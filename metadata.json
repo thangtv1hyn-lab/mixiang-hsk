@@ -1,0 +1,10 @@
+{
+  "name": "HanYu HSK Master - Nền Tảng Học Tiếng Trung HSK 1 - 5",
+  "description": "Nền tảng học tiếng Trung HSK 1 đến HSK 5 toàn diện: Quản trị khóa học, bài học, bài thi thử tự chấm điểm, học từ vựng Flashcard AI, luyện phát âm, diễn đàn trao đổi và báo cáo tiến độ chi tiết.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
