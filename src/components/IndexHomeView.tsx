@@ -47,6 +47,10 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
 
   const handleSelectLevel = (level: any) => {
     setActiveLevel(level);
+    if (!isAuthenticated) {
+      onOpenGoogleAuth();
+      return;
+    }
     setActiveTab('courses');
   };
 
@@ -126,7 +130,13 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
 
                 {/* Secondary Button */}
                 <button
-                  onClick={() => setActiveTab('courses')}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      onOpenGoogleAuth();
+                    } else {
+                      setActiveTab('courses');
+                    }
+                  }}
                   className="px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm sm:text-base border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-rose-300" />
@@ -341,10 +351,16 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
 
           <div className="pt-2 flex items-center gap-3">
             <button
-              onClick={() => setActiveTab('vocab')}
-              className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs sm:text-sm hover:bg-rose-700 transition-colors shadow-xs"
+              onClick={() => {
+                if (!isAuthenticated) {
+                  onOpenGoogleAuth();
+                } else {
+                  setActiveTab('vocab');
+                }
+              }}
+              className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs sm:text-sm hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
             >
-              Xem toàn bộ 2.500 từ vựng ➔
+              <span>Xem toàn bộ 2.500 từ vựng ➔</span>
             </button>
           </div>
         </div>

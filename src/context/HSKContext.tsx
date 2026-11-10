@@ -1123,6 +1123,13 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = async () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setUserRole('student');
+    setActiveTab('home');
+    setCurrentLesson(null);
+    setCurrentExam(null);
+    setLastExamResult(null);
+    setIsUserProfileOpen(false);
+    setIsGoogleAuthModalOpen(false);
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'auth');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'user');
     try {

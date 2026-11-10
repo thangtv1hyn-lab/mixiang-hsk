@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { IndexHomeView } from './components/IndexHomeView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { AuthRequiredGate } from './components/AuthRequiredGate';
 import { CoursesView } from './components/CoursesView';
 import { LessonDetailView } from './components/LessonDetailView';
 import { VocabularyFlashcardsView } from './components/VocabularyFlashcardsView';
@@ -36,6 +37,7 @@ function MainAppContent() {
     isUserProfileOpen,
     setIsUserProfileOpen,
     userRole,
+    isAuthenticated,
   } = useHSK();
 
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -71,75 +73,91 @@ function MainAppContent() {
           />
         )}
 
-        {/* VIEW 1: Courses Directory */}
-        {activeTab === 'courses' && (
-          <CoursesView
-            onOpenLesson={handleOpenLesson}
-            onOpenAiTutor={() => setIsAiTutorOpen(true)}
+        {/* GATED ACCESS: REQUIRE AUTHENTICATION FOR ALL CONTENT OTHER THAN HOMEPAGE */}
+        {!isAuthenticated && activeTab !== 'home' ? (
+          <AuthRequiredGate
+            onLogin={() => setIsGoogleAuthModalOpen(true)}
+            onGoHome={() => setActiveTab('home')}
           />
+        ) : (
+          <>
+            {/* VIEW 1: Courses Directory */}
+            {activeTab === 'courses' && (
+              <CoursesView
+                onOpenLesson={handleOpenLesson}
+                onOpenAiTutor={() => setIsAiTutorOpen(true)}
+              />
+            )}
+
+            {/* VIEW 2: Lesson Detail */}
+            {activeTab === 'lesson-detail' && currentLesson && (
+              <LessonDetailView
+                lesson={currentLesson}
+                onBack={() => setActiveTab('courses')}
+              />
+            )}
+
+            {/* VIEW 3: Vocabulary & Flashcards & AI Pronunciation */}
+            {activeTab === 'vocab' && <VocabularyFlashcardsView />}
+
+            {/* VIEW 4: Exams Directory */}
+            {activeTab === 'exams' && (
+              <ExamsView
+                onStartExam={handleStartExam}
+                onViewResult={() => setActiveTab('exam-result')}
+              />
+            )}
+
+            {/* VIEW 5: Taking Exam */}
+            {activeTab === 'exam-taking' && currentExam && (
+              <ExamTakingView
+                exam={currentExam}
+                onFinishExam={(result) => {
+                  setLastExamResult(result);
+                  setActiveTab('exam-result');
+                }}
+                onCancel={() => setActiveTab('exams')}
+              />
+            )}
+
+            {/* VIEW 6: Exam Result */}
+            {activeTab === 'exam-result' && lastExamResult && (
+              <ExamResultView
+                result={lastExamResult}
+                onRetake={() => {
+                  const matched = currentExam || undefined;
+                  if (matched) {
+                    setActiveTab('exam-taking');
+                  } else {
+                    setActiveTab('exams');
+                  }
+                }}
+                onGoToReports={() => setActiveTab('reports')}
+                onGoToExamsList={() => setActiveTab('exams')}
+              />
+            )}
+
+            {/* VIEW 7: Reports & Analytics */}
+            {activeTab === 'reports' && <ReportsView />}
+
+            {/* VIEW 8: Forum Q&A */}
+            {activeTab === 'forum' && <ForumView />}
+
+            {/* VIEW 9: Admin & Teacher Dashboard */}
+            {activeTab === 'admin' && userRole !== 'student' && <AdminDashboard />}
+          </>
         )}
-
-        {/* VIEW 2: Lesson Detail */}
-        {activeTab === 'lesson-detail' && currentLesson && (
-          <LessonDetailView
-            lesson={currentLesson}
-            onBack={() => setActiveTab('courses')}
-          />
-        )}
-
-        {/* VIEW 3: Vocabulary & Flashcards & AI Pronunciation */}
-        {activeTab === 'vocab' && <VocabularyFlashcardsView />}
-
-        {/* VIEW 4: Exams Directory */}
-        {activeTab === 'exams' && (
-          <ExamsView
-            onStartExam={handleStartExam}
-            onViewResult={() => setActiveTab('exam-result')}
-          />
-        )}
-
-        {/* VIEW 5: Taking Exam */}
-        {activeTab === 'exam-taking' && currentExam && (
-          <ExamTakingView
-            exam={currentExam}
-            onFinishExam={(result) => {
-              setLastExamResult(result);
-              setActiveTab('exam-result');
-            }}
-            onCancel={() => setActiveTab('exams')}
-          />
-        )}
-
-        {/* VIEW 6: Exam Result */}
-        {activeTab === 'exam-result' && lastExamResult && (
-          <ExamResultView
-            result={lastExamResult}
-            onRetake={() => {
-              const matched = currentExam || undefined;
-              if (matched) {
-                setActiveTab('exam-taking');
-              } else {
-                setActiveTab('exams');
-              }
-            }}
-            onGoToReports={() => setActiveTab('reports')}
-            onGoToExamsList={() => setActiveTab('exams')}
-          />
-        )}
-
-        {/* VIEW 7: Reports & Analytics */}
-        {activeTab === 'reports' && <ReportsView />}
-
-        {/* VIEW 8: Forum Q&A */}
-        {activeTab === 'forum' && <ForumView />}
-
-        {/* VIEW 9: Admin & Teacher Dashboard */}
-        {activeTab === 'admin' && userRole !== 'student' && <AdminDashboard />}
       </main>
 
       {/* Floating AI Tutor Launcher Button */}
       <button
-        onClick={() => setIsAiTutorOpen(true)}
+        onClick={() => {
+          if (!isAuthenticated) {
+            setIsGoogleAuthModalOpen(true);
+          } else {
+            setIsAiTutorOpen(true);
+          }
+        }}
         className="fixed bottom-6 right-6 z-40 p-3.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer group"
         title="Trò chuyện với Lão Sư AI"
       >

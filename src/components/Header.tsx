@@ -69,7 +69,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if (item.id !== 'home' && !isAuthenticated) {
+                      onOpenGoogleAuth();
+                      return;
+                    }
+                    setActiveTab(item.id);
+                  }}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
                     isActive
                       ? 'bg-rose-50 text-rose-700 font-bold shadow-2xs border border-rose-200'
@@ -216,7 +222,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  if (item.id !== 'home' && !isAuthenticated) {
+                    onOpenGoogleAuth();
+                    return;
+                  }
+                  setActiveTab(item.id);
+                }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   isActive
                     ? 'bg-rose-50 text-rose-700 border border-rose-200'
