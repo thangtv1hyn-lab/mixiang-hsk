@@ -149,12 +149,6 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     }, 500);
   };
 
-  const fillQuickAccount = (email: string, roleName: string) => {
-    setLoginEmail(email);
-    setLoginPassword('123456');
-    setErrorMessage('');
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative border border-slate-100 max-h-[92vh] overflow-y-auto">
@@ -406,35 +400,6 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Demo Credentials */}
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-600">
-              <span className="font-bold text-slate-800 block text-[11px]">
-                Tài khoản mẫu để trải nghiệm nhanh:
-              </span>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => fillQuickAccount('thangtv1.hyn@gmail.com', 'Admin')}
-                  className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 font-medium cursor-pointer"
-                >
-                  👑 Admin (Thắng Trần)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillQuickAccount('mylinh.laoshi@hskmaster.edu.vn', 'Giáo viên')}
-                  className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium cursor-pointer"
-                >
-                  👩‍🏫 Giáo viên (Cô Mỹ Linh)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillQuickAccount('tuankiet.dang@gmail.com', 'Học viên')}
-                  className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-medium cursor-pointer"
-                >
-                  🎓 Học viên (Tuấn Kiệt)
-                </button>
-              </div>
-            </div>
 
             <button
               type="submit"
