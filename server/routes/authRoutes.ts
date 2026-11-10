@@ -253,6 +253,69 @@ router.get('/me', (req, res) => {
   res.json({ user, profile });
 });
 
+// Update profile / password for current user
+router.put('/profile', (req, res) => {
+  try {
+    const { email, name, avatar, targetLevel, password, currentPassword } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const appUser = db.appUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
+
+    if (!appUser) {
+      return res.status(404).json({ error: 'Không tìm thấy thông tin tài khoản' });
+    }
+
+    // If changing password, verify current password if set
+    if (password) {
+      if (appUser.password && currentPassword && appUser.password !== currentPassword) {
+        return res.status(400).json({ error: 'Mật khẩu hiện tại không đúng' });
+      }
+      appUser.password = password;
+    }
+
+    if (name) appUser.name = name.trim();
+    if (avatar) appUser.avatar = avatar;
+    if (targetLevel) appUser.level = targetLevel;
+
+    // Update in db.users & db.students
+    const authUser = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (authUser) {
+      if (name) authUser.name = name.trim();
+      if (avatar) authUser.avatar = avatar;
+      if (targetLevel) authUser.targetLevel = targetLevel;
+    }
+
+    const studentProfile = db.students.find((s) => s.email.toLowerCase() === normalizedEmail);
+    if (studentProfile) {
+      if (name) studentProfile.name = name.trim();
+      if (avatar) studentProfile.avatar = avatar;
+      if (targetLevel) studentProfile.targetLevel = targetLevel;
+    }
+
+    res.json({
+      success: true,
+      message: 'Cập nhật thông tin tài khoản thành công',
+      user: {
+        id: appUser.id,
+        name: appUser.name,
+        email: appUser.email,
+        avatar: appUser.avatar,
+        role: appUser.role,
+        status: appUser.status,
+        targetLevel: appUser.level,
+        provider: appUser.provider,
+        joinedAt: appUser.joinedDate,
+      },
+      profile: studentProfile || null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Logout
 router.post('/logout', (req, res) => {
   res.json({ success: true, message: 'Đã đăng xuất' });

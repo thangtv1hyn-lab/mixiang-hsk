@@ -329,66 +329,68 @@ export const VocabularyFlashcardsView: React.FC = () => {
             )}
           </div>
 
-          {/* Admin Deck Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => {
-                setDeckToEdit(null);
-                setIsAIFlashcardModalOpen(true);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Tạo bộ Flashcard bằng AI</span>
-            </button>
-            <button
-              onClick={() => {
-                setDeckToEdit(null);
-                setIsDeckEditorOpen(true);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Thêm bộ từ mới</span>
-            </button>
-            {activeDeck && (
-              <>
-                <button
-                  onClick={() => {
-                    setCardToEdit(null);
-                    setIsCardModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm thẻ vào bộ</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setDeckToEdit(activeDeck);
-                    setIsDeckEditorOpen(true);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1 cursor-pointer"
-                  title="Sửa thông tin bộ từ vựng"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Sửa bộ</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Bạn có chắc muốn xóa bộ từ vựng "${activeDeck.title}"?`)) {
-                      deleteVocabDeck(activeDeck.id);
-                      setActiveDeckId(null);
-                    }
-                  }}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                  title="Xóa bộ từ vựng"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </>
-            )}
-          </div>
+          {/* Admin / Teacher Deck Action Buttons */}
+          {userRole !== 'student' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  setDeckToEdit(null);
+                  setIsAIFlashcardModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Tạo bộ Flashcard bằng AI</span>
+              </button>
+              <button
+                onClick={() => {
+                  setDeckToEdit(null);
+                  setIsDeckEditorOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm bộ từ mới</span>
+              </button>
+              {activeDeck && (
+                <>
+                  <button
+                    onClick={() => {
+                      setCardToEdit(null);
+                      setIsCardModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm thẻ vào bộ</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeckToEdit(activeDeck);
+                      setIsDeckEditorOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                    title="Sửa thông tin bộ từ vựng"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Sửa bộ</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Bạn có chắc muốn xóa bộ từ vựng "${activeDeck.title}"?`)) {
+                        deleteVocabDeck(activeDeck.id);
+                        setActiveDeckId(null);
+                      }
+                    }}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                    title="Xóa bộ từ vựng"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Deck selection pills */}

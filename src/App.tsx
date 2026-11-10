@@ -3,6 +3,7 @@ import { HSKProvider, useHSK } from './context/HSKContext';
 import { Header } from './components/Header';
 import { IndexHomeView } from './components/IndexHomeView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { CoursesView } from './components/CoursesView';
 import { LessonDetailView } from './components/LessonDetailView';
 import { VocabularyFlashcardsView } from './components/VocabularyFlashcardsView';
@@ -32,6 +33,9 @@ function MainAppContent() {
     setIsMobileCompanionOpen,
     isGoogleAuthModalOpen,
     setIsGoogleAuthModalOpen,
+    isUserProfileOpen,
+    setIsUserProfileOpen,
+    userRole,
   } = useHSK();
 
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -129,8 +133,8 @@ function MainAppContent() {
         {/* VIEW 8: Forum Q&A */}
         {activeTab === 'forum' && <ForumView />}
 
-        {/* VIEW 9: Admin Dashboard */}
-        {activeTab === 'admin' && <AdminDashboard />}
+        {/* VIEW 9: Admin & Teacher Dashboard */}
+        {activeTab === 'admin' && userRole !== 'student' && <AdminDashboard />}
       </main>
 
       {/* Floating AI Tutor Launcher Button */}
@@ -160,6 +164,11 @@ function MainAppContent() {
       <GoogleAuthModal
         isOpen={isGoogleAuthModalOpen}
         onClose={() => setIsGoogleAuthModalOpen(false)}
+      />
+
+      <UserProfileModal
+        isOpen={isUserProfileOpen}
+        onClose={() => setIsUserProfileOpen(false)}
       />
 
       <MobileAppCompanion />

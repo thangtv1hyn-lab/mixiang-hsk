@@ -176,7 +176,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
             />
           </div>
 
-          {userRole === 'admin' && (
+          {userRole !== 'student' && (
             <button
               onClick={() => setActiveTab('admin')}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"

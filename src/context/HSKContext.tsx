@@ -34,6 +34,9 @@ interface HSKContextType {
   logout: () => void;
   isGoogleAuthModalOpen: boolean;
   setIsGoogleAuthModalOpen: (open: boolean) => void;
+  isUserProfileOpen: boolean;
+  setIsUserProfileOpen: (open: boolean) => void;
+  updateCurrentUserProfile: (data: Partial<AppUser> & { currentPassword?: string; targetLevel?: HSKLevel }) => Promise<{ success: boolean; message?: string }>;
 
   // Navigation & Role
   activeTab: string;
@@ -120,7 +123,27 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Navigation & Role
   const [activeTab, setActiveTab] = useState<string>('home');
   const [activeLevel, setActiveLevel] = useState<HSKLevel>('HSK 1');
-  const [userRole, setUserRole] = useState<UserRole>('student');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u.role) return u.role;
+      }
+      return 'student';
+    } catch {
+      return 'student';
+    }
+  });
   const [showPinyin, setShowPinyin] = useState<boolean>(true);
   const [isMobileCompanionOpen, setIsMobileCompanionOpen] = useState<boolean>(false);
 
@@ -132,15 +155,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
   });
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
   const [isGoogleAuthModalOpen, setIsGoogleAuthModalOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
 
   // Selected entities
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -1048,6 +1064,62 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsGoogleAuthModalOpen(false);
   };
 
+  const updateCurrentUserProfile = async (
+    data: Partial<AppUser> & { currentPassword?: string; targetLevel?: HSKLevel }
+  ) => {
+    try {
+      if (!currentUser?.email) {
+        return { success: false, message: 'Bạn chưa đăng nhập' };
+      }
+
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUser.email,
+          ...data,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        return { success: false, message: resData.error || 'Cập nhật thất bại' };
+      }
+
+      if (resData.user) {
+        const updatedUser: AuthUser = resData.user;
+        setCurrentUser(updatedUser);
+        if (updatedUser.role) {
+          setUserRole(updatedUser.role);
+        }
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
+      }
+
+      if (resData.profile) {
+        setStudentProfile(resData.profile);
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(resData.profile));
+      }
+
+      setAppUsers((prev) =>
+        prev.map((u) => {
+          if (u.email.toLowerCase() === currentUser.email.toLowerCase()) {
+            return {
+              ...u,
+              name: data.name || u.name,
+              avatar: data.avatar || u.avatar,
+              level: (data.level || data.targetLevel || u.level) as HSKLevel,
+            };
+          }
+          return u;
+        })
+      );
+
+      return { success: true, message: resData.message || 'Cập nhật thành công' };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi cập nhật' };
+    }
+  };
+
   const logout = async () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
@@ -1080,6 +1152,9 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logout,
         isGoogleAuthModalOpen,
         setIsGoogleAuthModalOpen,
+        isUserProfileOpen,
+        setIsUserProfileOpen,
+        updateCurrentUserProfile,
         activeTab,
         setActiveTab,
         activeLevel,

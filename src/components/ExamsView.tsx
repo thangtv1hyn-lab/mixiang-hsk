@@ -91,13 +91,13 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
           ))}
         </div>
 
-        {userRole === 'admin' && (
+        {userRole !== 'student' && (
           <button
             onClick={() => setActiveTab('admin')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs sm:text-sm font-semibold hover:bg-indigo-700 shadow-xs"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs sm:text-sm font-semibold hover:bg-indigo-700 shadow-xs cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Tạo đề thi mới (Admin)</span>
+            <span>Tạo & Quản lý đề thi</span>
           </button>
         )}
       </div>

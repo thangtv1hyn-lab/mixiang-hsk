@@ -26,13 +26,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
     activeTab,
     setActiveTab,
     userRole,
-    setUserRole,
     isMobileCompanionOpen,
     setIsMobileCompanionOpen,
     studentProfile,
     isAuthenticated,
     currentUser,
     logout,
+    setIsUserProfileOpen,
   } = useHSK();
 
   const navItems = [
@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
               );
             })}
 
-            {/* Admin Nav Button */}
+            {/* Admin / Teacher Nav Button */}
             {userRole === 'admin' && (
               <button
                 onClick={() => setActiveTab('admin')}
@@ -94,6 +94,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
               >
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span>Quản trị</span>
+              </button>
+            )}
+            {userRole === 'teacher' && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === 'admin'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 shrink-0" />
+                <span>Giảng dạy</span>
               </button>
             )}
           </nav>
@@ -152,41 +165,35 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
             ) : (
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => {
-                    // Quick toggle between roles for admin users or testing
-                    if (userRole === 'admin') setUserRole('teacher');
-                    else if (userRole === 'teacher') setUserRole('student');
-                    else setUserRole('admin');
-                  }}
-                  title="Bấm để chuyển đổi vai trò (Admin / Giáo viên / Học viên)"
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${
+                  onClick={() => setIsUserProfileOpen(true)}
+                  title="Bấm để xem và chỉnh sửa thông tin tài khoản"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${
                     userRole === 'admin'
-                      ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
+                      ? 'bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100 shadow-2xs'
                       : userRole === 'teacher'
-                      ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
-                      : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100 shadow-2xs'
+                      : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 shadow-2xs'
                   }`}
                 >
-                  {userRole === 'admin' ? (
-                    <>
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                      <span>👑 Admin</span>
-                    </>
-                  ) : userRole === 'teacher' ? (
-                    <>
-                      <Award className="w-3.5 h-3.5 text-white" />
-                      <span>👩‍🏫 Giáo viên</span>
-                    </>
-                  ) : (
-                    <>
-                      <img
-                        src={currentUser?.avatar || studentProfile.avatar}
-                        alt={currentUser?.name || studentProfile.name}
-                        className="w-4 h-4 rounded-full object-cover ring-1 ring-slate-200"
-                      />
-                      <span className="max-w-[80px] truncate">{currentUser?.name || 'Học viên'}</span>
-                    </>
-                  )}
+                  <img
+                    src={currentUser?.avatar || studentProfile.avatar}
+                    alt={currentUser?.name || studentProfile.name}
+                    className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200"
+                  />
+                  <span className="max-w-[120px] truncate font-bold">
+                    {currentUser?.name || studentProfile.name || 'Người dùng'}
+                  </span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-md font-extrabold ${
+                      userRole === 'admin'
+                        ? 'bg-purple-600 text-white'
+                        : userRole === 'teacher'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {userRole === 'admin' ? 'Admin' : userRole === 'teacher' ? 'Giáo viên' : 'Học viên'}
+                  </span>
                 </button>
 
                 <button
@@ -232,6 +239,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Quản trị</span>
+            </button>
+          )}
+          {userRole === 'teacher' && (
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 ${
+                activeTab === 'admin'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Giảng dạy</span>
             </button>
           )}
         </div>
