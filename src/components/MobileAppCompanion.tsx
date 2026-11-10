@@ -86,7 +86,7 @@ export const MobileAppCompanion: React.FC = () => {
           </div>
 
           <h2 className="text-2xl font-extrabold tracking-tight">
-            MiXiang HSK App Trên Điện Thoại
+            MiXiangg HSK App Trên Điện Thoại
           </h2>
 
           <p className="text-xs text-slate-300 leading-relaxed">

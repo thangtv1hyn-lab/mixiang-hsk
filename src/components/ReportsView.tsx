@@ -154,7 +154,7 @@ export const ReportsView: React.FC = () => {
           PHIẾU BÁO CÁO KẾT QUẢ HỌC TIẾNG TRUNG HSK
         </h1>
         <p className="text-xs text-slate-600">
-          Nền tảng đào tạo MiXiang HSK • Học viên: <strong>{studentProfile.name}</strong> ({studentProfile.email})
+          Nền tảng đào tạo MiXiangg HSK • Học viên: <strong>{studentProfile.name}</strong> ({studentProfile.email})
         </p>
       </div>
 

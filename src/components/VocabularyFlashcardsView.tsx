@@ -773,7 +773,7 @@ export const VocabularyFlashcardsView: React.FC = () => {
                   </div>
 
                   <span className="px-3 py-1 rounded-full text-xs font-bold bg-white text-emerald-800 border border-emerald-200 shadow-xs">
-                    MiXiang AI
+                    MiXiangg AI
                   </span>
                 </div>
 

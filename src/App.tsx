@@ -198,7 +198,7 @@ function MainAppContent() {
             <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-serif font-bold text-xs">
               汉
             </div>
-            <span className="font-bold text-slate-800">MiXiang HSK</span>
+            <span className="font-bold text-slate-800">MiXiangg HSK</span>
             <span>• Nền tảng học và luyện thi Tiếng Trung</span>
           </div>
 
@@ -216,7 +216,7 @@ function MainAppContent() {
             >
               Nhắc nhở học tập
             </button>
-            <span>© 2026 MiXiang HSK. All rights reserved.</span>
+            <span>© 2026 MiXiangg HSK. All rights reserved.</span>
           </div>
         </div>
       </footer>

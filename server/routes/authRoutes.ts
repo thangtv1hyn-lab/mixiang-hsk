@@ -78,7 +78,7 @@ router.post('/register', (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Đăng ký tài khoản thành công! Chào mừng bạn gia nhập MiXiang HSK.',
+      message: 'Đăng ký tài khoản thành công! Chào mừng bạn gia nhập MiXiangg HSK.',
       user: authUser,
       profile: newProfile,
     });

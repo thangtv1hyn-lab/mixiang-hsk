@@ -54,14 +54,14 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose })
 
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
-        new Notification('🔔 MiXiang HSK: Đã đến giờ học!', {
+        new Notification('🔔 MiXiangg HSK: Đã đến giờ học!', {
           body: `Đừng quên duy trì chuỗi học ${studentProfile.streakDays} ngày của bạn hôm nay nhé! Mục tiêu: ${dailyGoal} phút.`,
           icon: '/favicon.ico',
         });
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then((permission) => {
           if (permission === 'granted') {
-            new Notification('🔔 MiXiang HSK: Đã đến giờ học!', {
+            new Notification('🔔 MiXiangg HSK: Đã đến giờ học!', {
               body: `Đừng quên duy trì chuỗi học ${studentProfile.streakDays} ngày của bạn hôm nay nhé!`,
             });
           }

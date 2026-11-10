@@ -927,7 +927,7 @@ export const INITIAL_FORUM_POSTS: ForumPost[] = [
     authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
     role: 'student',
     title: 'Kinh nghiệm luyện nghe HSK 3 để đạt điểm tối đa (90+)',
-    content: 'Mình vừa thi HSK 3 đạt 285/300, trong đó phần nghe được 98 điểm. Mình muốn chia sẻ với các bạn phương pháp "nghe chép chính tả" và luyện phát âm song song trên nền tảng MiXiang HSK này...',
+    content: 'Mình vừa thi HSK 3 đạt 285/300, trong đó phần nghe được 98 điểm. Mình muốn chia sẻ với các bạn phương pháp "nghe chép chính tả" và luyện phát âm song song trên nền tảng MiXiangg HSK này...',
     level: 'HSK 3',
     category: 'Kinh nghiệm thi',
     tags: ['Luyện nghe', 'HSK 3', 'Kinh nghiệm'],

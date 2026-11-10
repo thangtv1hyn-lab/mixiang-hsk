@@ -116,7 +116,7 @@ router.get('/export-html', (req, res) => {
   <div class="header">
     <div>
       <h1 class="title">BÁO CÁO KẾT QUẢ HỌC TẬP HSK</h1>
-      <div class="meta">Hệ thống Luyện thi Tiếng Trung Chuẩn hóa MiXiang HSK</div>
+      <div class="meta">Hệ thống Luyện thi Tiếng Trung Chuẩn hóa MiXiangg HSK</div>
     </div>
     <div style="text-align: right;">
       <button onclick="window.print()" style="background: #e11d48; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">In / Lưu PDF</button>
@@ -177,7 +177,7 @@ router.get('/export-html', (req, res) => {
   </table>
 
   <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-    Báo cáo này được tạo tự động bởi MiXiang HSK Platform. Chúc bạn luôn giữ vững tinh thần "加油!"
+    Báo cáo này được tạo tự động bởi MiXiangg HSK Platform. Chúc bạn luôn giữ vững tinh thần "加油!"
   </div>
 </body>
 </html>`;

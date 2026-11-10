@@ -12,7 +12,7 @@ export const AuthRequiredGate: React.FC<AuthRequiredGateProps> = ({
   onLogin,
   onGoHome,
   title = 'Vui lòng đăng nhập để tiếp tục học tập',
-  description = 'Bạn cần có tài khoản MiXiang HSK để truy cập toàn bộ khóa học, luyện từ vựng Flashcard AI và tham gia các kỳ thi thử có chấm điểm tự động.',
+  description = 'Bạn cần có tài khoản MiXiangg HSK để truy cập toàn bộ khóa học, luyện từ vựng Flashcard AI và tham gia các kỳ thi thử có chấm điểm tự động.',
 }) => {
   return (
     <div className="max-w-2xl mx-auto my-12 px-4">

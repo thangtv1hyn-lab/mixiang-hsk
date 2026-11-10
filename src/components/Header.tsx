@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
               <span className="font-serif text-2xl font-bold tracking-tight">汉</span>
             </div>
             <span className="font-extrabold text-xl tracking-tight text-slate-900 group-hover:text-rose-600 transition-colors whitespace-nowrap">
-              MiXiang HSK
+              MiXiangg HSK
             </span>
           </div>
 

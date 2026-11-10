@@ -265,7 +265,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             Công nghệ hỗ trợ học tập
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Những Tính Năng Vượt Trội Tại MiXiang HSK
+            Những Tính Năng Vượt Trội Tại MiXiangg HSK
           </h2>
           <p className="text-xs sm:text-sm text-slate-600">
             Kết hợp trí tuệ nhân tạo Gemini AI và phương pháp sư phạm hiện đại giúp bạn học nhanh gấp 3 lần
@@ -419,7 +419,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       <section className="rounded-3xl bg-slate-900 text-white p-8 sm:p-12 text-center space-y-6 shadow-xl border border-slate-800">
         <div className="max-w-2xl mx-auto space-y-3">
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-            Sẵn Sàng Chinh Phục HSK Cùng MiXiang?
+            Sẵn Sàng Chinh Phục HSK Cùng MiXiangg?
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Hàng ngàn học viên đã vượt qua kỳ thi HSK với số điểm xuất sắc. Đăng ký tài khoản Google

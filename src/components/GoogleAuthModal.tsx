@@ -165,7 +165,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             汉
           </div>
           <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
-            Tài Khoản MiXiang HSK
+            Tài Khoản MiXiangg HSK
           </h3>
           <p className="text-xs text-slate-500 max-w-xs mx-auto">
             Học tiếng Trung HSK 1 đến HSK 5 chuẩn hóa, tự động lưu tiến độ và thi thử AI
@@ -460,7 +460,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
             <div className="space-y-1.5 text-xs text-slate-600 bg-rose-50/50 p-3.5 rounded-2xl border border-rose-100">
               <span className="font-bold text-rose-900 block text-xs">
-                Quyền lợi thành viên MiXiang HSK:
+                Quyền lợi thành viên MiXiangg HSK:
               </span>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />

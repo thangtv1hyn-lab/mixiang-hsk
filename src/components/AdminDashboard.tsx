@@ -394,7 +394,7 @@ export const AdminDashboard: React.FC = () => {
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-white/10 text-purple-200 border border-white/20 mb-2">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-              <span>{isTeacher ? 'Cổng Thông Tin Giảng Dạy & Quản Lý Giáo Viên' : 'Hệ Thống Quản Trị Trung Tâm MiXiang HSK'}</span>
+              <span>{isTeacher ? 'Cổng Thông Tin Giảng Dạy & Quản Lý Giáo Viên' : 'Hệ Thống Quản Trị Trung Tâm MiXiangg HSK'}</span>
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {isTeacher ? 'Bảng Điều Khiển Giáo Viên (Teacher Portal)' : 'Bảng Điều Khiển Quản Trị Viên (Admin)'}
