@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: mixiangg-hsk
+    name: mixiang-hsk
     runtime: node
     plan: free
     region: singapore
