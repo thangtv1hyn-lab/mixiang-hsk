@@ -212,9 +212,21 @@ export const CardEditorModal: React.FC<CardEditorModalProps> = ({
             </span>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                Câu tiếng Trung
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-medium text-slate-600">
+                  Câu tiếng Trung
+                </label>
+                {exampleSentence && (
+                  <button
+                    type="button"
+                    onClick={() => speakChinese(exampleSentence)}
+                    className="text-[11px] text-rose-600 hover:text-rose-700 flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <Volume2 className="w-3 h-3" />
+                    Nghe câu ví dụ
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="Ví dụ: 我想预订一张明天去北京的机票。"

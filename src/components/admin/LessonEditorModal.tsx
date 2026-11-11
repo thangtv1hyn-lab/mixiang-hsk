@@ -12,8 +12,10 @@ import {
   MessageSquare,
   HelpCircle,
   CheckCircle2,
+  Volume2,
 } from 'lucide-react';
 import { Course, Lesson, VocabItem, GrammarPoint, PracticeQuestion, DialogueLine, HSKLevel } from '../../types/hsk';
+import { speakChinese } from '../../utils/audioSpeech';
 
 interface LessonEditorModalProps {
   isOpen: boolean;
@@ -671,14 +673,27 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Chữ Hán *</label>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-semibold text-slate-600">Chữ Hán *</label>
+                      {vocabWord && (
+                        <button
+                          type="button"
+                          onClick={() => speakChinese(vocabWord)}
+                          className="text-[10px] text-rose-600 hover:text-rose-700 flex items-center gap-0.5 font-bold cursor-pointer"
+                          title="Nghe thử phát âm chữ Hán"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>Nghe đọc</span>
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       required
                       placeholder="Ví dụ: 旅游"
                       value={vocabWord}
                       onChange={(e) => setVocabWord(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white font-bold text-sm"
                     />
                   </div>
                   <div>
@@ -689,7 +704,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="lǚyóu"
                       value={vocabPinyin}
                       onChange={(e) => setVocabPinyin(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white font-mono text-xs"
                     />
                   </div>
                   <div>
@@ -699,7 +714,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Lữ du"
                       value={vocabSino}
                       onChange={(e) => setVocabSino(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
                     />
                   </div>
                   <div>
@@ -710,20 +725,33 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Đi du lịch"
                       value={vocabMeaning}
                       onChange={(e) => setVocabMeaning(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Câu ví dụ (Chữ Hán)</label>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-semibold text-slate-600">Câu ví dụ (Chữ Hán)</label>
+                      {vocabExample && (
+                        <button
+                          type="button"
+                          onClick={() => speakChinese(vocabExample)}
+                          className="text-[10px] text-rose-600 hover:text-rose-700 flex items-center gap-0.5 font-bold cursor-pointer"
+                          title="Nghe phát âm câu ví dụ"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>Nghe ví dụ</span>
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       placeholder="我想去北京旅游。"
                       value={vocabExample}
                       onChange={(e) => setVocabExample(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
                     />
                   </div>
                   <div>
@@ -733,7 +761,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Wǒ xiǎng qù Běijīng lǚyóu."
                       value={vocabExamplePinyin}
                       onChange={(e) => setVocabExamplePinyin(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white font-mono text-xs"
                     />
                   </div>
                   <div>
@@ -743,7 +771,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Tôi muốn đi du lịch Bắc Kinh."
                       value={vocabExampleMeaning}
                       onChange={(e) => setVocabExampleMeaning(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
                     />
                   </div>
                 </div>
@@ -751,7 +779,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                 <div className="flex justify-end pt-1">
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 flex items-center gap-1 shadow-xs cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 flex items-center gap-1 shadow-xs cursor-pointer text-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{editingVocabId ? 'Cập nhật từ vựng' : 'Lưu từ vựng'}</span>
@@ -761,12 +789,12 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
 
               {/* Vocab Table */}
               <div className="space-y-2">
-                <span className="font-bold text-slate-800 block">
+                <span className="font-bold text-slate-800 block text-xs">
                   Danh sách từ vựng trong bài ({vocabulary.length} từ):
                 </span>
 
                 {vocabulary.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs">
                     Chưa có từ vựng nào trong bài. Hãy dùng form phía trên hoặc bấm nút AI Điền Mẫu để thêm từ mới!
                   </div>
                 ) : (
@@ -774,6 +802,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
+                          <th className="p-2.5 w-12 text-center">STT</th>
                           <th className="p-2.5">Chữ Hán</th>
                           <th className="p-2.5">Pīnyīn</th>
                           <th className="p-2.5">Hán Việt</th>
@@ -782,19 +811,32 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                           <th className="p-2.5 text-right">Thao tác</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {vocabulary.map((item) => (
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {vocabulary.map((item, idx) => (
                           <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="p-2.5 font-bold text-slate-900 text-sm">{item.word}</td>
-                            <td className="p-2.5 font-mono text-rose-700">{item.pinyin}</td>
+                            <td className="p-2.5 text-center font-bold text-slate-400 text-[11px]">
+                              #{String(idx + 1).padStart(2, '0')}
+                            </td>
+                            <td className="p-2.5 font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                              <span>{item.word}</span>
+                              <button
+                                type="button"
+                                onClick={() => speakChinese(item.word)}
+                                className="p-1 rounded-full text-rose-500 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                                title="Phát âm từ này"
+                              >
+                                <Volume2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                            <td className="p-2.5 font-mono text-rose-700 font-medium">{item.pinyin}</td>
                             <td className="p-2.5 text-slate-500">{item.sinoVietnamese || '-'}</td>
                             <td className="p-2.5 font-medium text-slate-800">{item.meaning}</td>
                             <td className="p-2.5 text-slate-600 truncate max-w-xs">{item.exampleSentence}</td>
-                            <td className="p-2.5 text-right space-x-1">
+                            <td className="p-2.5 text-right space-x-1 shrink-0">
                               <button
                                 type="button"
                                 onClick={() => handleEditVocab(item)}
-                                className="p-1 rounded text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                                className="p-1 rounded text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer"
                                 title="Sửa từ vựng"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
@@ -802,7 +844,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleDeleteVocab(item.id)}
-                                className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
                                 title="Xóa từ vựng"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1249,14 +1291,27 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                   </div>
 
                   <div className="sm:col-span-3">
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Câu tiếng Trung *</label>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-semibold text-slate-600">Câu tiếng Trung *</label>
+                      {dlgChinese && (
+                        <button
+                          type="button"
+                          onClick={() => speakChinese(dlgChinese)}
+                          className="text-[10px] text-amber-700 hover:text-amber-800 flex items-center gap-0.5 font-bold cursor-pointer"
+                          title="Tạo & nghe thử phát âm câu thoại"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          <span>Nghe phát âm</span>
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       required
                       placeholder="我要去北京旅游，你觉得什么时候去最好？"
                       value={dlgChinese}
                       onChange={(e) => setDlgChinese(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white font-bold text-sm"
                     />
                   </div>
                 </div>
@@ -1269,7 +1324,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Wǒ yào qù Běijīng lǚyóu, nǐ juéde shénme shíhou qù zuì hǎo?"
                       value={dlgPinyin}
                       onChange={(e) => setDlgPinyin(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white font-mono text-xs"
                     />
                   </div>
                   <div>
@@ -1279,7 +1334,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       placeholder="Tôi muốn đi Bắc Kinh du lịch, bạn thấy đi khi nào là tốt nhất?"
                       value={dlgVietnamese}
                       onChange={(e) => setDlgVietnamese(e.target.value)}
-                      className="w-full p-2 rounded-lg border border-slate-200 bg-white"
+                      className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
                     />
                   </div>
                 </div>
@@ -1287,7 +1342,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                 <div className="flex justify-end pt-1">
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 flex items-center gap-1 shadow-xs cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 flex items-center gap-1 shadow-xs cursor-pointer text-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{editingDlgId ? 'Cập nhật câu thoại' : 'Lưu câu thoại'}</span>
@@ -1297,18 +1352,29 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
 
               {/* Dialogue Lines List */}
               <div className="space-y-2">
-                <span className="font-bold text-slate-800 block">
+                <span className="font-bold text-slate-800 block text-xs">
                   Đoạn hội thoại ({dialogue.length} lượt thoại):
                 </span>
 
                 {dialogue.map((d, idx) => (
                   <div key={d.id} className="p-3 rounded-xl border border-slate-200 bg-white flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                        {d.speaker}:
-                      </span>
-                      <p className="font-bold text-slate-900 text-sm">{d.chinese}</p>
-                      {d.pinyin && <p className="text-rose-600 text-[11px] font-mono">{d.pinyin}</p>}
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                          #{idx + 1} {d.speaker}:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => speakChinese(d.chinese)}
+                          className="p-1 rounded-full text-amber-700 hover:bg-amber-100 cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                          title="Phát âm câu thoại này"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>Nghe</span>
+                        </button>
+                      </div>
+                      <p className="font-bold text-slate-900 text-base">{d.chinese}</p>
+                      {d.pinyin && <p className="text-rose-600 text-xs font-mono font-medium">{d.pinyin}</p>}
                       <p className="text-slate-600 text-xs">{d.vietnamese}</p>
                     </div>
 
@@ -1316,7 +1382,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleEditDialogue(d)}
-                        className="p-1 rounded text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                        className="p-1 rounded text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer"
                         title="Sửa câu thoại"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -1324,7 +1390,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteDialogue(d.id)}
-                        className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
                         title="Xóa câu thoại"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

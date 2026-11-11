@@ -503,11 +503,16 @@ export const VocabularyFlashcardsView: React.FC = () => {
                     style={{ backfaceVisibility: 'hidden' }}
                   >
                     <div className="w-full flex items-center justify-between text-xs text-slate-400">
-                      <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200">
-                        {currentFlashcard.level}
-                      </span>
-                      <span className="text-slate-400">Chạm để xem nghĩa ➔</span>
-                      <span>{currentFlashcard.radical ? `Bộ: ${currentFlashcard.radical}` : ''}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full bg-slate-900 text-white font-mono font-extrabold text-xs shadow-xs">
+                          #{String(currentIndex + 1).padStart(2, '0')}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200">
+                          {currentFlashcard.level}
+                        </span>
+                      </div>
+                      <span className="text-slate-400 font-medium">Chạm thẻ để lật xem nghĩa ➔</span>
+                      <span className="font-semibold text-slate-600">{currentFlashcard.radical ? `Bộ: ${currentFlashcard.radical}` : ''}</span>
                     </div>
 
                     <div className="space-y-4 my-auto">
@@ -515,7 +520,7 @@ export const VocabularyFlashcardsView: React.FC = () => {
                         {currentFlashcard.word}
                       </h1>
                       {showPinyin && (
-                        <p className="text-lg font-medium text-rose-600 font-mono">
+                        <p className="text-2xl sm:text-3xl font-extrabold text-rose-600 font-mono tracking-wide">
                           {currentFlashcard.pinyin}
                         </p>
                       )}
@@ -527,7 +532,7 @@ export const VocabularyFlashcardsView: React.FC = () => {
                           e.stopPropagation();
                           speakChinese(currentFlashcard.word);
                         }}
-                        className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold flex items-center gap-2 border border-rose-200 transition-colors"
+                        className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs sm:text-sm font-bold flex items-center gap-2 border border-rose-200 transition-colors cursor-pointer"
                       >
                         <Volume2 className="w-4 h-4" />
                         <span>Nghe phát âm chuẩn</span>
@@ -544,31 +549,36 @@ export const VocabularyFlashcardsView: React.FC = () => {
                     }}
                   >
                     <div className="flex items-center justify-between text-xs text-rose-300">
-                      <span className="font-bold text-amber-400 font-mono text-base">
-                        {currentFlashcard.pinyin}
-                      </span>
-                      <span className="bg-white/10 px-2 py-0.5 rounded-full text-[11px]">
-                        Hán Việt: {currentFlashcard.sinoVietnamese}
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full bg-white/20 text-white font-mono font-extrabold text-xs">
+                          #{String(currentIndex + 1).padStart(2, '0')}
+                        </span>
+                        <span className="font-extrabold text-amber-300 font-mono text-xl sm:text-2xl">
+                          {currentFlashcard.pinyin}
+                        </span>
+                      </div>
+                      <span className="bg-white/15 px-3 py-1 rounded-full text-xs font-semibold text-white">
+                        Hán Việt: {currentFlashcard.sinoVietnamese || '-'}
                       </span>
                     </div>
 
-                    <div className="space-y-3 my-auto">
-                      <div className="text-2xl sm:text-3xl font-extrabold text-amber-200">
+                    <div className="space-y-4 my-auto">
+                      <div className="text-3xl sm:text-4xl font-black text-amber-200 leading-tight">
                         {currentFlashcard.meaning}
                       </div>
 
                       {/* Example sentence */}
-                      <div className="bg-white/10 rounded-xl p-4 text-left border border-white/10 space-y-1">
-                        <span className="text-[10px] text-rose-300 font-bold uppercase tracking-wider block">
+                      <div className="bg-white/10 rounded-2xl p-4 text-left border border-white/15 space-y-1.5">
+                        <span className="text-[11px] text-rose-300 font-bold uppercase tracking-wider block">
                           Câu ví dụ thực tế:
                         </span>
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-base sm:text-lg font-bold text-white">
                           {currentFlashcard.exampleSentence}
                         </p>
-                        <p className="text-xs text-rose-200 italic">
+                        <p className="text-xs sm:text-sm text-rose-200 italic font-mono font-medium">
                           {currentFlashcard.examplePinyin}
                         </p>
-                        <p className="text-xs text-slate-300">
+                        <p className="text-xs sm:text-sm text-slate-200 font-medium">
                           {currentFlashcard.exampleMeaning}
                         </p>
                       </div>
@@ -838,53 +848,57 @@ export const VocabularyFlashcardsView: React.FC = () => {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                 <tr>
+                  <th className="py-3 px-3 text-center w-14">STT</th>
                   <th className="py-3 px-4">Chữ Hán</th>
                   <th className="py-3 px-4">Pinyin & Hán Việt</th>
                   <th className="py-3 px-4">Nghĩa tiếng Việt</th>
                   <th className="py-3 px-4">Cấp độ</th>
-                  <th className="py-3 px-4">Ví dụ</th>
+                  <th className="py-3 px-4">Ví dụ thực tế</th>
                   <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredVocab.map((item) => {
+                {filteredVocab.map((item, idx) => {
                   const isMastered = studentProfile.masteredVocabIds.includes(item.id);
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-3 text-center font-bold text-slate-400 font-mono text-xs">
+                        #{String(idx + 1).padStart(2, '0')}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-serif text-2xl font-bold text-slate-900">
+                          <span className="font-serif text-2xl sm:text-3xl font-extrabold text-slate-900">
                             {item.word}
                           </span>
                           <button
                             onClick={() => speakChinese(item.word)}
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
                             title="Nghe phát âm"
                           >
-                            <Volume2 className="w-3.5 h-3.5" />
+                            <Volume2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-mono font-medium text-rose-600 block">
+                        <span className="font-mono font-bold text-rose-600 block text-base sm:text-lg">
                           {item.pinyin}
                         </span>
-                        <span className="text-slate-400 text-xs">
-                          {item.sinoVietnamese}
+                        <span className="text-slate-500 text-xs sm:text-sm font-semibold">
+                          [Hán Việt: {item.sinoVietnamese || '-'}]
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-800">
+                      <td className="py-3 px-4 font-bold text-slate-900 text-base sm:text-lg">
                         {item.meaning}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           {item.level}
                         </span>
                       </td>
-                      <td className="py-3 px-4 max-w-xs text-xs">
-                        <p className="font-medium text-slate-900">{item.exampleSentence}</p>
-                        <p className="text-slate-500 truncate">{item.exampleMeaning}</p>
+                      <td className="py-3 px-4 max-w-sm text-xs sm:text-sm">
+                        <p className="font-bold text-slate-900">{item.exampleSentence}</p>
+                        <p className="text-slate-600 font-medium truncate">{item.exampleMeaning}</p>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button
@@ -893,10 +907,10 @@ export const VocabularyFlashcardsView: React.FC = () => {
                               ? markVocabLearning(item.id)
                               : markVocabMastered(item.id)
                           }
-                          className={`p-1.5 rounded-lg border transition-colors ${
+                          className={`p-2 rounded-xl border transition-all cursor-pointer ${
                             isMastered
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs'
+                              : 'bg-white text-slate-400 border-slate-200 hover:text-slate-700 hover:bg-slate-50'
                           }`}
                           title={isMastered ? 'Bỏ đánh dấu thành thạo' : 'Đánh dấu đã thuộc'}
                         >
