@@ -450,65 +450,65 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
           </div>
         </div>
 
-        {/* 1.5. SÁCH BÀI TẬP 新HSK教程 学练手册 */}
+        {/* 1.5. DANH SÁCH KHÓA HỌC 新HSK教程 */}
         <div className="space-y-3 pt-2">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
             <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Sách bài tập <span className="font-serif font-bold text-slate-700">新HSK教程 学练手册</span>
+              Danh sách khóa học <span className="font-serif font-bold text-slate-700">新HSK教程</span>
             </h3>
           </div>
           <p className="text-xs text-slate-500">
-            Chọn quyển ➔ chọn bài ➔ nghe, làm bài và bấm Nộp bài để xem kết quả ngay.
+            Chọn khóa học ➔ chọn bài học ➔ học từ vựng, ngữ pháp, đối thoại và làm bài tập.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            {/* Quyển 1 - HSK 1 */}
+            {/* Khóa học HSK 1 */}
             <div
               onClick={() => handleNavigateCourse('HSK 1')}
               className="p-6 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
             >
               <div className="font-serif text-5xl font-black text-white/90">1</div>
               <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Quyển 1 · HSK 1</h4>
-                <p className="text-xs text-pink-100 font-serif">新HSK教程 1 学练手册</p>
+                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 1</h4>
+                <p className="text-xs text-pink-100 font-serif">新HSK教程 1 · Khóa học chuẩn</p>
                 <div className="pt-2">
                   <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    16/16 bài
+                    16/16 bài học
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Quyển 2 - HSK 2 */}
+            {/* Khóa học HSK 2 */}
             <div
               onClick={() => handleNavigateCourse('HSK 2')}
               className="p-6 rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
             >
               <div className="font-serif text-5xl font-black text-white/90">2</div>
               <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Quyển 2 · HSK 2</h4>
-                <p className="text-xs text-amber-100 font-serif">新HSK教程 2 学练手册</p>
+                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 2</h4>
+                <p className="text-xs text-amber-100 font-serif">新HSK教程 2 · Khóa học chuẩn</p>
                 <div className="pt-2">
                   <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    16/16 bài
+                    16/16 bài học
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Quyển 3 - HSK 3 */}
+            {/* Khóa học HSK 3 */}
             <div
               onClick={() => handleNavigateCourse('HSK 3')}
               className="p-6 rounded-3xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
             >
               <div className="font-serif text-5xl font-black text-white/90">3</div>
               <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Quyển 3 · HSK 3</h4>
-                <p className="text-xs text-teal-100 font-serif">新HSK教程 3 学练手册</p>
+                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 3</h4>
+                <p className="text-xs text-teal-100 font-serif">新HSK教程 3 · Khóa học chuẩn</p>
                 <div className="pt-2">
                   <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    19/19 bài
+                    19/19 bài học
                   </span>
                 </div>
               </div>
@@ -518,7 +518,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       </section>
 
       {/* ========================================================= */}
-      {/* PHÂN KHU 2: THEO HÌNH 2 (LUYỆN NGỮ ÂM & 12 TRÒ CHƠI TỪ VỰNG) */}
+      {/* PHÂN KHU 2: LUYỆN NGỮ ÂM */}
       {/* ========================================================= */}
       <section className="space-y-6 pt-4">
         {/* 2.1. LUYỆN NGỮ ÂM CARD */}
@@ -562,41 +562,6 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             >
               <Volume2 className="w-7 h-7 text-amber-300" />
             </button>
-          </div>
-        </div>
-
-        {/* 2.2. TRÒ CHƠI TỪ VỰNG (12 CARDS GRID) */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
-            <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Trò chơi từ vựng
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {gamesList.map((game) => (
-              <div
-                key={game.id}
-                onClick={() => setActiveGameModal(game.id)}
-                className={`p-5 rounded-3xl ${game.color} text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[160px] border border-white/15`}
-              >
-                <div>
-                  <div className="text-2xl mb-2">{game.icon}</div>
-                  <h4 className="text-base sm:text-lg font-black tracking-wide mb-1">
-                    {game.title}
-                  </h4>
-                  <p className="text-xs text-white/90 leading-relaxed font-medium">
-                    {game.desc}
-                  </p>
-                </div>
-                <div className="pt-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/20 text-white/90">
-                    {game.tag}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -779,6 +744,46 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* PHÂN KHU 4: TRÒ CHƠI TỪ VỰNG (DƯỚI CÙNG TRANG CHỦ) */}
+      {/* ========================================================= */}
+      <section className="space-y-4 pt-4 pb-6">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+          <h3 className="font-black text-slate-900 text-base sm:text-lg">
+            Trò chơi từ vựng
+          </h3>
+        </div>
+        <p className="text-xs text-slate-500">
+          Luyện phản xạ gõ pinyin, nhận diện chữ Hán và ngữ âm qua 12 trò chơi tương tác thú vị.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {gamesList.map((game) => (
+            <div
+              key={game.id}
+              onClick={() => setActiveGameModal(game.id)}
+              className={`p-5 rounded-3xl ${game.color} text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[160px] border border-white/15`}
+            >
+              <div>
+                <div className="text-2xl mb-2">{game.icon}</div>
+                <h4 className="text-base sm:text-lg font-black tracking-wide mb-1">
+                  {game.title}
+                </h4>
+                <p className="text-xs text-white/90 leading-relaxed font-medium">
+                  {game.desc}
+                </p>
+              </div>
+              <div className="pt-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/20 text-white/90">
+                  {game.tag}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
