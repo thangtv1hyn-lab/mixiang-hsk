@@ -56,7 +56,7 @@ function MainAppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
+    <div className="min-h-screen bg-[#FAF7F0] text-[#18181B] flex flex-col font-sans selection:bg-rose-500 selection:text-white">
       {/* Main Header */}
       <Header
         onOpenReminder={() => setIsReminderOpen(true)}
