@@ -25,6 +25,9 @@ import {
   Camera,
   Coins,
   Smile,
+  Crown,
+  Medal,
+  TrendingUp,
 } from 'lucide-react';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese } from '../utils/audioSpeech';
@@ -57,6 +60,40 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
   const [activeRadicalModal, setActiveRadicalModal] = useState(false);
   const [activeHanziStoryModal, setActiveHanziStoryModal] = useState(false);
   const [activePinyinModal, setActivePinyinModal] = useState(false);
+
+  // Leaderboard timeframe: 'today' | 'week' | 'month'
+  const [leaderboardTimeframe, setLeaderboardTimeframe] = useState<'today' | 'week' | 'month'>('today');
+
+  const leaderboardData = {
+    today: [
+      { rank: 1, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 380, level: 'HSK 4', title: 'Trạng nguyên', avatar: '👩‍🏫', isCurrentUser: false },
+      { rank: 2, name: 'Lê Tuấn Kiệt', score: 320, level: 'HSK 3', title: 'Bảng nhãn', avatar: '🧑‍🎓', isCurrentUser: false },
+      { rank: 3, name: 'Hoàng Mai Anh', score: 290, level: 'HSK 3', title: 'Thám hoa', avatar: '👩', isCurrentUser: false },
+      { rank: 4, name: 'Đặng Quốc Bảo', score: 240, level: 'HSK 2', title: 'Cử nhân', avatar: '👨‍💼', isCurrentUser: false },
+      { rank: 5, name: 'Trần Phương Thảo', score: 210, level: 'HSK 2', title: 'Tú tài', avatar: '👧', isCurrentUser: false },
+      { rank: 6, name: 'Phạm Minh Đức', score: 180, level: 'HSK 1', title: 'Tú tài', avatar: '👦', isCurrentUser: false },
+      { rank: 7, name: 'Vũ Hải Yến', score: 150, level: 'HSK 1', title: 'Đồng sinh', avatar: '👩‍🦰', isCurrentUser: false },
+      { rank: 8, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 95, level: 'HSK 1', title: 'Đồng sinh', avatar: '👤', isCurrentUser: true },
+    ],
+    week: [
+      { rank: 1, name: 'Lê Tuấn Kiệt', score: 1850, level: 'HSK 3', title: 'Trạng nguyên', avatar: '🧑‍🎓', isCurrentUser: false },
+      { rank: 2, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 1720, level: 'HSK 4', title: 'Bảng nhãn', avatar: '👩‍🏫', isCurrentUser: false },
+      { rank: 3, name: 'Hoàng Mai Anh', score: 1490, level: 'HSK 3', title: 'Thám hoa', avatar: '👩', isCurrentUser: false },
+      { rank: 4, name: 'Trần Phương Thảo', score: 1280, level: 'HSK 2', title: 'Cử nhân', avatar: '👧', isCurrentUser: false },
+      { rank: 5, name: 'Đặng Quốc Bảo', score: 1140, level: 'HSK 2', title: 'Cử nhân', avatar: '👨‍💼', isCurrentUser: false },
+      { rank: 6, name: 'Phạm Minh Đức', score: 950, level: 'HSK 1', title: 'Tú tài', avatar: '👦', isCurrentUser: false },
+      { rank: 7, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 620, level: 'HSK 1', title: 'Đồng sinh', avatar: '👤', isCurrentUser: true },
+      { rank: 8, name: 'Vũ Hải Yến', score: 580, level: 'HSK 1', title: 'Đồng sinh', avatar: '👩‍🦰', isCurrentUser: false },
+    ],
+    month: [
+      { rank: 1, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 6450, level: 'HSK 4', title: 'Trạng nguyên', avatar: '👩‍🏫', isCurrentUser: false },
+      { rank: 2, name: 'Lê Tuấn Kiệt', score: 5820, level: 'HSK 3', title: 'Bảng nhãn', avatar: '🧑‍🎓', isCurrentUser: false },
+      { rank: 3, name: 'Đặng Quốc Bảo', score: 4920, level: 'HSK 2', title: 'Thám hoa', avatar: '👨‍💼', isCurrentUser: false },
+      { rank: 4, name: 'Hoàng Mai Anh', score: 4310, level: 'HSK 3', title: 'Cử nhân', avatar: '👩', isCurrentUser: false },
+      { rank: 5, name: 'Trần Phương Thảo', score: 3890, level: 'HSK 2', title: 'Cử nhân', avatar: '👧', isCurrentUser: false },
+      { rank: 6, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 2150, level: 'HSK 1', title: 'Tú tài', avatar: '👤', isCurrentUser: true },
+    ],
+  };
 
   // Mini-game playable states for "Gõ pinyin" & "Nối từ"
   const [typingInput, setTypingInput] = useState('');
@@ -453,7 +490,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
         {/* 1.5. DANH SÁCH KHÓA HỌC 新HSK教程 */}
         <div className="space-y-3 pt-2">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
             <h3 className="font-black text-slate-900 text-base sm:text-lg">
               Danh sách khóa học <span className="font-serif font-bold text-slate-700">新HSK教程</span>
             </h3>
@@ -524,7 +561,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
         {/* 2.1. LUYỆN NGỮ ÂM CARD */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
             <h3 className="font-black text-slate-900 text-base sm:text-lg">
               Luyện ngữ âm
             </h3>
@@ -570,28 +607,206 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       {/* PHÂN KHU 3: THEO HÌNH 3 (BẢNG XẾP HẠNG, FLASHCARD, GIÁO TRÌNH) */}
       {/* ========================================================= */}
       <section className="space-y-6 pt-4">
-        {/* 3.1. BẢNG XẾP HẠNG BANNER */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 shadow-inner">
-              🏆
+        {/* 3.1. BẢNG XẾP HẠNG HỌC VIÊN XUẤT SẮC (THEME ĐỎ - BE - ĐEN) */}
+        <div className="rounded-3xl bg-[#FFFDF9] border-2 border-red-600/30 shadow-lg overflow-hidden space-y-5">
+          {/* Header Banner - Đỏ sơn mài truyền thống */}
+          <div className="bg-gradient-to-r from-red-800 via-red-600 to-rose-700 text-white p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-2 border-amber-400/40">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 shadow-inner border border-white/20">
+                🏆
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif font-black text-lg sm:text-xl tracking-wide text-amber-200">
+                    Bảng Xếp Hạng Học Viên Xuất Sắc
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 uppercase">
+                    HSK 3.0
+                  </span>
+                </div>
+                <p className="text-xs text-rose-100/90 mt-0.5">
+                  Tích lũy điểm khi học bài, làm bài tập và luyện đề để vinh danh trên bảng vàng
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-black text-base sm:text-lg">Bảng xếp hạng</h3>
-              <p className="text-xs text-white/90">
-                Làm bài tập, chơi trò chơi để tích điểm và leo hạng theo ngày, tuần, tháng
-              </p>
+
+            {/* Timeframe Filter Tabs (Đen & Be) */}
+            <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/15 self-stretch md:self-auto justify-center">
+              {[
+                { id: 'today', label: 'Hôm nay' },
+                { id: 'week', label: 'Tuần này' },
+                { id: 'month', label: 'Tháng này' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setLeaderboardTimeframe(tab.id as any)}
+                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                    leaderboardTimeframe === tab.id
+                      ? 'bg-amber-300 text-red-950 shadow-sm scale-105'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <div className="px-3.5 py-1.5 rounded-xl bg-white/20 border border-white/20 text-center">
-              <span className="block text-sm font-black">0</span>
-              <span className="text-[10px] text-white/80">hôm nay</span>
+          <div className="p-5 sm:p-6 space-y-6">
+            {/* Top 3 Podium (Bục Vinh Quang 3 Hạng Đầu) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 items-end pt-2">
+              {/* Top 2 - Bảng nhãn */}
+              {leaderboardData[leaderboardTimeframe][1] && (
+                <div className="order-2 sm:order-1 p-4 rounded-2xl bg-[#FAF7F0] border-2 border-slate-300 shadow-xs flex flex-col items-center text-center relative hover:shadow-md transition-shadow">
+                  <div className="absolute -top-3.5 px-3 py-0.5 rounded-full bg-slate-200 border border-slate-400 text-slate-800 font-extrabold text-xs shadow-xs">
+                    🥈 Hạng 2 · {leaderboardData[leaderboardTimeframe][1].title}
+                  </div>
+                  <div className="w-16 h-16 rounded-full bg-slate-200 border-2 border-slate-400 text-3xl flex items-center justify-center mt-2 shadow-inner">
+                    {leaderboardData[leaderboardTimeframe][1].avatar}
+                  </div>
+                  <h4 className="font-extrabold text-slate-900 text-sm sm:text-base mt-2 line-clamp-1">
+                    {leaderboardData[leaderboardTimeframe][1].name}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold mt-0.5">
+                    {leaderboardData[leaderboardTimeframe][1].level}
+                  </span>
+                  <div className="mt-2 text-base font-black text-slate-900 font-mono">
+                    {leaderboardData[leaderboardTimeframe][1].score.toLocaleString()} <span className="text-xs font-semibold text-slate-500">điểm</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Top 1 - Trạng nguyên (Cao nhất, Nổi bật Đỏ - Vàng) */}
+              {leaderboardData[leaderboardTimeframe][0] && (
+                <div className="order-1 sm:order-2 p-5 rounded-3xl bg-gradient-to-b from-[#FFFDF9] to-[#FAF7F0] border-2 border-red-600 shadow-xl flex flex-col items-center text-center relative -translate-y-1 sm:-translate-y-2">
+                  <div className="absolute -top-4 px-4 py-1 rounded-full bg-red-600 border border-amber-300 text-amber-200 font-extrabold text-xs shadow-md flex items-center gap-1 animate-pulse">
+                    <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                    <span>🥇 Quán Quân · {leaderboardData[leaderboardTimeframe][0].title}</span>
+                  </div>
+                  <div className="w-20 h-20 rounded-full bg-red-100 border-3 border-red-500 text-4xl flex items-center justify-center mt-2 shadow-lg ring-4 ring-amber-300/40">
+                    {leaderboardData[leaderboardTimeframe][0].avatar}
+                  </div>
+                  <h4 className="font-black text-red-950 text-base sm:text-lg mt-2 line-clamp-1">
+                    {leaderboardData[leaderboardTimeframe][0].name}
+                  </h4>
+                  <span className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 text-xs font-bold mt-0.5 border border-red-200">
+                    {leaderboardData[leaderboardTimeframe][0].level}
+                  </span>
+                  <div className="mt-2 text-xl font-black text-red-700 font-mono">
+                    {leaderboardData[leaderboardTimeframe][0].score.toLocaleString()} <span className="text-xs font-semibold text-red-900">điểm</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Top 3 - Thám hoa */}
+              {leaderboardData[leaderboardTimeframe][2] && (
+                <div className="order-3 p-4 rounded-2xl bg-[#FAF7F0] border-2 border-amber-700/30 shadow-xs flex flex-col items-center text-center relative hover:shadow-md transition-shadow">
+                  <div className="absolute -top-3.5 px-3 py-0.5 rounded-full bg-amber-100 border border-amber-600 text-amber-900 font-extrabold text-xs shadow-xs">
+                    🥉 Hạng 3 · {leaderboardData[leaderboardTimeframe][2].title}
+                  </div>
+                  <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-600 text-3xl flex items-center justify-center mt-2 shadow-inner">
+                    {leaderboardData[leaderboardTimeframe][2].avatar}
+                  </div>
+                  <h4 className="font-extrabold text-slate-900 text-sm sm:text-base mt-2 line-clamp-1">
+                    {leaderboardData[leaderboardTimeframe][2].name}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold mt-0.5">
+                    {leaderboardData[leaderboardTimeframe][2].level}
+                  </span>
+                  <div className="mt-2 text-base font-black text-slate-900 font-mono">
+                    {leaderboardData[leaderboardTimeframe][2].score.toLocaleString()} <span className="text-xs font-semibold text-slate-500">điểm</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="px-3.5 py-1.5 rounded-xl bg-white/20 border border-white/20 text-center">
-              <span className="block text-sm font-black">0</span>
-              <span className="text-[10px] text-white/80">tuần này</span>
+
+            {/* Danh sách học viên từ Hạng 4 trở đi */}
+            <div className="rounded-2xl border border-[#EBE4D5] overflow-hidden bg-white shadow-2xs">
+              <div className="bg-[#F5EFEB] px-4 py-2.5 text-slate-700 text-xs font-bold flex items-center justify-between border-b border-[#EBE4D5]">
+                <span>Thứ hạng & Học viên</span>
+                <span>Cấp độ & Điểm tích lũy</span>
+              </div>
+
+              <div className="divide-y divide-[#F0EAE1]">
+                {leaderboardData[leaderboardTimeframe].slice(3).map((item) => (
+                  <div
+                    key={item.rank}
+                    className={`px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
+                      item.isCurrentUser
+                        ? 'bg-red-50/90 border-l-4 border-red-600'
+                        : 'hover:bg-[#FAF7F0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs ${
+                          item.isCurrentUser
+                            ? 'bg-red-600 text-white'
+                            : 'bg-slate-900 text-white'
+                        }`}
+                      >
+                        #{item.rank}
+                      </span>
+                      <div className="text-xl">{item.avatar}</div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs sm:text-sm text-slate-900">
+                            {item.name}
+                          </span>
+                          {item.isCurrentUser && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white">
+                              Bạn
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          Học vị: <strong className="text-slate-700">{item.title}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="font-black text-sm text-red-700 font-mono block">
+                        {item.score.toLocaleString()} điểm
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                        {item.level}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Thanh thông tin thứ hạng của bạn */}
+            <div className="p-4 rounded-2xl bg-[#FAF7F0] border border-red-600/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <div className="w-10 h-10 rounded-xl bg-red-600 text-white font-serif font-black text-lg flex items-center justify-center shadow-xs">
+                  榜
+                </div>
+                <div>
+                  <h5 className="font-bold text-xs sm:text-sm text-slate-900">
+                    Thứ hạng hiện tại: <strong className="text-red-700">#8</strong> • Còn thiếu <strong className="text-slate-900">55 điểm</strong> để vượt qua hạng #7!
+                  </h5>
+                  <p className="text-[11px] text-slate-500">
+                    Làm bài tập hoặc luyện flashcard ngay hôm nay để leo hạng cao hơn
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    onOpenGoogleAuth();
+                    return;
+                  }
+                  setActiveTab('courses');
+                }}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              >
+                <span>Học ngay để leo hạng</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -599,7 +814,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
         {/* 3.2. FLASHCARD TỪ VỰNG (3 WIDE CARDS) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
             <h3 className="font-black text-slate-900 text-base sm:text-lg">
               Flashcard từ vựng
             </h3>
@@ -668,7 +883,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
         {/* 3.3. GIÁO TRÌNH HSK (GRID OF 4 BOOKS) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
             <h3 className="font-black text-slate-900 text-base sm:text-lg">
               Giáo trình
             </h3>
@@ -752,7 +967,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       {/* ========================================================= */}
       <section className="space-y-4 pt-4 pb-6">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-5 rounded-full bg-purple-600"></span>
+          <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
           <h3 className="font-black text-slate-900 text-base sm:text-lg">
             Trò chơi từ vựng
           </h3>
