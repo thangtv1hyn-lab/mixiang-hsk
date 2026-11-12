@@ -71,18 +71,36 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
   const heroSlides = [
     {
       id: 'boya-red',
-      title: 'Tuyển sinh Lớp Học Tiếng Trung Cơ Bản - Boya',
+      badge: 'LỚP HỌC TIẾNG TRUNG · DÀNH CHO NGƯỜI MỚI',
+      title: 'Tuyển sinh Lớp Học Tiếng Trung Cơ Bản',
+      subtitle: 'Khóa 40 buổi (02 buổi/tuần) · Giáo trình Boya chuẩn quốc tế · Cam kết chuẩn đầu ra HSK 3',
       image: '/assets/aistudio/1794493556654_2645543663410262361_g4922351168579610784_e99743bc4875704f02020ec30504d074_7a96f4ba.jpg',
+      teacher: 'Giảng viên Boya Chuẩn Sư Phạm',
+      highlights: ['Khóa 40 buổi · 02 buổi/tuần', 'Tối đa 08 học viên 1 lớp', 'Hình thức Online / Offline', 'Đầu ra HSK 3 & 5 kỹ năng'],
+      hotline: '0378.105.999',
+      ctaText: 'Đăng ký tư vấn xếp lớp',
     },
     {
       id: 'boya-black',
-      title: 'Tuyển sinh Khóa Học Tiếng Trung Dành Cho Người Mới Bắt Đầu - Boya',
+      badge: 'LỘ TRÌNH CHUYÊN SÂU · HSK 3.0',
+      title: 'Tuyển sinh Khóa Học Tiếng Trung Toàn Diện',
+      subtitle: 'Học bài bản cùng giáo trình Boya và giảng viên tận tâm · Luyện giao tiếp phản xạ tự nhiên',
       image: '/assets/aistudio/1794493556657_2645543663410262361_g4922351168579610784_dce6dc1e88bf0bec69888aec30c627a0_f9b8c805.jpg',
+      teacher: 'Lão Sư MiXiangg HSK',
+      highlights: ['5 kỹ năng: Nghe - Nói - Đọc - Viết - Dịch', 'Giáo trình Boya chuẩn Bắc Kinh', 'Tặng tài khoản luyện thi HSK 3.0', 'Tư vấn: 0378.105.999'],
+      hotline: '0378.105.999',
+      ctaText: 'Khám phá bài học HSK',
     },
     {
-      id: 'brand-banner',
-      title: 'MIXIANGG HSK · CHINESE LEARNING · 汉语学习',
-      image: '/assets/aistudio/banner_d01a30da.jpg',
+      id: 'calligraphy-seal',
+      badge: 'TÔN CHỈ HỌC TẬP TRUYỀN THỐNG',
+      title: '勤学好问 · Chuyên Cần Luyện HSK 3.0',
+      subtitle: 'Sách bài tập · Giáo trình chuẩn · Luyện ngữ âm · Thẻ từ vựng · Thi thử có phân tích điểm',
+      sealImage: '/assets/aistudio/logo_2cd38f9f.jpg',
+      teacher: 'Ấn triện chu sa MiXiangg HSK',
+      highlights: ['Nghe máy phát âm chuẩn', 'Nhận diện giọng nói tiếng Trung', 'Hơn 2,000 từ vựng & ngữ pháp', 'Bộ đề thi thử sát đề thật'],
+      hotline: '0378.105.999',
+      ctaText: 'Luyện tập Flashcard ngay',
     },
   ];
 
@@ -323,88 +341,152 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             <span className="text-red-700">之</span>
           </div>
 
-          {/* Banner & Slider ảnh tuyển sinh trung tâm - Full Ảnh Không Diễn Giải Thêm Chữ */}
+          {/* Banner & Slider ảnh tuyển sinh trung tâm (Selector 2 target) */}
           <div
-            className="flex-1 rounded-3xl bg-[#18181B] text-white shadow-xl relative overflow-hidden flex flex-col justify-center items-center border-2 border-red-700/60 min-h-[240px] sm:min-h-[320px] md:min-h-[380px] lg:min-h-[420px] group/slider transition-all select-none"
+            className="flex-1 rounded-3xl bg-gradient-to-r from-red-950 via-red-900 to-[#18181B] text-white shadow-xl relative overflow-hidden flex flex-col justify-between border-2 border-red-700/60 min-h-[220px] sm:min-h-[280px] md:min-h-[310px] group/slider transition-all"
             onMouseEnter={() => setIsSlidePaused(true)}
             onMouseLeave={() => setIsSlidePaused(false)}
           >
-            {/* Ambient Blurred Background of the current slide image */}
-            <div
-              className="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-110 pointer-events-none transition-all duration-700"
-              style={{ backgroundImage: `url(${heroSlides[currentSlide].image})` }}
-            />
-            {/* Subtle lacquer vignette overlay */}
-            <div className="absolute inset-0 bg-radial from-transparent via-[#18181B]/40 to-[#18181B]/80 pointer-events-none" />
+            {/* Top Indicator & Badge */}
+            <div className="relative z-10 p-4 sm:p-6 pb-2 flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-white/10 text-amber-300 border border-amber-400/30 backdrop-blur-md shadow-xs">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>{heroSlides[currentSlide].badge}</span>
+              </span>
 
-            {/* FULL SLIDE IMAGE */}
-            <div
-              onClick={() => setActivePosterModal(heroSlides[currentSlide].image)}
-              className="relative z-10 w-full h-full flex items-center justify-center p-2 sm:p-3 cursor-pointer group/img"
-              title="Bấm để xem ảnh phóng to đầy đủ"
-            >
-              <img
-                src={heroSlides[currentSlide].image}
-                alt={heroSlides[currentSlide].title}
-                className="w-full max-h-[380px] sm:max-h-[440px] object-contain drop-shadow-2xl rounded-2xl transition-transform duration-500 group-hover/img:scale-[1.01]"
-              />
-
-              {/* Discreet hover zoom badge */}
-              <div className="absolute bottom-4 right-4 z-20 px-3 py-1.5 rounded-xl bg-black/75 hover:bg-black text-amber-300 border border-amber-400/40 text-[11px] font-bold backdrop-blur-md opacity-0 group-hover/slider:opacity-100 transition-opacity flex items-center gap-1.5 shadow-lg">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Bấm phóng to xem chi tiết</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/40 text-[11px] font-mono font-bold text-white/90 border border-white/10">
+                <span>{currentSlide + 1}</span>
+                <span className="text-white/40">/</span>
+                <span>{heroSlides.length}</span>
               </div>
             </div>
 
-            {/* Left Nav Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-              }}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-red-700 text-white border border-white/20 hover:border-red-400 shadow-xl backdrop-blur-md transition-all cursor-pointer opacity-75 hover:opacity-100 hover:scale-110"
-              title="Slide trước"
-              aria-label="Slide trước"
-            >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
+            {/* Slide Content Rendering */}
+            <div className="relative z-10 px-4 sm:px-6 py-1 flex-1 flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Left Column: Text & CTAs */}
+              <div className="space-y-2 max-w-xl text-left">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-sm font-serif">
+                  {heroSlides[currentSlide].title}
+                </h2>
+                <p className="text-xs sm:text-sm text-red-100/90 leading-relaxed font-medium line-clamp-2">
+                  {heroSlides[currentSlide].subtitle}
+                </p>
 
-            {/* Right Nav Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-              }}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-red-700 text-white border border-white/20 hover:border-red-400 shadow-xl backdrop-blur-md transition-all cursor-pointer opacity-75 hover:opacity-100 hover:scale-110"
-              title="Slide kế tiếp"
-              aria-label="Slide kế tiếp"
-            >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
+                {/* Highlights tags */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {heroSlides[currentSlide].highlights.map((h, hIdx) => (
+                    <span
+                      key={hIdx}
+                      className="px-2.5 py-0.5 rounded-md bg-white/10 border border-white/15 text-amber-200 text-[10px] sm:text-[11px] font-semibold"
+                    >
+                      ✓ {h}
+                    </span>
+                  ))}
+                </div>
 
-            {/* Bottom Floating Indicator & Dots */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-black/75 border border-white/20 backdrop-blur-md shadow-lg">
-              <span className="text-[11px] font-mono font-bold text-amber-300">
-                {currentSlide + 1} / {heroSlides.length}
-              </span>
-              <div className="w-[1px] h-3 bg-white/25" />
-              <div className="flex items-center gap-1.5">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        onOpenGoogleAuth();
+                        return;
+                      }
+                      setActiveTab('courses');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105"
+                  >
+                    <span>{heroSlides[currentSlide].ctaText}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  {heroSlides[currentSlide].hotline && (
+                    <a
+                      href="tel:0378105999"
+                      className="px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+                      title="Gọi ngay hotline tư vấn khóa học"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Hotline: 0378.105.999</span>
+                    </a>
+                  )}
+
+                  {heroSlides[currentSlide].image && (
+                    <button
+                      onClick={() => setActivePosterModal(heroSlides[currentSlide].image!)}
+                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Xem ảnh poster phóng to chi tiết"
+                    >
+                      <span>Xem poster 🔍</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Poster / Banner Thumbnail Preview */}
+              <div className="shrink-0 relative">
+                {heroSlides[currentSlide].image ? (
+                  <div
+                    onClick={() => setActivePosterModal(heroSlides[currentSlide].image!)}
+                    className="relative cursor-pointer group/img transition-transform hover:scale-105"
+                    title="Bấm để xem ảnh phóng to đầy đủ"
+                  >
+                    <img
+                      src={heroSlides[currentSlide].image}
+                      alt={heroSlides[currentSlide].title}
+                      className="w-32 h-32 sm:w-44 sm:h-44 md:w-52 md:h-52 object-cover rounded-2xl border-2 border-amber-400/60 shadow-xl shadow-black/40 bg-white"
+                    />
+                    <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold text-white backdrop-blur-2xs">
+                      Bấm phóng to 🔍
+                    </div>
+                  </div>
+                ) : heroSlides[currentSlide].sealImage ? (
+                  <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-2xl bg-white border-2 border-red-700/80 p-3 shadow-xl flex items-center justify-center">
+                    <img
+                      src={heroSlides[currentSlide].sealImage}
+                      alt="Triện khắc MiXiangg HSK"
+                      className="w-full h-full object-contain mix-blend-multiply"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Bottom Controls: Previous / Next & Dots */}
+            <div className="relative z-10 p-3 sm:p-4 pt-2 flex items-center justify-between gap-2 border-t border-white/10 bg-black/20">
+              <button
+                onClick={() =>
+                  setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
+                }
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                title="Slide trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Dots */}
+              <div className="flex items-center gap-2">
                 {heroSlides.map((_, dotIdx) => (
                   <button
                     key={dotIdx}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentSlide(dotIdx);
-                    }}
+                    onClick={() => setCurrentSlide(dotIdx)}
                     className={`h-2 rounded-full transition-all cursor-pointer ${
                       currentSlide === dotIdx
-                        ? 'w-6 bg-amber-400 shadow-xs'
-                        : 'w-2 bg-white/40 hover:bg-white/80'
+                        ? 'w-7 bg-amber-400 shadow-xs'
+                        : 'w-2 bg-white/30 hover:bg-white/60'
                     }`}
-                    title={`Chuyển tới ảnh ${dotIdx + 1}`}
+                    title={`Chuyển tới slide ${dotIdx + 1}`}
                   />
                 ))}
               </div>
+
+              <button
+                onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                title="Slide kế tiếp"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
