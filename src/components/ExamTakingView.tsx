@@ -282,7 +282,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
               {/* Question Header */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-50 text-red-700 border border-red-200">
                     Câu {currentQuestionIdx + 1} / {exam.questions.length}
                   </span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
@@ -297,9 +297,9 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
 
               {/* Listening Audio Prompt Player */}
               {activeQuestion.section === 'listening' && activeQuestion.audioPrompt && (
-                <div className="bg-gradient-to-r from-indigo-50 to-rose-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between gap-4">
+                <div className="bg-[#FAF7F0] rounded-2xl p-4 border border-[#E6DEC8] flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <span className="text-xs font-bold text-indigo-900 block">
+                    <span className="text-xs font-bold text-[#18181B] block">
                       Đoạn ghi âm bài nghe HSK:
                     </span>
                     <p className="text-xs text-slate-500">
@@ -310,7 +310,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                   <button
                     onClick={() => handlePlayAudio(activeQuestion.audioPrompt!)}
                     disabled={isPlayingAudio}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs flex items-center gap-2 hover:bg-indigo-700 shadow-xs transition-colors shrink-0"
+                    className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold text-xs flex items-center gap-2 hover:bg-red-700 shadow-xs transition-colors shrink-0"
                   >
                     <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-bounce' : ''}`} />
                     <span>{isPlayingAudio ? 'Đang phát...' : 'Phát âm thanh'}</span>
@@ -406,7 +406,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                   return (
                     <div className="space-y-3 pt-2">
                       <label className="text-xs font-semibold text-slate-700 block flex items-center gap-1.5">
-                        <PenTool className="w-4 h-4 text-purple-600" />
+                        <PenTool className="w-4 h-4 text-red-600" />
                         <span>Viết / Sắp xếp câu hoàn chỉnh:</span>
                       </label>
                       <textarea
@@ -419,10 +419,10 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                           }))
                         }
                         placeholder="Nhập câu tiếng Trung hoàn chỉnh theo yêu cầu đề bài..."
-                        className="w-full p-3.5 rounded-xl border border-slate-300 focus:border-purple-500 bg-white text-sm font-medium text-slate-900 shadow-xs outline-hidden"
+                        className="w-full p-3.5 rounded-xl border border-[#E6DEC8] focus:border-red-500 bg-white text-sm font-medium text-slate-900 shadow-xs outline-hidden"
                       />
                       {currentValue && (
-                        <p className="text-[11px] text-purple-700 font-semibold flex items-center gap-1">
+                        <p className="text-[11px] text-red-700 font-semibold flex items-center gap-1">
                           <Check className="w-3.5 h-3.5" />
                           <span>Đã ghi nhận bài viết ({currentValue.length} ký tự)</span>
                         </p>

@@ -98,8 +98,8 @@ export const ReportsView: React.FC = () => {
       {/* Top Header & Export Buttons */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 print:hidden">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-indigo-600" />
+          <h2 className="text-xl sm:text-2xl font-bold text-[#18181B] flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-red-600" />
             <span>Báo Cáo Kết Quả & Tiến Độ Học Tập</span>
           </h2>
           <p className="text-xs text-slate-500">
@@ -109,19 +109,19 @@ export const ReportsView: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Timeframe selector */}
-          <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+          <div className="flex items-center p-1 bg-[#F5EFEB] rounded-xl text-xs font-semibold border border-[#E6DEC8]">
             <button
               onClick={() => setTimeframe('week')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
-                timeframe === 'week' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+              className={`px-3 py-1.5 rounded-lg transition-colors font-bold ${
+                timeframe === 'week' ? 'bg-white text-red-700 shadow-2xs border border-red-200' : 'text-[#18181B]/70'
               }`}
             >
               Theo Tuần
             </button>
             <button
               onClick={() => setTimeframe('month')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${
-                timeframe === 'month' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+              className={`px-3 py-1.5 rounded-lg transition-colors font-bold ${
+                timeframe === 'month' ? 'bg-white text-red-700 shadow-2xs border border-red-200' : 'text-[#18181B]/70'
               }`}
             >
               Theo Tháng
@@ -130,10 +130,10 @@ export const ReportsView: React.FC = () => {
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E6DEC8] text-xs font-semibold text-[#18181B] hover:bg-[#FAF7F0] transition-colors shadow-xs"
             title="Tải file Excel / CSV chi tiết"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <FileSpreadsheet className="w-4 h-4 text-red-600" />
             <span className="hidden sm:inline">Xuất CSV</span>
           </button>
 
@@ -244,15 +244,15 @@ export const ReportsView: React.FC = () => {
                   </div>
 
                   {/* The bar */}
-                  <div className="w-full max-w-[32px] bg-slate-100 rounded-t-lg h-36 flex items-end overflow-hidden">
+                  <div className="w-full max-w-[32px] bg-[#F5EFEB] rounded-t-lg h-36 flex items-end overflow-hidden">
                     <div
-                      className="w-full bg-gradient-to-t from-indigo-600 to-rose-500 rounded-t-md transition-all duration-500 group-hover:brightness-110"
+                      className="w-full bg-gradient-to-t from-red-700 to-rose-500 rounded-t-md transition-all duration-500 group-hover:brightness-110"
                       style={{ height: `${Math.max(heightPercent, 4)}%` }}
                     ></div>
                   </div>
 
                   {/* Day label */}
-                  <span className="text-[10px] text-slate-500 font-medium group-hover:text-indigo-600">
+                  <span className="text-[10px] text-slate-500 font-medium group-hover:text-red-600">
                     {item.label}
                   </span>
                 </div>
@@ -276,10 +276,10 @@ export const ReportsView: React.FC = () => {
 
           <div className="space-y-3 pt-2">
             {[
-              { skill: 'Nghe hiểu (Listening)', score: 88, color: 'bg-indigo-600' },
-              { skill: 'Đọc hiểu (Reading)', score: 92, color: 'bg-emerald-600' },
-              { skill: 'Từ vựng (Vocabulary)', score: 85, color: 'bg-amber-600' },
-              { skill: 'Ngữ pháp (Grammar)', score: 80, color: 'bg-purple-600' },
+              { skill: 'Nghe hiểu (Listening)', score: 88, color: 'bg-red-700' },
+              { skill: 'Đọc hiểu (Reading)', score: 92, color: 'bg-red-600' },
+              { skill: 'Từ vựng (Vocabulary)', score: 85, color: 'bg-[#18181B]' },
+              { skill: 'Ngữ pháp (Grammar)', score: 80, color: 'bg-stone-800' },
               { skill: 'Viết & Cấu trúc (Writing)', score: 75, color: 'bg-rose-600' },
             ].map((s) => (
               <div key={s.skill} className="space-y-1">

@@ -172,8 +172,8 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose })
 
         {/* Test Notification Banner */}
         {testNotificationSent && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-center gap-2 animate-in fade-in">
+            <Check className="w-4 h-4 text-red-600 shrink-0" />
             <span>
               Đã kích hoạt thông báo! Chuỗi ngày học của bạn là {studentProfile.streakDays} ngày.
             </span>
@@ -185,7 +185,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose })
           <button
             type="button"
             onClick={handleTriggerTestNotification}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            className="text-xs font-bold text-red-700 hover:text-red-800"
           >
             Thử gửi thông báo ➔
           </button>

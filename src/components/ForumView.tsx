@@ -194,7 +194,7 @@ export const ForumView: React.FC = () => {
                       {selectedPost.authorName}
                     </span>
                     {selectedPost.role === 'admin' && (
-                      <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.2 rounded-md bg-[#18181B] text-white text-[10px] font-bold">
                         Quản trị
                       </span>
                     )}
@@ -261,8 +261,8 @@ export const ForumView: React.FC = () => {
 
           {/* Replies Section */}
           <div className="space-y-4">
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-indigo-600" />
+            <h3 className="font-bold text-base text-[#18181B] flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-red-600" />
               <span>Các câu trả lời ({selectedPost.replies.length})</span>
             </h3>
 
@@ -427,8 +427,8 @@ export const ForumView: React.FC = () => {
                   </div>
 
                   {post.isSolved && (
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                      <CheckCircle2 className="w-3 h-3 text-red-600" />
                       Đã giải đáp
                     </span>
                   )}

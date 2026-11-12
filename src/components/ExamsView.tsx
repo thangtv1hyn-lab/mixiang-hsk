@@ -30,10 +30,10 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
   return (
     <div className="space-y-8 pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-md">
+      <div className="bg-gradient-to-r from-[#18181B] via-red-950 to-[#18181B] border border-red-900/40 text-white rounded-2xl p-6 sm:p-8 shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-200 border border-red-400/30">
               <Award className="w-3.5 h-3.5 text-amber-400" />
               <span>Hệ thống Đề thi thử HSK Chuẩn Quốc Tế</span>
             </span>
@@ -64,7 +64,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
             {lastExamResult && (
               <button
                 onClick={onViewResult}
-                className="w-full mt-2 py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-center transition-colors block"
+                className="w-full mt-2 py-1.5 px-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-center transition-colors block shadow-xs"
               >
                 Xem kết quả bài vừa thi ➔
               </button>
@@ -75,15 +75,15 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
 
       {/* Level Filter Tabs */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-[#F5EFEB] rounded-xl border border-[#E6DEC8] overflow-x-auto">
           {(['ALL', 'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5'] as const).map((lvl) => (
             <button
               key={lvl}
               onClick={() => setSelectedLevel(lvl)}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                 selectedLevel === lvl
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-red-700 shadow-2xs border border-red-200'
+                  : 'text-[#18181B]/70 hover:text-red-700'
               }`}
             >
               {lvl === 'ALL' ? 'Tất cả cấp độ' : lvl}
@@ -94,7 +94,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
         {userRole !== 'student' && (
           <button
             onClick={() => setActiveTab('admin')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs sm:text-sm font-semibold hover:bg-indigo-700 shadow-xs cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#18181B] text-white text-xs sm:text-sm font-bold hover:bg-black shadow-xs cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Tạo & Quản lý đề thi</span>
@@ -116,11 +116,11 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
           return (
             <div
               key={exam.id}
-              className="bg-white rounded-2xl border border-slate-200/90 p-6 flex flex-col justify-between hover:shadow-lg transition-all duration-200"
+              className="bg-white rounded-2xl border border-[#E6DEC8] p-6 flex flex-col justify-between hover:border-red-300 hover:shadow-lg transition-all duration-200"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
                     {exam.level}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
@@ -129,7 +129,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
                   </span>
                 </div>
 
-                <h3 className="font-bold text-base text-slate-900 line-clamp-1">
+                <h3 className="font-bold text-base text-[#18181B] line-clamp-1">
                   {exam.title}
                 </h3>
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
@@ -138,22 +138,22 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
 
                 {/* Exam Breakdown Badges */}
                 <div className="grid grid-cols-3 gap-2 pt-2 text-center text-[11px] font-medium text-slate-600">
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="bg-[#FAF7F0] p-2 rounded-lg border border-[#E6DEC8]">
                     <span className="block text-slate-400 text-[10px]">Số câu</span>
-                    <span className="font-bold text-slate-800">{exam.questions.length} câu</span>
+                    <span className="font-bold text-[#18181B]">{exam.questions.length} câu</span>
                   </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="bg-[#FAF7F0] p-2 rounded-lg border border-[#E6DEC8]">
                     <span className="block text-slate-400 text-[10px]">Điểm đạt</span>
-                    <span className="font-bold text-indigo-700">{exam.passScore}/{exam.totalPoints}</span>
+                    <span className="font-bold text-red-700">{exam.passScore}/{exam.totalPoints}</span>
                   </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="bg-[#FAF7F0] p-2 rounded-lg border border-[#E6DEC8]">
                     <span className="block text-slate-400 text-[10px]">Đã thi</span>
-                    <span className="font-bold text-slate-800">{pastAttempts.length} lần</span>
+                    <span className="font-bold text-[#18181B]">{pastAttempts.length} lần</span>
                   </div>
                 </div>
 
                 {highestScore !== null && (
-                  <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">
+                  <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-medium">
                     <span>Điểm cao nhất của bạn:</span>
                     <span className="font-bold">{highestScore} / {exam.totalPoints} điểm</span>
                   </div>

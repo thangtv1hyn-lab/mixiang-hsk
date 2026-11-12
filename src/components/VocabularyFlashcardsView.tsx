@@ -315,11 +315,11 @@ export const VocabularyFlashcardsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-purple-600" />
+              <Layers className="w-4 h-4 text-red-700" />
               <span>Bộ từ vựng đang học:</span>
             </span>
             {activeDeck ? (
-              <span className="text-xs font-extrabold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+              <span className="text-xs font-extrabold text-red-700 bg-[#F5EFEB] px-2.5 py-1 rounded-lg border border-red-200">
                 {activeDeck.title} ({activeDeck.cards.length} thẻ)
               </span>
             ) : (
@@ -337,7 +337,7 @@ export const VocabularyFlashcardsView: React.FC = () => {
                   setDeckToEdit(null);
                   setIsAIFlashcardModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-rose-700 hover:from-red-800 hover:to-rose-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Tạo bộ Flashcard bằng AI</span>
@@ -347,7 +347,7 @@ export const VocabularyFlashcardsView: React.FC = () => {
                   setDeckToEdit(null);
                   setIsDeckEditorOpen(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-[#F5EFEB] hover:bg-[#EBE4D5] text-red-700 border border-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Thêm bộ từ mới</span>
@@ -419,12 +419,12 @@ export const VocabularyFlashcardsView: React.FC = () => {
                 }}
                 className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 border ${
                   activeDeckId === deck.id
-                    ? 'bg-purple-700 text-white border-purple-700 shadow-xs'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-50/50'
+                    ? 'bg-red-700 text-white border-red-700 shadow-xs'
+                    : 'bg-white text-slate-700 border-[#E6DEC8] hover:bg-[#FAF7F0]'
                 }`}
               >
                 <span>{deck.title}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeDeckId === deck.id ? 'bg-purple-900 text-purple-200' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeDeckId === deck.id ? 'bg-red-900 text-red-100' : 'bg-slate-100 text-slate-600'}`}>
                   {deck.cards.length}
                 </span>
                 {deck.createdBy === 'ai' && (
@@ -621,10 +621,10 @@ export const VocabularyFlashcardsView: React.FC = () => {
 
                 <button
                   onClick={() => handleRateCard('good')}
-                  className="p-3.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs sm:text-sm hover:bg-emerald-100 transition-colors flex flex-col items-center gap-1"
+                  className="p-3.5 rounded-2xl bg-red-600 text-white border border-red-700 font-bold text-xs sm:text-sm hover:bg-red-700 transition-colors flex flex-col items-center gap-1 shadow-xs"
                 >
                   <span>Đã thuộc ✓</span>
-                  <span className="text-[10px] font-normal text-emerald-600">+10 XP</span>
+                  <span className="text-[10px] font-normal text-red-100">+10 XP</span>
                 </button>
               </div>
 

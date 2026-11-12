@@ -390,10 +390,10 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
               <div className="flex items-center md:items-start gap-4">
                 <div className="relative">
                   <div
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-zinc-800 to-zinc-950 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
                       activeDialogueIndex !== null &&
                       (lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') || activeDialogueIndex % 2 === 0)
-                        ? 'border-sky-300 ring-4 ring-sky-400/50 scale-105 animate-pulse'
+                        ? 'border-red-500 ring-4 ring-red-500/50 scale-105 animate-pulse'
                         : 'border-white/20'
                     }`}
                   >
@@ -401,17 +401,17 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   </div>
                   {activeDialogueIndex !== null &&
                     (lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') || activeDialogueIndex % 2 === 0) && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-500 text-white shadow-xs whitespace-nowrap animate-bounce">
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white shadow-xs whitespace-nowrap animate-bounce">
                         Đang nói 🔊
                       </span>
                     )}
                 </div>
                 <div className="text-left">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-400/30 uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-950/60 text-red-200 border border-red-600/40 uppercase tracking-wider">
                     Nhân vật A
                   </span>
                   <h4 className="text-lg font-bold text-white mt-1">Tiểu Minh</h4>
-                  <p className="text-xs text-sky-200/80">Học viên tiếng Trung HSK</p>
+                  <p className="text-xs text-slate-300">Học viên tiếng Trung HSK</p>
                 </div>
               </div>
 
@@ -523,9 +523,9 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   <div
                     className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md transition-all duration-300 ${
                       isSpeakerA
-                        ? 'bg-gradient-to-tr from-sky-400 to-blue-600 text-white'
-                        : 'bg-gradient-to-tr from-amber-400 to-rose-600 text-white'
-                    } ${isCurrentActive ? 'ring-4 ring-rose-400 scale-110 animate-bounce' : 'opacity-90'}`}
+                        ? 'bg-gradient-to-tr from-zinc-800 to-zinc-950 text-white border border-[#E6DEC8]'
+                        : 'bg-gradient-to-tr from-amber-600 to-red-600 text-white'
+                    } ${isCurrentActive ? 'ring-4 ring-red-500 scale-110 animate-bounce' : 'opacity-90'}`}
                   >
                     {isSpeakerA ? '👦' : '👩‍🏫'}
                   </div>
@@ -535,14 +535,14 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     onClick={() => handlePlaySingleDialogue(line.chinese, idx)}
                     className={`relative max-w-xl sm:max-w-2xl p-5 sm:p-6 rounded-3xl transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg ${
                       isSpeakerA
-                        ? 'bg-white border-2 border-slate-200 rounded-tl-xs text-left'
-                        : 'bg-amber-50/70 border-2 border-amber-200/90 rounded-tr-xs text-left'
+                        ? 'bg-white border-2 border-[#E6DEC8] rounded-tl-xs text-left'
+                        : 'bg-[#FAF7F0] border-2 border-red-200/80 rounded-tr-xs text-left'
                     } ${
                       isCurrentActive
                         ? isSpeakerA
-                          ? 'border-sky-500 ring-4 ring-sky-200 bg-sky-50/95 shadow-xl scale-[1.015]'
-                          : 'border-amber-500 ring-4 ring-amber-200 bg-amber-100/95 shadow-xl scale-[1.015]'
-                        : 'hover:border-rose-300'
+                          ? 'border-red-600 ring-4 ring-red-200 bg-[#FAF7F0] shadow-xl scale-[1.015]'
+                          : 'border-amber-600 ring-4 ring-amber-200 bg-[#F5EFEB] shadow-xl scale-[1.015]'
+                        : 'hover:border-red-400'
                     }`}
                   >
                     {/* Header: Speaker & Controls */}

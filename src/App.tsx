@@ -158,7 +158,7 @@ function MainAppContent() {
             setIsAiTutorOpen(true);
           }
         }}
-        className="fixed bottom-6 right-6 z-40 p-3.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer group"
+        className="fixed bottom-6 right-6 z-40 p-3.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-red-800 via-red-600 to-rose-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer group border border-red-500/40"
         title="Trò chuyện với Lão Sư AI"
       >
         <span className="font-serif text-lg font-bold">师</span>
@@ -192,27 +192,27 @@ function MainAppContent() {
       <MobileAppCompanion />
 
       {/* Global Footer */}
-      <footer className="bg-white border-t border-slate-200/80 mt-16 py-8 text-xs text-slate-500">
+      <footer className="bg-[#F5EFEB] border-t border-[#E6DEC8] mt-16 py-8 text-xs text-slate-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-serif font-bold text-xs">
+            <div className="w-6 h-6 rounded-lg bg-red-700 text-white flex items-center justify-center font-serif font-bold text-xs shadow-2xs">
               汉
             </div>
-            <span className="font-bold text-slate-800">MiXiangg HSK</span>
+            <span className="font-bold text-[#18181B]">MiXiangg HSK</span>
             <span>• Nền tảng học và luyện thi Tiếng Trung</span>
           </div>
 
           <div className="flex items-center gap-6">
             <button
               onClick={() => setIsMobileCompanionOpen(true)}
-              className="hover:text-rose-600 flex items-center gap-1 font-medium"
+              className="hover:text-red-700 flex items-center gap-1 font-medium transition-colors"
             >
               <Smartphone className="w-3.5 h-3.5" />
               <span>Ứng dụng di động</span>
             </button>
             <button
               onClick={() => setIsReminderOpen(true)}
-              className="hover:text-rose-600 font-medium"
+              className="hover:text-red-700 font-medium transition-colors"
             >
               Nhắc nhở học tập
             </button>

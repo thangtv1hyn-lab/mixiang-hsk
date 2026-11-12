@@ -49,8 +49,8 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       <div
         className={`rounded-3xl p-8 sm:p-10 border text-center shadow-lg relative overflow-hidden ${
           result.passed
-            ? 'bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white border-emerald-500/30'
-            : 'bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 text-white border-rose-500/30'
+            ? 'bg-gradient-to-br from-red-950 via-red-900 to-[#18181B] text-white border-red-500/40'
+            : 'bg-gradient-to-br from-[#18181B] via-zinc-900 to-[#18181B] text-white border-zinc-700'
         }`}
       >
         <div className="relative z-10 max-w-xl mx-auto space-y-4">
@@ -78,8 +78,8 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
           {/* Pass/Fail Status */}
           <div>
             {result.passed ? (
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-sm font-bold">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/20 text-amber-200 border border-amber-400/40 text-sm font-bold">
+                <CheckCircle2 className="w-5 h-5 text-amber-400" />
                 <span>CHÚC MỪNG! BẠN ĐÃ ĐẠT CHUẨN (合格 - PASS)</span>
               </div>
             ) : (
@@ -123,7 +123,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onRetake}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-xs sm:text-sm hover:bg-slate-800 transition-colors flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl bg-[#18181B] text-white font-bold text-xs sm:text-sm hover:bg-black transition-colors flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Làm lại đề thi</span>
@@ -131,7 +131,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
 
           <button
             onClick={onGoToReports}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs sm:text-sm hover:bg-indigo-700 transition-colors shadow-xs flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs sm:text-sm hover:bg-red-700 transition-colors shadow-xs flex items-center gap-2"
           >
             <BarChart3 className="w-4 h-4" />
             <span>Xem Báo Cáo Học Tập Tuần/Tháng ➔</span>
@@ -221,7 +221,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
                       <span className="font-serif font-bold text-slate-900">{q.audioPrompt}</span>
                       <button
                         onClick={() => speakChinese(q.audioPrompt!)}
-                        className="ml-auto text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                        className="ml-auto text-red-700 hover:text-red-800 font-bold flex items-center gap-1"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
                         <span>Nghe lại</span>

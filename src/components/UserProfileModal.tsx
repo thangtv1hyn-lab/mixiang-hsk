@@ -162,18 +162,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                 </h4>
                 {/* Strict Role Badges with NO toggle ability */}
                 {userRole === 'admin' ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/30 text-purple-200 border border-purple-400/30 flex items-center gap-1 shrink-0">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#18181B] text-white border border-white/20 flex items-center gap-1 shrink-0">
                     <ShieldCheck className="w-3 h-3 text-amber-300" />
                     <span>Quản trị viên</span>
                   </span>
                 ) : userRole === 'teacher' ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/30 text-blue-200 border border-blue-400/30 flex items-center gap-1 shrink-0">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-800 text-white border border-red-700 flex items-center gap-1 shrink-0">
                     <Award className="w-3 h-3 text-amber-300" />
                     <span>Giáo viên</span>
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/30 text-rose-200 border border-rose-400/30 flex items-center gap-1 shrink-0">
-                    <GraduationCap className="w-3 h-3 text-emerald-300" />
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-950/60 text-red-200 border border-red-500/40 flex items-center gap-1 shrink-0">
+                    <GraduationCap className="w-3 h-3 text-amber-300" />
                     <span>Học viên</span>
                   </span>
                 )}

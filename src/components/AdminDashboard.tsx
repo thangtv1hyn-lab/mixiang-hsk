@@ -389,17 +389,17 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6 pb-16">
       {/* Admin / Teacher Top Header */}
-      <div className={`bg-gradient-to-r ${isTeacher ? 'from-amber-900 via-yellow-900 to-slate-900' : 'from-purple-900 via-indigo-900 to-slate-900'} text-white rounded-2xl p-6 sm:p-8 shadow-sm`}>
+      <div className={`bg-gradient-to-r ${isTeacher ? 'from-red-950 via-red-900 to-[#18181B]' : 'from-[#18181B] via-red-950 to-[#18181B]'} border border-red-900/40 text-white rounded-2xl p-6 sm:p-8 shadow-sm`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-white/10 text-purple-200 border border-white/20 mb-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-white/10 text-red-200 border border-white/20 mb-2">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
               <span>{isTeacher ? 'Cổng Thông Tin Giảng Dạy & Quản Lý Giáo Viên' : 'Hệ Thống Quản Trị Trung Tâm MiXiangg HSK'}</span>
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {isTeacher ? 'Bảng Điều Khiển Giáo Viên (Teacher Portal)' : 'Bảng Điều Khiển Quản Trị Viên (Admin)'}
             </h1>
-            <p className="text-xs sm:text-sm text-purple-200 mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
               {isTeacher
                 ? 'Thêm/sửa/xóa khóa học, bài học, đề thi thử, từ vựng và theo dõi sát sao lộ trình & kết quả học tập của học viên.'
                 : 'Toàn quyền quản trị khóa học HSK 1 - 5, bộ từ vựng flashcards & AI, đề thi thử tự động chấm điểm và phân quyền tài khoản người dùng.'}
@@ -412,9 +412,9 @@ export const AdminDashboard: React.FC = () => {
                 setDeckToEdit(null);
                 setIsAIFlashcardModalOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-rose-700 hover:from-red-800 hover:to-rose-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
               <span>Flashcard AI</span>
             </button>
             {isAdmin && (
@@ -431,7 +431,7 @@ export const AdminDashboard: React.FC = () => {
             )}
             <button
               onClick={() => setIsAddCourseModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Tạo khóa học</span>
@@ -441,7 +441,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto text-xs font-semibold">
+      <div className="flex items-center gap-1.5 p-1 bg-[#F5EFEB] rounded-xl border border-[#E6DEC8] overflow-x-auto text-xs font-semibold">
         {adminTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeAdminTab === tab.id;
@@ -449,8 +449,8 @@ export const AdminDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveAdminTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
-                isActive ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap cursor-pointer font-bold ${
+                isActive ? 'bg-white text-red-700 shadow-2xs border border-red-200' : 'text-[#18181B]/70 hover:text-red-700'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -469,7 +469,7 @@ export const AdminDashboard: React.FC = () => {
             </h3>
             <button
               onClick={() => setIsAddCourseModal(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-purple-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-purple-700 shadow-xs"
+              className="px-3.5 py-1.5 rounded-xl bg-red-600 text-white font-bold text-xs flex items-center gap-1.5 hover:bg-red-700 shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Thêm khóa học mới</span>
@@ -480,15 +480,15 @@ export const AdminDashboard: React.FC = () => {
             {courses.map((course) => (
               <div
                 key={course.id}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4"
+                className="bg-white rounded-2xl border border-[#E6DEC8] p-6 shadow-xs space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F5EFEB]">
                   <div className="flex items-center gap-3">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
                       {course.level}
                     </span>
                     <div>
-                      <h4 className="font-bold text-base text-slate-900">
+                      <h4 className="font-bold text-base text-[#18181B]">
                         {course.vietnameseTitle}
                       </h4>
                       <p className="text-xs text-slate-500">{course.description}</p>
@@ -501,7 +501,7 @@ export const AdminDashboard: React.FC = () => {
                         setCourseToEdit(course);
                         setIsEditCourseModalOpen(true);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 font-semibold text-xs border border-purple-200 hover:bg-purple-100 flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-[#FAF7F0] text-[#18181B] font-semibold text-xs border border-[#E6DEC8] hover:bg-[#F5EFEB] flex items-center gap-1 cursor-pointer"
                       title="Chỉnh sửa thông tin khóa học"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -620,7 +620,7 @@ export const AdminDashboard: React.FC = () => {
                   setExamToEdit(null);
                   setIsExamEditorOpen(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-indigo-700 shadow-xs cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-red-600 text-white font-bold text-xs flex items-center gap-1.5 hover:bg-red-700 shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Soạn đề thi mới (Thủ công / Excel / AI)</span>
@@ -632,11 +632,11 @@ export const AdminDashboard: React.FC = () => {
             {exams.map((exam) => (
               <div
                 key={exam.id}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-colors"
+                className="bg-white rounded-2xl border border-[#E6DEC8] p-6 shadow-xs flex flex-col justify-between hover:border-red-300 transition-colors"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
                       {exam.level}
                     </span>
                     <div className="flex items-center gap-1.5">
@@ -645,7 +645,7 @@ export const AdminDashboard: React.FC = () => {
                           setExamToEdit(exam);
                           setIsExamEditorOpen(true);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#FAF7F0] text-[#18181B] hover:bg-[#F5EFEB] border border-[#E6DEC8] font-semibold text-xs flex items-center gap-1 cursor-pointer"
                         title="Sửa kì thi: thêm/sửa câu hỏi, nhập Excel, AI"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -706,9 +706,9 @@ export const AdminDashboard: React.FC = () => {
                   setDeckToEdit(null);
                   setIsAIFlashcardModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-rose-700 hover:from-red-800 hover:to-rose-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-4 h-4 text-amber-200" />
                 <span>Tạo bộ Flashcards bằng AI</span>
               </button>
               <button
@@ -716,7 +716,7 @@ export const AdminDashboard: React.FC = () => {
                   setDeckToEdit(null);
                   setIsDeckEditorOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Thêm bộ từ mới</span>
@@ -733,8 +733,8 @@ export const AdminDashboard: React.FC = () => {
                 onClick={() => setDeckLevelFilter(lvl)}
                 className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                   deckLevelFilter === lvl
-                    ? 'bg-purple-700 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                    ? 'bg-red-700 text-white shadow-xs'
+                    : 'bg-white text-slate-700 border border-[#E6DEC8] hover:bg-[#FAF7F0]'
                 }`}
               >
                 {lvl === 'ALL' ? 'Tất cả cấp độ' : lvl}

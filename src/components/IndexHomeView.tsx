@@ -155,7 +155,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       id: 'noi-tu',
       title: 'Nối từ',
       desc: 'Nối chữ Hán ở cột trái với nghĩa đúng ở cột phải. Nối càng nhanh càng nhiều điểm.',
-      color: 'bg-purple-600',
+      color: 'bg-red-700',
       tag: 'Ghép đôi từ vựng',
       icon: '🔗',
     },
@@ -219,7 +219,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       id: 'karaoke-bai-khoa',
       title: 'Karaoke bài khoá',
       desc: 'Nghe giọng đọc gốc của sách từng câu rồi đọc theo — chữ đọc đúng sáng xanh. Có chế độ đóng vai và học thuộc.',
-      color: 'bg-violet-700',
+      color: 'bg-[#18181B]',
       tag: 'Hát theo bài khoá',
       icon: '🎤',
     },
@@ -290,16 +290,16 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             <span>之</span>
           </div>
 
-          {/* Banner trung tâm bo tròn sắc tím hồng */}
-          <div className="flex-1 rounded-3xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-pink-500 text-white p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col items-center justify-center text-center border border-purple-300/30">
+          {/* Banner trung tâm bo tròn sắc Đỏ - Be - Đen */}
+          <div className="flex-1 rounded-3xl bg-gradient-to-r from-red-800 via-red-600 to-rose-700 text-white p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col items-center justify-center text-center border border-red-500/30">
             {/* Chữ thư pháp lớn */}
             <h1 className="font-serif text-3xl sm:text-5xl font-black tracking-wider text-white drop-shadow-md">
               勤学好问
             </h1>
-            <h2 className="text-base sm:text-xl font-extrabold text-pink-100 mt-1">
+            <h2 className="text-base sm:text-xl font-extrabold text-red-100 mt-1">
               Luyện HSK 3.0
             </h2>
-            <p className="text-xs sm:text-sm text-pink-200/95 font-medium mt-2">
+            <p className="text-xs sm:text-sm text-red-100/90 font-medium mt-2">
               Sách bài tập · Giáo trình · Luyện ngữ âm · Flashcard · Trò chơi
             </p>
 
@@ -447,11 +447,11 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
               }
               setActiveTab('vocab');
             }}
-            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-0.5 space-y-1"
+            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#18181B] via-zinc-800 to-[#18181B] border border-red-900/30 text-white shadow-md cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-0.5 space-y-1"
           >
             <div className="text-lg">🗂️</div>
             <h4 className="font-extrabold text-sm sm:text-base">Ôn lỗi sai hôm nay</h4>
-            <p className="text-xs text-indigo-100">Không có từ đến hạn</p>
+            <p className="text-xs text-slate-300">Không có từ đến hạn</p>
           </div>
 
           {/* Card 2: Bài được giao */}
@@ -537,12 +537,12 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* Khóa học HSK 3 */}
             <div
               onClick={() => handleNavigateCourse('HSK 3')}
-              className="p-6 rounded-3xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
+              className="p-6 rounded-3xl bg-gradient-to-br from-[#18181B] via-zinc-800 to-stone-900 border border-red-700/40 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
             >
-              <div className="font-serif text-5xl font-black text-white/90">3</div>
+              <div className="font-serif text-5xl font-black text-amber-400/90">3</div>
               <div className="space-y-1 mt-3">
                 <h4 className="text-base sm:text-lg font-black">Khóa học HSK 3</h4>
-                <p className="text-xs text-teal-100 font-serif">新HSK教程 3 · Khóa học chuẩn</p>
+                <p className="text-xs text-red-200 font-serif">新HSK教程 3 · Khóa học chuẩn</p>
                 <div className="pt-2">
                   <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
                     19/19 bài học
@@ -830,14 +830,14 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
                 }
                 setActiveTab('vocab');
               }}
-              className="p-5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
+              className="p-5 rounded-2xl bg-gradient-to-r from-red-800 to-rose-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
             >
               <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
                 🗂️
               </div>
               <div className="flex-1">
                 <h4 className="font-black text-sm sm:text-base">Flashcard HSK 1 – 4</h4>
-                <p className="text-xs text-sky-100">
+                <p className="text-xs text-red-100/90">
                   Chọn các bài đã học · lật từng thẻ hoặc xem 6/8 thẻ một trang để luyện đọc · đánh dấu từ đã thuộc
                 </p>
               </div>
@@ -847,14 +847,14 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* Card 2: Học bộ thủ */}
             <div
               onClick={() => setActiveRadicalModal(true)}
-              className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
+              className="p-5 rounded-2xl bg-gradient-to-r from-[#18181B] via-zinc-800 to-stone-900 border border-red-900/40 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
             >
               <div className="w-11 h-11 rounded-xl bg-white/20 font-serif font-black text-2xl flex items-center justify-center shrink-0">
                 部
               </div>
               <div className="flex-1">
                 <h4 className="font-black text-sm sm:text-base">Học bộ thủ</h4>
-                <p className="text-xs text-blue-100">
+                <p className="text-xs text-slate-300">
                   Tên, nghĩa, cách nhận biết các bộ thủ trong từ vựng HSK 1–4 · luyện đoán bộ thủ · 214 bộ thủ
                 </p>
               </div>
@@ -864,14 +864,14 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* Card 3: Câu chuyện chữ Hán */}
             <div
               onClick={() => setActiveHanziStoryModal(true)}
-              className="p-5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
+              className="p-5 rounded-2xl bg-gradient-to-r from-stone-900 via-amber-950 to-[#18181B] border border-amber-600/30 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
             >
               <div className="w-11 h-11 rounded-xl bg-white/20 font-serif font-black text-2xl flex items-center justify-center shrink-0">
                 字
               </div>
               <div className="flex-1">
                 <h4 className="font-black text-sm sm:text-base">Câu chuyện chữ Hán</h4>
-                <p className="text-xs text-teal-100">
+                <p className="text-xs text-amber-100/90">
                   1063 chữ trong từ mới HSK 1–4: chữ vẽ hình gì, vì sao mang nghĩa đó · song ngữ Trung – Việt
                 </p>
               </div>
@@ -893,12 +893,12 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* 课1: HSK 1 */}
             <div
               onClick={() => handleNavigateCourse('HSK 1')}
-              className="p-5 rounded-3xl bg-[#592787] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
+              className="p-5 rounded-3xl bg-[#7F1D1D] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
             >
               <div className="font-serif text-4xl font-black text-white/90">课1</div>
               <div className="space-y-1 mt-3">
                 <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 1</h4>
-                <p className="text-[11px] text-purple-200 font-serif">新HSK教程 1 · 课本</p>
+                <p className="text-[11px] text-red-200 font-serif">新HSK教程 1 · 课本</p>
                 <div className="pt-2">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
                     15 bài · Thẻ từ & Bài khoá · Tập viết chữ
@@ -910,12 +910,12 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* 课2: HSK 2 */}
             <div
               onClick={() => handleNavigateCourse('HSK 2')}
-              className="p-5 rounded-3xl bg-[#1C5F69] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
+              className="p-5 rounded-3xl bg-[#991B1B] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
             >
               <div className="font-serif text-4xl font-black text-white/90">课2</div>
               <div className="space-y-1 mt-3">
                 <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 2</h4>
-                <p className="text-[11px] text-teal-200 font-serif">新HSK教程 2 · 课本</p>
+                <p className="text-[11px] text-red-100 font-serif">新HSK教程 2 · 课本</p>
                 <div className="pt-2">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
                     15 bài · Thẻ từ & Bài khoá · Tập viết chữ
@@ -927,12 +927,12 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             {/* 课3: HSK 3 */}
             <div
               onClick={() => handleNavigateCourse('HSK 3')}
-              className="p-5 rounded-3xl bg-[#9E3E1A] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
+              className="p-5 rounded-3xl bg-[#18181B] border border-amber-600/30 text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
             >
-              <div className="font-serif text-4xl font-black text-white/90">课3</div>
+              <div className="font-serif text-4xl font-black text-amber-400">课3</div>
               <div className="space-y-1 mt-3">
                 <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 3</h4>
-                <p className="text-[11px] text-orange-200 font-serif">新HSK教程 3 · 课本</p>
+                <p className="text-[11px] text-amber-200 font-serif">新HSK教程 3 · 课本</p>
                 <div className="pt-2">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
                     18 bài · Thẻ từ & Bài khoá
@@ -946,13 +946,13 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
               onClick={() => {
                 alert('Tài liệu HSK 4 đang được cập nhật thêm các bài tập ngữ pháp nâng cao. Bạn vui lòng hoàn thành HSK 1-3 trước nhé!');
               }}
-              className="p-5 rounded-3xl bg-[#44634B] text-white shadow-md transition-all flex flex-col justify-between min-h-[170px] cursor-pointer hover:bg-[#3B5741]"
+              className="p-5 rounded-3xl bg-[#27272A] border border-zinc-700 text-white shadow-md transition-all flex flex-col justify-between min-h-[170px] cursor-pointer hover:bg-[#18181B]"
             >
-              <div className="font-serif text-4xl font-black text-white/90">课4</div>
+              <div className="font-serif text-4xl font-black text-zinc-400">课4</div>
               <div className="space-y-1 mt-3">
                 <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 4 (Thượng + hạ)</h4>
-                <p className="text-[11px] text-emerald-200 font-serif">新HSK教程 4上·4下 · 课本</p>
-                <div className="pt-2 flex items-center gap-1 text-[11px] font-bold text-amber-200 bg-black/20 px-2 py-0.5 rounded-full w-fit">
+                <p className="text-[11px] text-zinc-300 font-serif">新HSK教程 4上·4下 · 课本</p>
+                <div className="pt-2 flex items-center gap-1 text-[11px] font-bold text-amber-200 bg-black/40 px-2 py-0.5 rounded-full w-fit">
                   <Lock className="w-3 h-3" />
                   <span>Chưa được cấp quyền</span>
                 </div>
@@ -1192,7 +1192,7 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 font-black text-xl flex items-center justify-center">
+              <span className="w-10 h-10 rounded-xl bg-red-100 text-red-700 font-black text-xl flex items-center justify-center">
                 🎮
               </span>
               <div>
