@@ -194,12 +194,18 @@ function MainAppContent() {
       {/* Global Footer */}
       <footer className="bg-[#F5EFEB] border-t border-[#E6DEC8] mt-16 py-8 text-xs text-slate-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-red-700 text-white flex items-center justify-center font-serif font-bold text-xs shadow-2xs">
-              汉
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white border border-red-700/60 p-0.5 overflow-hidden flex items-center justify-center shadow-xs">
+              <img
+                src="/assets/aistudio/logo_2cd38f9f.jpg"
+                alt="MiXiangg HSK"
+                className="w-full h-full object-contain mix-blend-multiply"
+              />
             </div>
-            <span className="font-bold text-[#18181B]">MiXiangg HSK</span>
-            <span>• Nền tảng học và luyện thi Tiếng Trung</span>
+            <div>
+              <span className="font-extrabold text-[#18181B] text-sm">MiXiangg HSK</span>
+              <span className="text-[11px] text-slate-500 ml-2 hidden sm:inline">• Nền tảng học và luyện thi Tiếng Trung</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-6">

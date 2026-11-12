@@ -50,15 +50,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenReminder, onOpenGoogleAuth
         <div className="flex items-center justify-between h-16 sm:h-18 gap-2 sm:gap-4 lg:gap-6">
           {/* Logo & Brand */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer shrink-0 select-none group"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer shrink-0 select-none group"
             onClick={() => setActiveTab('home')}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-rose-700 flex items-center justify-center text-white shadow-md shadow-red-900/20 group-hover:scale-105 transition-transform">
-              <span className="font-serif text-2xl font-bold tracking-tight">汉</span>
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white border-2 border-red-700/80 p-1 shadow-md shadow-red-900/15 overflow-hidden flex items-center justify-center group-hover:scale-105 group-hover:border-red-600 transition-all relative">
+              <div className="absolute inset-0 bg-red-500/5 pointer-events-none"></div>
+              <img
+                src="/assets/aistudio/logo_2cd38f9f.jpg"
+                alt="MiXiangg HSK Triện Ấn"
+                className="w-full h-full object-contain mix-blend-multiply"
+              />
             </div>
-            <span className="font-extrabold text-xl tracking-tight text-[#18181B] group-hover:text-red-700 transition-colors whitespace-nowrap">
-              MiXiangg HSK
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-[#18181B] group-hover:text-red-700 transition-colors whitespace-nowrap">
+                  MIXIANGG
+                </span>
+                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-700 to-rose-700 text-white font-extrabold text-[10px] tracking-wider uppercase shadow-2xs">
+                  HSK
+                </span>
+              </div>
+              <span className="text-[10px] font-semibold text-red-800/80 tracking-wide uppercase group-hover:text-red-700 transition-colors hidden sm:block">
+                Chinese Learning · 汉语学习
+              </span>
+            </div>
           </div>
 
           {/* Center Navigation - Balanced & Fits screen perfectly */}
