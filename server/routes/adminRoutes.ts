@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../dataStore.ts';
+import { db, hashPassword, sanitizeAppUser } from '../dataStore.ts';
 import { AppUser, UserRole, UserStatus } from '../../src/types/hsk.ts';
 
 const router = Router();
@@ -27,28 +27,29 @@ router.get('/users', (req, res) => {
     );
   }
 
-  res.json(users);
+  res.json(users.map(sanitizeAppUser));
 });
 
 // Admin creates a new user directly with assigned role
 router.post('/users', (req, res) => {
   try {
-    const { name, email, password, role = 'student', status = 'active', level = 'HSK 1', note } = req.body;
+    const { id, name, email, password, role = 'student', status = 'active', level = 'HSK 1', note } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Họ tên và email là bắt buộc' });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = String(email).trim().toLowerCase();
     if (db.appUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-      return res.status(400).json({ error: 'Email này đã tồn tại trong hệ thống' });
+      return res.status(409).json({ error: 'Email này đã tồn tại trong hệ thống' });
     }
 
     const newUser: AppUser = {
-      id: `usr-${Date.now()}`,
-      name: name.trim(),
+      id: id || `usr-${Date.now()}`,
+      name: String(name).trim(),
       email: normalizedEmail,
-      password: password || '123456',
+      password: hashPassword(String(password || '123456')),
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
       role: (role as UserRole) || 'student',
       status: (status as UserStatus) || 'active',
       level,
@@ -63,12 +64,11 @@ router.post('/users', (req, res) => {
 
     db.appUsers.unshift(newUser);
 
-    // Also add to db.students if student or teacher
     db.students.push({
       id: newUser.id,
       name: newUser.name,
       email: newUser.email,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: newUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
       targetLevel: newUser.level,
       streakDays: 0,
       lastActiveDate: new Date().toISOString().split('T')[0],
@@ -84,8 +84,9 @@ router.post('/users', (req, res) => {
       examHistory: [],
       studyLog: {},
     });
+    db.saveUsersAndSessions();
 
-    res.status(201).json(newUser);
+    res.status(201).json(sanitizeAppUser(newUser));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -107,19 +108,24 @@ router.put('/users/:id/role', (req, res) => {
 
   user.role = role as UserRole;
 
-  // Sync with matching student profile if exists
-  const student = db.students.find((s) => s.id === id || s.email === user.email);
+  const student = db.students.find((s) => s.id === id || s.email.toLowerCase() === user.email.toLowerCase());
   if (student) {
     student.role = role as UserRole;
   }
 
-  // Sync with matching authUser
-  const authUser = db.users.find((u) => u.id === id || u.email === user.email);
+  const authUser = db.users.find((u) => u.id === id || u.email.toLowerCase() === user.email.toLowerCase());
   if (authUser) {
     authUser.role = role as UserRole;
   }
 
-  res.json({ success: true, message: `Đã cập nhật vai trò thành công: ${role}`, user });
+  for (const sess of db.sessions) {
+    if (sess.userId === id || sess.email.toLowerCase() === user.email.toLowerCase()) {
+      sess.role = role as UserRole;
+    }
+  }
+  db.saveUsersAndSessions();
+
+  res.json({ success: true, message: `Đã cập nhật vai trò thành công: ${role}`, user: sanitizeAppUser(user) });
 });
 
 // Admin toggles user status (active / suspended)
@@ -138,12 +144,17 @@ router.put('/users/:id/status', (req, res) => {
 
   user.status = status as UserStatus;
 
-  const student = db.students.find((s) => s.id === id || s.email === user.email);
+  const student = db.students.find((s) => s.id === id || s.email.toLowerCase() === user.email.toLowerCase());
   if (student) {
     student.status = status as UserStatus;
   }
 
-  res.json({ success: true, message: `Trạng thái đã cập nhật: ${status}`, user });
+  if (status === 'suspended') {
+    db.revokeUserSessions(user.email);
+  }
+  db.saveUsersAndSessions();
+
+  res.json({ success: true, message: `Trạng thái đã cập nhật: ${status}`, user: sanitizeAppUser(user) });
 });
 
 // Admin edits user information
@@ -157,24 +168,30 @@ router.put('/users/:id', (req, res) => {
   }
 
   const user = db.appUsers[userIndex];
-  if (name) user.name = name;
-  if (email) user.email = email.trim().toLowerCase();
+  const oldEmail = user.email.toLowerCase();
+  if (name) user.name = String(name).trim();
+  if (email) user.email = String(email).trim().toLowerCase();
   if (level) user.level = level;
   if (role) user.role = role;
   if (status) user.status = status;
-  if (password) user.password = password;
+  if (password) user.password = hashPassword(String(password));
   if (note !== undefined) user.note = note;
 
-  // Sync student profile
-  const student = db.students.find((s) => s.id === id || s.email === user.email);
+  const student = db.students.find((s) => s.id === id || s.email.toLowerCase() === oldEmail);
   if (student) {
-    if (name) student.name = name;
+    if (name) student.name = String(name).trim();
+    if (email) student.email = String(email).trim().toLowerCase();
     if (level) student.targetLevel = level;
     if (role) student.role = role;
     if (status) student.status = status;
   }
 
-  res.json({ success: true, user });
+  if (status === 'suspended') {
+    db.revokeUserSessions(user.email);
+  }
+  db.saveUsersAndSessions();
+
+  res.json({ success: true, user: sanitizeAppUser(user) });
 });
 
 // Admin deletes a user
@@ -186,15 +203,17 @@ router.delete('/users/:id', (req, res) => {
   }
 
   const deletedUser = db.appUsers.splice(index, 1)[0];
-  db.students = db.students.filter((s) => s.id !== id && s.email !== deletedUser.email);
-  db.users = db.users.filter((u) => u.id !== id && u.email !== deletedUser.email);
+  db.students = db.students.filter((s) => s.id !== id && s.email.toLowerCase() !== deletedUser.email.toLowerCase());
+  db.users = db.users.filter((u) => u.id !== id && u.email.toLowerCase() !== deletedUser.email.toLowerCase());
+  db.revokeUserSessions(deletedUser.email);
+  db.saveUsersAndSessions();
 
   res.json({ success: true, message: 'Đã xóa người dùng khỏi hệ thống' });
 });
 
 // Legacy /students endpoint
 router.get('/students', (req, res) => {
-  res.json(db.appUsers);
+  res.json(db.appUsers.map(sanitizeAppUser));
 });
 
 // Get system-wide platform statistics
@@ -210,6 +229,17 @@ router.get('/stats', (req, res) => {
   const teacherCount = db.appUsers.filter((u) => u.role === 'teacher').length;
   const studentCount = db.appUsers.filter((u) => u.role === 'student').length;
 
+  const averageStreak =
+    totalUsers > 0
+      ? Math.round(db.appUsers.reduce((sum, u) => sum + (u.streak || 0), 0) / totalUsers)
+      : 15;
+
+  const allExamResults = db.students.flatMap((s) => s.examHistory || []);
+  const passRate =
+    allExamResults.length > 0
+      ? Math.round((allExamResults.filter((e) => e.passed).length / allExamResults.length) * 100)
+      : 88;
+
   res.json({
     totalCourses,
     totalLessons,
@@ -221,10 +251,23 @@ router.get('/stats', (req, res) => {
     adminCount,
     teacherCount,
     studentCount,
-    averageStreak: 18,
+    averageStreak,
     completionRate: 92,
-    passRate: 88,
+    passRate,
   });
+});
+
+// Admin: Reset all platform data to initial seed state
+router.post('/reset', (req, res) => {
+  try {
+    db.resetToInitial();
+    res.json({
+      success: true,
+      message: 'Đã khôi phục toàn bộ dữ liệu gốc thành công',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

@@ -34,7 +34,7 @@ const DAILY_PROVERBS = [
 
 // GET /api/reminders/daily
 router.get('/daily', (req, res) => {
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const proverb = DAILY_PROVERBS[dayOfYear % DAILY_PROVERBS.length];
 
@@ -58,11 +58,12 @@ router.get('/daily', (req, res) => {
 // POST /api/reminders/settings
 router.post('/settings', (req, res) => {
   const { enabled, time, dailyGoal } = req.body;
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
 
   if (typeof enabled === 'boolean') profile.reminderEnabled = enabled;
   if (time) profile.reminderTime = time;
   if (dailyGoal) profile.dailyGoalMinutes = Number(dailyGoal);
+  db.save();
 
   res.json({
     success: true,

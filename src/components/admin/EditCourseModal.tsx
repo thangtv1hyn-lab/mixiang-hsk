@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Save, Sparkles } from 'lucide-react';
+import { X, BookOpen, Save } from 'lucide-react';
 import { Course, HSKLevel } from '../../types/hsk';
 
 interface EditCourseModalProps {
@@ -54,39 +54,44 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-6 relative border border-slate-100">
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-[#FDFBF6] rounded-3xl w-[96vw] max-w-4xl max-h-[94vh] overflow-y-auto shadow-2xl border-2 border-[#E8DFCE] flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-5 bg-gradient-to-r from-red-600 via-red-700 to-[#18181B] text-white flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 text-amber-300 flex items-center justify-center border border-white/25 shrink-0">
+              <BookOpen className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="font-serif text-[21px] sm:text-[24px] font-black text-white leading-tight">
+                Chỉnh Sửa Khóa Học {course.level}
+              </h3>
+              <p className="text-[16px] text-rose-100">
+                Cập nhật tên, mục tiêu và mô tả chương trình học
+              </p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Chỉnh Sửa Khóa Học {course.level}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Cập nhật tên, mục tiêu và mô tả chương trình học
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng"
+            className="p-2.5 rounded-2xl bg-white/10 text-white hover:bg-red-600 transition-colors cursor-pointer"
+          >
+            <X className="w-7 h-7" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">
+              <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
                 Cấp độ HSK:
               </label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value as HSKLevel)}
-                className="w-full p-2.5 rounded-xl border border-slate-200 bg-white font-medium"
+                className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[18px] font-bold text-[#18181B] focus:border-red-600 focus:outline-none"
               >
                 <option value="HSK 1">HSK 1 (Sơ cấp 1)</option>
                 <option value="HSK 2">HSK 2 (Sơ cấp 2)</option>
@@ -97,7 +102,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">
+              <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
                 Số từ vựng mục tiêu:
               </label>
               <input
@@ -106,14 +111,14 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
                 max={5000}
                 value={targetVocabCount}
                 onChange={(e) => setTargetVocabCount(Number(e.target.value))}
-                className="w-full p-2.5 rounded-xl border border-slate-200"
+                className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white font-mono text-[18px] font-bold text-[#18181B] focus:border-red-600 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">
-              Tên khóa học (Tiếng Trung):
+            <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
+              Tên khóa học (Tiếng Trung) *:
             </label>
             <input
               type="text"
@@ -121,13 +126,13 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: HSK 3 级标准教程"
-              className="w-full p-2.5 rounded-xl border border-slate-200 font-medium text-slate-900"
+              className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white font-serif text-[21px] font-black text-[#18181B] focus:border-red-600 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">
-              Tên tiếng Việt hiển thị:
+            <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
+              Tên tiếng Việt hiển thị *:
             </label>
             <input
               type="text"
@@ -135,12 +140,12 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
               value={vietnameseTitle}
               onChange={(e) => setVietnameseTitle(e.target.value)}
               placeholder="Ví dụ: Giáo trình chuẩn HSK 3 Toàn diện"
-              className="w-full p-2.5 rounded-xl border border-slate-200 font-medium text-slate-900"
+              className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[18px] font-bold text-[#18181B] focus:border-red-600 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">
+            <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
               Mô tả chi tiết khóa học:
             </label>
             <textarea
@@ -148,13 +153,13 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Mô tả mục tiêu đầu ra, ngữ cảnh giao tiếp..."
-              className="w-full p-2.5 rounded-xl border border-slate-200"
+              className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[18px] text-[#18181B] leading-relaxed focus:border-red-600 focus:outline-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">
+              <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
                 Số điểm ngữ pháp:
               </label>
               <input
@@ -163,32 +168,32 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
                 max={200}
                 value={grammarPointsCount}
                 onChange={(e) => setGrammarPointsCount(Number(e.target.value))}
-                className="w-full p-2.5 rounded-xl border border-slate-200"
+                className="w-full px-4 py-3.5 rounded-2xl border-2 border-[#E8DFCE] bg-white font-mono text-[18px] font-bold text-[#18181B] focus:border-red-600 focus:outline-none"
               />
             </div>
             <div>
-              <label className="font-semibold text-slate-700 block mb-1">
+              <label className="text-[16px] font-extrabold text-[#18181B] block mb-2">
                 Số bài học hiện có:
               </label>
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 font-bold">
+              <div className="px-4 py-3.5 rounded-2xl bg-[#FAF7F0] border-2 border-[#E8DFCE] text-[#18181B] font-mono text-[18px] font-bold">
                 {course.lessons.length} bài học
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E8DFCE]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
+              className="px-6 py-3 rounded-2xl bg-white border border-[#E8DFCE] text-[#18181B] hover:bg-[#F5EFEB] font-bold text-[16px] cursor-pointer"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="px-7 py-3 rounded-2xl bg-red-600 text-white font-black text-[16px] hover:bg-red-700 flex items-center gap-2 shadow-sm cursor-pointer"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-6 h-6" />
               <span>Lưu thay đổi</span>
             </button>
           </div>

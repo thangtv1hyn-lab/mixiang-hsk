@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { db } from '../dataStore.ts';
 import { Exam, ExamResult } from '../../src/types/hsk.ts';
 
@@ -23,26 +24,33 @@ router.get('/:id', (req, res) => {
   res.json(exam);
 });
 
-// Admin: Create new mock exam
+// Admin: Create new mock exam (preserve client ID if provided)
 router.post('/', (req, res) => {
   try {
-    const { level, title, subtitle, timeLimitMinutes, passScore, totalPoints, questions = [] } = req.body;
+    const { id, level, title, subtitle, timeLimitMinutes, passScore, totalPoints, questions = [] } = req.body;
     if (!title || !level) {
       return res.status(400).json({ error: 'Tiêu đề và cấp độ là bắt buộc' });
     }
 
     const newExam: Exam = {
-      id: `exam-custom-${Date.now()}`,
+      id: id || `exam-custom-${Date.now()}`,
       level,
-      title,
+      title: String(title).trim(),
       subtitle: subtitle || `Đề thi thử HSK cấp độ ${level}`,
       timeLimitMinutes: Number(timeLimitMinutes) || 30,
       passScore: Number(passScore) || 120,
       totalPoints: Number(totalPoints) || 200,
-      questions,
+      questions: Array.isArray(questions) ? questions : [],
     };
 
-    db.exams.unshift(newExam);
+    const existingIdx = db.exams.findIndex((e) => e.id === newExam.id);
+    if (existingIdx !== -1) {
+      db.exams[existingIdx] = newExam;
+    } else {
+      db.exams.unshift(newExam);
+    }
+    db.save();
+
     res.status(201).json(newExam);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -59,7 +67,9 @@ router.put('/:id', (req, res) => {
   db.exams[index] = {
     ...db.exams[index],
     ...req.body,
+    id: db.exams[index].id,
   };
+  db.save();
 
   res.json(db.exams[index]);
 });
@@ -71,6 +81,7 @@ router.delete('/:id', (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đề thi' });
   }
   const deleted = db.exams.splice(index, 1);
+  db.save();
   res.json({ success: true, deleted: deleted[0] });
 });
 
@@ -81,7 +92,6 @@ router.post('/ai-generate', async (req, res) => {
 
     const apiKey = process.env.GEMINI_API_KEY || '';
     if (!apiKey) {
-      // Fallback sample exam if no API key
       const fallbackExam: Exam = {
         id: `exam-ai-${Date.now()}`,
         level,
@@ -133,10 +143,10 @@ router.post('/ai-generate', async (req, res) => {
       };
 
       db.exams.unshift(fallbackExam);
+      db.save();
       return res.status(201).json(fallbackExam);
     }
 
-    const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
@@ -166,8 +176,8 @@ Trả về JSON có cấu trúc sau:
       "question": "Nội dung câu hỏi chữ Hán hoặc hướng dẫn bằng tiếng Việt",
       "pinyin": "phiên âm pinyin",
       "audioPrompt": "Đoạn văn chữ Hán đọc bằng audio nếu là phần nghe hoặc nói",
-      "options": ["A. ...", "B. ...", "C. ...", "D. ..."], // Bắt buộc nếu questionType là "choice"
-      "correctAnswer": 0, // Chỉ số 0..3 nếu questionType là "choice"
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "correctAnswer": 0,
       "correctText": "Đáp án chuẩn bằng chữ Hán nếu là fill_blank, writing, hoặc speaking",
       "explanation": "Giải thích chi tiết ngữ pháp, từ vựng và đáp án bằng tiếng Việt"
     }
@@ -175,9 +185,12 @@ Trả về JSON có cấu trúc sau:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-4-hydrogen',
       contents: prompt,
-      config: { responseMimeType: 'application/json' },
+      config: {
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+      },
     });
 
     const parsed = JSON.parse(response.text || '{}');
@@ -204,6 +217,7 @@ Trả về JSON có cấu trúc sau:
     };
 
     db.exams.unshift(newExam);
+    db.save();
     res.status(201).json(newExam);
   } catch (err: any) {
     console.warn('AI generate exam encountered error, using smart fallback template:', err?.message);
@@ -260,6 +274,7 @@ Trả về JSON có cấu trúc sau:
     };
 
     db.exams.unshift(fallbackExam);
+    db.save();
     return res.status(201).json(fallbackExam);
   }
 });
@@ -291,7 +306,6 @@ router.post('/:id/submit', (req, res) => {
         .replace(/[,.?!，。？！]/g, '')
         .replace(/\s+/g, '');
 
-    // Verify each question based on questionType
     exam.questions.forEach((q) => {
       const userChoice = userAnswers[q.id];
       let isCorrect = false;
@@ -305,7 +319,6 @@ router.post('/:id/submit', (req, res) => {
         const targetClean = cleanStr(q.correctText);
         isCorrect = uClean.length > 0 && (uClean === targetClean || targetClean.includes(uClean));
       } else if (qType === 'speaking') {
-        // Speaking: valid recognized speech with high similarity or presence
         const uClean = cleanStr(userChoice);
         const targetClean = cleanStr(q.correctText);
         isCorrect = uClean.length > 0 && (uClean === targetClean || targetClean.includes(uClean) || uClean.length >= targetClean.length * 0.7);
@@ -363,13 +376,14 @@ router.post('/:id/submit', (req, res) => {
       userAnswers,
     };
 
-    // Update student progress in database
-    const profile = db.getActiveProfile();
+    const profile = db.getActiveProfile(req);
     profile.examHistory.unshift(result);
     profile.xp += passed ? 150 : 50;
 
     const today = new Date().toISOString().split('T')[0];
-    profile.studyLog[today] = (profile.studyLog[today] || 0) + Math.round(timeSpentSeconds / 60);
+    profile.studyLog[today] = (profile.studyLog[today] || 0) + Math.max(1, Math.round(Number(timeSpentSeconds) / 60));
+
+    db.syncProfileToAppUser(profile);
 
     res.json({
       success: true,

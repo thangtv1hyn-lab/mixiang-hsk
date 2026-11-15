@@ -28,10 +28,11 @@ interface HSKContextType {
   // Authentication & Self-Registration
   isAuthenticated: boolean;
   currentUser: AuthUser | null;
-  loginWithGoogle: (customData?: Partial<AuthUser>) => void;
+  loginWithGoogle: (customData?: Partial<AuthUser>) => Promise<{ success: boolean; message?: string }>;
   registerAccount: (data: { name: string; email: string; password: string; level: HSKLevel }) => Promise<{ success: boolean; message?: string }>;
   loginWithEmail: (data: { email: string; password: string }) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  resetPasswordWithEmail: (data: { email: string; newPassword: string }) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
   isGoogleAuthModalOpen: boolean;
   setIsGoogleAuthModalOpen: (open: boolean) => void;
   isUserProfileOpen: boolean;
@@ -228,6 +229,24 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  // Helper to build headers including active session token and user identity
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    try {
+      const token = localStorage.getItem(STORAGE_KEY_PREFIX + 'token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch {
+      // ignore storage access issues
+    }
+    const activeEmail = currentUser?.email || studentProfile?.email;
+    const activeUserId = currentUser?.id || studentProfile?.id;
+    if (activeEmail) headers['x-user-email'] = activeEmail;
+    if (activeUserId) headers['x-user-id'] = activeUserId;
+    return headers;
+  };
+
   // Save changes to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_PREFIX + 'courses', JSON.stringify(courses));
@@ -261,15 +280,26 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const syncWithBackend = async () => {
       try {
-        const [cRes, eRes, vRes, dRes, fRes, uRes, rRes] = await Promise.allSettled([
+        const storedToken = localStorage.getItem(STORAGE_KEY_PREFIX + 'token');
+        const emailParam = currentUser?.email ? `?email=${encodeURIComponent(currentUser.email)}` : '';
+        const authFetchHeaders: Record<string, string> = {};
+        if (storedToken) authFetchHeaders['Authorization'] = `Bearer ${storedToken}`;
+
+        const requests: Promise<Response>[] = [
           fetch('/api/courses'),
           fetch('/api/exams'),
           fetch('/api/vocab'),
           fetch('/api/vocab/decks'),
           fetch('/api/forum'),
           fetch('/api/admin/users'),
-          fetch('/api/reports/summary'),
-        ]);
+          fetch(`/api/reports/summary${emailParam}`, { headers: authFetchHeaders }),
+        ];
+
+        if (storedToken) {
+          requests.push(fetch('/api/auth/me', { headers: authFetchHeaders }));
+        }
+
+        const [cRes, eRes, vRes, dRes, fRes, uRes, rRes, meRes] = await Promise.allSettled(requests);
 
         if (cRes.status === 'fulfilled' && cRes.value.ok) {
           const cData = await cRes.value.json();
@@ -306,9 +336,39 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...prev,
               name: rData.studentName || prev.name,
               email: rData.email || prev.email,
+              xp: typeof rData.xp === 'number' ? rData.xp : prev.xp,
+              completedLessonIds: Array.isArray(rData.completedLessonIds)
+                ? rData.completedLessonIds
+                : prev.completedLessonIds,
+              masteredVocabIds: Array.isArray(rData.masteredVocabIds)
+                ? rData.masteredVocabIds
+                : prev.masteredVocabIds,
+              learningVocabIds: Array.isArray(rData.learningVocabIds)
+                ? rData.learningVocabIds
+                : prev.learningVocabIds,
               studyLog: rData.studyLog || prev.studyLog,
               examHistory: rData.examHistory || prev.examHistory,
             }));
+          }
+        }
+
+        if (meRes && meRes.status === 'fulfilled') {
+          if (meRes.value.ok) {
+            const meData = await meRes.value.json();
+            if (meData.authenticated && meData.user) {
+              setIsAuthenticated(true);
+              setCurrentUser(meData.user);
+              setUserRole(meData.user.role || 'student');
+              localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(meData.user));
+              if (meData.profile) setStudentProfile(meData.profile);
+            }
+          } else if (meRes.value.status === 401) {
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setUserRole('student');
+            localStorage.removeItem(STORAGE_KEY_PREFIX + 'auth');
+            localStorage.removeItem(STORAGE_KEY_PREFIX + 'user');
+            localStorage.removeItem(STORAGE_KEY_PREFIX + 'token');
           }
         }
       } catch (err) {
@@ -317,17 +377,21 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     syncWithBackend();
-  }, []);
+  }, [currentUser?.email]);
 
   // Course actions
   const addCourse = async (course: Course) => {
     setCourses((prev) => [course, ...prev]);
     try {
-      await fetch('/api/courses', {
+      const res = await fetch('/api/courses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(course),
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setCourses((prev) => prev.map((c) => (c.id === course.id ? saved : c)));
+      }
     } catch (e) {
       console.error('API create course error:', e);
     }
@@ -338,7 +402,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/courses/${updatedCourse.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedCourse),
       });
     } catch (e) {
@@ -349,7 +413,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteCourse = async (courseId: string) => {
     setCourses((prev) => prev.filter((c) => c.id !== courseId));
     try {
-      await fetch(`/api/courses/${courseId}`, { method: 'DELETE' });
+      await fetch(`/api/courses/${courseId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API delete course error:', e);
     }
@@ -368,11 +432,24 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     try {
-      await fetch(`/api/courses/${courseId}/lessons`, {
+      const res = await fetch(`/api/courses/${courseId}/lessons`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(lesson),
       });
+      if (res.ok) {
+        const savedLesson = await res.json();
+        setCourses((prev) =>
+          prev.map((course) =>
+            course.id === courseId
+              ? {
+                  ...course,
+                  lessons: course.lessons.map((l) => (l.id === lesson.id ? savedLesson : l)),
+                }
+              : course
+          )
+        );
+      }
     } catch (e) {
       console.error('API add lesson error:', e);
     }
@@ -393,7 +470,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/courses/${courseId}/lessons/${updatedLesson.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedLesson),
       });
     } catch (e) {
@@ -414,7 +491,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     try {
-      await fetch(`/api/courses/${courseId}/lessons/${lessonId}`, { method: 'DELETE' });
+      await fetch(`/api/courses/${courseId}/lessons/${lessonId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
     } catch (e) {
       console.error('API delete lesson error:', e);
     }
@@ -430,7 +510,11 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
     try {
-      await fetch(`/api/courses/lessons/${lessonId}/complete`, { method: 'POST' });
+      await fetch(`/api/courses/lessons/${lessonId}/complete`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ email: currentUser?.email || studentProfile.email }),
+      });
     } catch (e) {
       console.error('API complete lesson error:', e);
     }
@@ -440,11 +524,15 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addExam = async (exam: Exam) => {
     setExams((prev) => [exam, ...prev]);
     try {
-      await fetch('/api/exams', {
+      const res = await fetch('/api/exams', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(exam),
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setExams((prev) => prev.map((e) => (e.id === exam.id ? saved : e)));
+      }
     } catch (e) {
       console.error('API add exam error:', e);
     }
@@ -455,7 +543,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/exams/${updatedExam.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedExam),
       });
     } catch (e) {
@@ -466,7 +554,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteExam = async (examId: string) => {
     setExams((prev) => prev.filter((e) => e.id !== examId));
     try {
-      await fetch(`/api/exams/${examId}`, { method: 'DELETE' });
+      await fetch(`/api/exams/${examId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API delete exam error:', e);
     }
@@ -476,7 +564,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLastExamResult(result);
     setStudentProfile((prev) => {
       const today = new Date().toISOString().split('T')[0];
-      const todayMinutes = (prev.studyLog[today] || 0) + Math.round(result.timeSpentSeconds / 60);
+      const todayMinutes = (prev.studyLog[today] || 0) + Math.max(1, Math.round(result.timeSpentSeconds / 60));
 
       return {
         ...prev,
@@ -492,8 +580,9 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/exams/${result.examId}/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
+          email: currentUser?.email || studentProfile.email,
           userAnswers: result.userAnswers,
           timeSpentSeconds: result.timeSpentSeconds,
         }),
@@ -519,8 +608,11 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/vocab/${vocabId}/master`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'mastered' }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          status: 'mastered',
+          email: currentUser?.email || studentProfile.email,
+        }),
       });
     } catch (e) {
       console.error('API mark mastered error:', e);
@@ -540,8 +632,11 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/vocab/${vocabId}/master`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'learning' }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          status: 'learning',
+          email: currentUser?.email || studentProfile.email,
+        }),
       });
     } catch (e) {
       console.error('API mark learning error:', e);
@@ -553,7 +648,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch('/api/vocab', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(vocab),
       });
     } catch (e) {
@@ -564,7 +659,6 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Vocab Decks & Flashcards actions
   const addVocabDeck = async (deck: VocabDeck) => {
     setVocabDecks((prev) => [deck, ...prev]);
-    // Also merge its cards into global vocabularies
     if (deck.cards && deck.cards.length > 0) {
       setVocabularies((prev) => {
         const newOnes = deck.cards.filter((c) => !prev.some((v) => v.word === c.word));
@@ -573,11 +667,15 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      await fetch('/api/vocab/decks', {
+      const res = await fetch('/api/vocab/decks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(deck),
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setVocabDecks((prev) => prev.map((d) => (d.id === deck.id ? saved : d)));
+      }
     } catch (e) {
       console.error('API add deck error:', e);
     }
@@ -588,7 +686,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/vocab/decks/${updatedDeck.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedDeck),
       });
     } catch (e) {
@@ -600,7 +698,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVocabDecks((prev) => prev.filter((d) => d.id !== deckId));
     if (activeDeckId === deckId) setActiveDeckId(null);
     try {
-      await fetch(`/api/vocab/decks/${deckId}`, { method: 'DELETE' });
+      await fetch(`/api/vocab/decks/${deckId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API delete deck error:', e);
     }
@@ -621,7 +719,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/vocab/decks/${deckId}/cards`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(card),
       });
     } catch (e) {
@@ -646,7 +744,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/vocab/decks/${deckId}/cards/${updatedCard.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updatedCard),
       });
     } catch (e) {
@@ -666,7 +764,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     try {
-      await fetch(`/api/vocab/decks/${deckId}/cards/${cardId}`, { method: 'DELETE' });
+      await fetch(`/api/vocab/decks/${deckId}/cards/${cardId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
     } catch (e) {
       console.error('API delete card error:', e);
     }
@@ -714,6 +815,9 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
       localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      if (resData.token) {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+      }
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: resData.message };
     } catch (err: any) {
@@ -744,6 +848,42 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
       localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      if (resData.token) {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+      }
+      setIsGoogleAuthModalOpen(false);
+      return { success: true, message: resData.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+    }
+  };
+
+  const resetPasswordWithEmail = async (data: { email: string; newPassword: string }) => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        return { success: false, message: resData.error || 'Đặt lại mật khẩu không thành công' };
+      }
+
+      const authedUser: AuthUser = resData.user;
+      setIsAuthenticated(true);
+      setCurrentUser(authedUser);
+      setUserRole(authedUser.role || 'student');
+      if (resData.profile) {
+        setStudentProfile(resData.profile);
+      }
+
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      if (resData.token) {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+      }
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: resData.message };
     } catch (err: any) {
@@ -756,7 +896,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
       const resData = await res.json();
@@ -774,7 +914,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch(`/api/admin/users/${userId}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ role }),
       });
       const resData = await res.json();
@@ -801,7 +941,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch(`/api/admin/users/${userId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status }),
       });
       const resData = await res.json();
@@ -823,7 +963,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
       const resData = await res.json();
@@ -843,7 +983,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteUserAdmin = async (userId: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
       const resData = await res.json();
       if (!res.ok) {
         return { success: false, message: resData.error || 'Xóa tài khoản thất bại' };
@@ -874,8 +1017,14 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await fetch('/api/forum', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPostData),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          ...newPostData,
+          id: tempId,
+          authorName: newPostData.authorName || currentUser?.name || studentProfile.name,
+          authorAvatar: newPostData.authorAvatar || currentUser?.avatar || studentProfile.avatar,
+          role: newPostData.role || userRole,
+        }),
       });
       if (res.ok) {
         const savedPost = await res.json();
@@ -887,10 +1036,15 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addForumReply = async (postId: string, content: string, role: 'student' | 'teacher' | 'admin' = 'student') => {
+    const replyId = `fr-${Date.now()}`;
+    const authorName =
+      userRole === 'admin' ? 'Quản trị viên / Giáo viên' : currentUser?.name || studentProfile.name;
+    const authorAvatar = userRole === 'admin' ? '' : currentUser?.avatar || studentProfile.avatar;
+
     const newReply = {
-      id: `fr-${Date.now()}`,
-      authorName: userRole === 'admin' ? 'Quản trị viên / Giáo viên' : studentProfile.name,
-      authorAvatar: userRole === 'admin' ? '' : studentProfile.avatar,
+      id: replyId,
+      authorName,
+      authorAvatar,
       role,
       content,
       createdAt: new Date().toISOString(),
@@ -913,8 +1067,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch(`/api/forum/${postId}/replies`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, role }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ id: replyId, content, role, authorName, authorAvatar }),
       });
     } catch (e) {
       console.error('API reply forum post error:', e);
@@ -926,7 +1080,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p))
     );
     try {
-      await fetch(`/api/forum/${postId}/like`, { method: 'POST' });
+      await fetch(`/api/forum/${postId}/like`, { method: 'POST', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API like forum post error:', e);
     }
@@ -937,7 +1091,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => (p.id === postId ? { ...p, isPinned: !p.isPinned } : p))
     );
     try {
-      await fetch(`/api/forum/${postId}/toggle-pin`, { method: 'POST' });
+      await fetch(`/api/forum/${postId}/toggle-pin`, { method: 'POST', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API pin forum post error:', e);
     }
@@ -948,7 +1102,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => (p.id === postId ? { ...p, isSolved: !p.isSolved } : p))
     );
     try {
-      await fetch(`/api/forum/${postId}/toggle-solved`, { method: 'POST' });
+      await fetch(`/api/forum/${postId}/toggle-solved`, { method: 'POST', headers: getAuthHeaders() });
     } catch (e) {
       console.error('API solve forum post error:', e);
     }
@@ -965,8 +1119,13 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch('/api/reminders/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled, time, dailyGoal }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          enabled,
+          time,
+          dailyGoal,
+          email: currentUser?.email || studentProfile.email,
+        }),
       });
     } catch (e) {
       console.error('API reminder settings error:', e);
@@ -986,15 +1145,18 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await fetch('/api/reports/log-time', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minutes }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          minutes,
+          email: currentUser?.email || studentProfile.email,
+        }),
       });
     } catch (e) {
       console.error('API record study minutes error:', e);
     }
   };
 
-  const loginWithGoogle = async (customData?: Partial<AuthUser>) => {
+  const loginWithGoogle = async (customData?: Partial<AuthUser>): Promise<{ success: boolean; message?: string }> => {
     const userPayload = {
       name: customData?.name || 'Thắng Trần',
       email: customData?.email || 'thangtv1.hyn@gmail.com',
@@ -1010,58 +1172,44 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify(userPayload),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const authedUser: AuthUser = data.user || {
-          id: `g-user-${Date.now()}`,
-          ...userPayload,
-          provider: 'google',
-          joinedAt: new Date().toISOString(),
-        };
-
-        setIsAuthenticated(true);
-        setCurrentUser(authedUser);
-        if (data.profile) {
-          setStudentProfile(data.profile);
-        } else {
-          setStudentProfile((prev) => ({
-            ...prev,
-            name: authedUser.name,
-            email: authedUser.email,
-            avatar: authedUser.avatar,
-          }));
-        }
-
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
-        setIsGoogleAuthModalOpen(false);
-        return;
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.error || 'Đăng nhập Google không thành công' };
       }
-    } catch (err) {
-      console.warn('Backend login fallback to local session:', err);
-    }
 
-    // Client fallback if network hiccup
-    const user: AuthUser = {
-      id: customData?.id || `g-user-${Date.now()}`,
-      name: userPayload.name,
-      email: userPayload.email,
-      avatar: userPayload.avatar,
-      provider: 'google',
-      role: customData?.role || (userPayload.email === 'thangtv1.hyn@gmail.com' ? 'admin' : 'student'),
-      joinedAt: new Date().toISOString(),
-    };
-    setIsAuthenticated(true);
-    setCurrentUser(user);
-    setStudentProfile((prev) => ({
-      ...prev,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-    }));
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(user));
-    setIsGoogleAuthModalOpen(false);
+      const authedUser: AuthUser = data.user || {
+        id: `g-user-${Date.now()}`,
+        ...userPayload,
+        provider: 'google',
+        joinedAt: new Date().toISOString(),
+      };
+
+      setIsAuthenticated(true);
+      setCurrentUser(authedUser);
+      if (authedUser.role) {
+        setUserRole(authedUser.role);
+      }
+      if (data.profile) {
+        setStudentProfile(data.profile);
+      } else {
+        setStudentProfile((prev) => ({
+          ...prev,
+          name: authedUser.name,
+          email: authedUser.email,
+          avatar: authedUser.avatar,
+        }));
+      }
+
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      if (data.token) {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', data.token);
+      }
+      setIsGoogleAuthModalOpen(false);
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+    }
   };
 
   const updateCurrentUserProfile = async (
@@ -1074,7 +1222,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const res = await fetch('/api/auth/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           email: currentUser.email,
           ...data,
@@ -1121,6 +1269,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = async () => {
+    const headers = getAuthHeaders();
     setIsAuthenticated(false);
     setCurrentUser(null);
     setUserRole('student');
@@ -1130,22 +1279,32 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLastExamResult(null);
     setIsUserProfileOpen(false);
     setIsGoogleAuthModalOpen(false);
+    setStudentProfile(INITIAL_STUDENT_PROFILE);
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'auth');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'user');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'token');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'profile');
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', headers });
     } catch (e) {
       console.error(e);
     }
   };
 
-  const resetAllData = () => {
+  const resetAllData = async () => {
     setCourses(INITIAL_COURSES);
     setExams(INITIAL_EXAMS);
     setVocabularies(INITIAL_VOCABULARY);
+    setVocabDecks(INITIAL_VOCAB_DECKS);
     setForumPosts(INITIAL_FORUM_POSTS);
     setStudentProfile(INITIAL_STUDENT_PROFILE);
+    setAppUsers(INITIAL_APP_USERS);
     localStorage.clear();
+    try {
+      await fetch('/api/admin/reset', { method: 'POST' });
+    } catch (e) {
+      console.error('API reset error:', e);
+    }
   };
 
   return (
@@ -1156,6 +1315,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithGoogle,
         registerAccount,
         loginWithEmail,
+        resetPasswordWithEmail,
         logout,
         isGoogleAuthModalOpen,
         setIsGoogleAuthModalOpen,

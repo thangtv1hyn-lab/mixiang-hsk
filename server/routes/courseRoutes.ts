@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', (req, res) => {
   const { level } = req.query;
   let result = db.courses;
-  if (level) {
+  if (level && level !== 'ALL') {
     result = result.filter((c) => c.level === level);
   }
   res.json(result);
@@ -23,32 +23,49 @@ router.get('/:id', (req, res) => {
   res.json(course);
 });
 
-// Admin: Create new course
+// Admin: Create new course (preserve client-supplied ID if provided)
 router.post('/', (req, res) => {
   try {
-    const { level, title, vietnameseTitle, description, targetVocabCount, grammarPointsCount } = req.body;
+    const {
+      id,
+      level,
+      title,
+      vietnameseTitle,
+      description,
+      targetVocabCount,
+      grammarPointsCount,
+      colorScheme,
+      lessons,
+    } = req.body;
     if (!title || !level) {
       return res.status(400).json({ error: 'Tiêu đề và cấp độ là bắt buộc' });
     }
 
     const newCourse: Course = {
-      id: `c-custom-${Date.now()}`,
+      id: id || `c-custom-${Date.now()}`,
       level,
-      title,
+      title: String(title).trim(),
       vietnameseTitle: vietnameseTitle || title,
       description: description || `Khóa học chuẩn ${level}`,
       targetVocabCount: Number(targetVocabCount) || 300,
       grammarPointsCount: Number(grammarPointsCount) || 50,
-      colorScheme: {
+      colorScheme: colorScheme || {
         bg: 'from-rose-500/10 to-red-500/10',
         border: 'border-rose-400',
         text: 'text-rose-700',
         badge: 'bg-rose-100 text-rose-800 border-rose-300',
       },
-      lessons: [],
+      lessons: Array.isArray(lessons) ? lessons : [],
     };
 
-    db.courses.unshift(newCourse);
+    const existingIdx = db.courses.findIndex((c) => c.id === newCourse.id);
+    if (existingIdx !== -1) {
+      db.courses[existingIdx] = newCourse;
+    } else {
+      db.courses.unshift(newCourse);
+    }
+    db.save();
+
     res.status(201).json(newCourse);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -65,7 +82,9 @@ router.put('/:id', (req, res) => {
   db.courses[index] = {
     ...db.courses[index],
     ...req.body,
+    id: db.courses[index].id,
   };
+  db.save();
 
   res.json(db.courses[index]);
 });
@@ -77,10 +96,11 @@ router.delete('/:id', (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy khóa học' });
   }
   const deleted = db.courses.splice(index, 1);
+  db.save();
   res.json({ success: true, deleted: deleted[0] });
 });
 
-// Admin: Add lesson to course
+// Admin: Add lesson to course (preserve client-supplied ID if provided)
 router.post('/:courseId/lessons', (req, res) => {
   try {
     const course = db.courses.find((c) => c.id === req.params.courseId);
@@ -89,6 +109,8 @@ router.post('/:courseId/lessons', (req, res) => {
     }
 
     const {
+      id,
+      lessonNumber,
       title,
       vietnameseTitle,
       durationMinutes,
@@ -100,10 +122,10 @@ router.post('/:courseId/lessons', (req, res) => {
     } = req.body;
 
     const newLesson: Lesson = {
-      id: `l-custom-${Date.now()}`,
+      id: id || `l-custom-${Date.now()}`,
       courseId: course.id,
       level: course.level,
-      lessonNumber: course.lessons.length + 1,
+      lessonNumber: Number(lessonNumber) || course.lessons.length + 1,
       title: title || 'Bài học mới',
       vietnameseTitle: vietnameseTitle || title || 'Bài học mới',
       durationMinutes: Number(durationMinutes) || 30,
@@ -114,7 +136,14 @@ router.post('/:courseId/lessons', (req, res) => {
       practiceQuestions,
     };
 
-    course.lessons.push(newLesson);
+    const existingIdx = course.lessons.findIndex((l) => l.id === newLesson.id);
+    if (existingIdx !== -1) {
+      course.lessons[existingIdx] = newLesson;
+    } else {
+      course.lessons.push(newLesson);
+    }
+    db.save();
+
     res.status(201).json(newLesson);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -137,7 +166,10 @@ router.put('/:courseId/lessons/:lessonId', (req, res) => {
     course.lessons[lessonIdx] = {
       ...course.lessons[lessonIdx],
       ...req.body,
+      id: course.lessons[lessonIdx].id,
+      courseId: course.id,
     };
+    db.save();
 
     res.json(course.lessons[lessonIdx]);
   } catch (err: any) {
@@ -158,13 +190,14 @@ router.delete('/:courseId/lessons/:lessonId', (req, res) => {
   }
 
   const deletedLesson = course.lessons.splice(lessonIdx, 1);
+  db.save();
   res.json({ success: true, deleted: deletedLesson[0] });
 });
 
 // Student: Mark lesson as completed
 router.post('/lessons/:id/complete', (req, res) => {
   const lessonId = req.params.id;
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
 
   if (!profile.completedLessonIds.includes(lessonId)) {
     profile.completedLessonIds.push(lessonId);
@@ -174,11 +207,14 @@ router.post('/lessons/:id/complete', (req, res) => {
     profile.studyLog[today] = (profile.studyLog[today] || 0) + 20;
   }
 
+  db.syncProfileToAppUser(profile);
+
   res.json({
     success: true,
     message: 'Hoàn thành bài học (+50 XP)',
     completedLessonIds: profile.completedLessonIds,
     xp: profile.xp,
+    studyLog: profile.studyLog,
   });
 });
 

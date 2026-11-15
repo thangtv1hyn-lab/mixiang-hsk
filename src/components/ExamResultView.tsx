@@ -44,68 +44,68 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
   }, [result.passed]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+    <div className="w-full space-y-8 pb-16">
       {/* Score Certificate Card */}
       <div
         className={`rounded-3xl p-8 sm:p-10 border text-center shadow-lg relative overflow-hidden ${
           result.passed
-            ? 'bg-gradient-to-br from-red-950 via-red-900 to-[#18181B] text-white border-red-500/40'
+            ? 'bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white border-red-500/70'
             : 'bg-gradient-to-br from-[#18181B] via-zinc-900 to-[#18181B] text-white border-zinc-700'
         }`}
       >
-        <div className="relative z-10 max-w-xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 backdrop-blur-md border border-white/20">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+        <div className="relative z-10 max-w-2xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[14px] font-bold bg-white/10 backdrop-blur-md border border-white/20">
+            <Sparkles className="w-5 h-5 text-amber-300" />
             <span>Kết Quả Thi Thử HSK Tự Động</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h2 className="font-serif text-[22px] sm:text-[27px] font-black tracking-tight">
             {result.examTitle}
           </h2>
 
           {/* Big Score Display */}
           <div className="py-4">
             <div className="inline-block p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
-              <span className="text-6xl sm:text-7xl font-black tracking-tight text-amber-300">
+              <span className="font-mono text-6xl sm:text-7xl font-black tracking-tight text-amber-300 tabular-nums">
                 {result.totalScore}
               </span>
-              <span className="text-xl text-slate-300 font-bold ml-2">
+              <span className="font-mono text-[21px] text-rose-100 font-bold ml-2 tabular-nums">
                 / {result.maxScore}
               </span>
             </div>
           </div>
 
           {/* Pass/Fail Status */}
-          <div>
+          <div className="space-y-3">
             {result.passed ? (
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/20 text-amber-200 border border-amber-400/40 text-sm font-bold">
-                <CheckCircle2 className="w-5 h-5 text-amber-400" />
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-300/20 text-amber-200 border border-amber-300/50 text-[16px] font-bold">
+                <CheckCircle2 className="w-6 h-6 text-amber-300" />
                 <span>CHÚC MỪNG! BẠN ĐÃ ĐẠT CHUẨN (合格 - PASS)</span>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-sm font-bold">
-                <XCircle className="w-5 h-5 text-rose-400" />
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-rose-500/20 text-rose-200 border border-rose-400/40 text-[16px] font-bold">
+                <XCircle className="w-6 h-6 text-rose-300" />
                 <span>CHƯA ĐẠT (不合格) - CẦN CỐ GẮNG THÊM</span>
               </div>
             )}
-            <p className="text-xs text-slate-300 mt-2">
-              Điểm đạt yêu cầu: {exam?.passScore || 120} điểm | Thời gian làm bài: {Math.round(result.timeSpentSeconds / 60)} phút
+            <p className="text-[19px] text-rose-50">
+              Điểm đạt yêu cầu: {exam?.passScore || 120} điểm · Thời gian làm bài: {Math.round(result.timeSpentSeconds / 60)} phút
             </p>
           </div>
 
           {/* Skill Breakdown */}
-          <div className="grid grid-cols-3 gap-3 pt-6 border-t border-white/10 text-xs">
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-300 block text-[11px]">Nghe hiểu</span>
-              <span className="font-bold text-base text-white">{result.listeningScore} đ</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 border-t border-white/15">
+            <div className="bg-white/10 p-4 rounded-2xl border border-white/15">
+              <span className="text-rose-100 block text-[14px]">Nghe hiểu</span>
+              <span className="font-mono font-black text-[19px] text-white tabular-nums">{result.listeningScore} đ</span>
             </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-300 block text-[11px]">Đọc hiểu</span>
-              <span className="font-bold text-base text-white">{result.readingScore} đ</span>
+            <div className="bg-white/10 p-4 rounded-2xl border border-white/15">
+              <span className="text-rose-100 block text-[14px]">Đọc hiểu</span>
+              <span className="font-mono font-black text-[19px] text-white tabular-nums">{result.readingScore} đ</span>
             </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-              <span className="text-slate-300 block text-[11px]">Viết & Cấu trúc</span>
-              <span className="font-bold text-base text-white">{result.writingScore} đ</span>
+            <div className="bg-white/10 p-4 rounded-2xl border border-white/15">
+              <span className="text-rose-100 block text-[14px]">Viết & Cấu trúc</span>
+              <span className="font-mono font-black text-[19px] text-white tabular-nums">{result.writingScore} đ</span>
             </div>
           </div>
         </div>
@@ -114,39 +114,42 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <button
+          type="button"
           onClick={onGoToExamsList}
-          className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors"
+          className="px-5 py-3 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[#18181B] font-bold text-[14px] sm:text-[16px] hover:border-red-500 hover:bg-[#FFF5F3] transition-colors cursor-pointer"
         >
           ← Danh sách đề thi
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
+            type="button"
             onClick={onRetake}
-            className="px-4 py-2.5 rounded-xl bg-[#18181B] text-white font-bold text-xs sm:text-sm hover:bg-black transition-colors flex items-center gap-2"
+            className="px-5 py-3 rounded-2xl bg-[#18181B] text-white font-bold text-[14px] sm:text-[16px] hover:bg-black transition-colors flex items-center gap-2 cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-5 h-5" />
             <span>Làm lại đề thi</span>
           </button>
 
           <button
+            type="button"
             onClick={onGoToReports}
-            className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs sm:text-sm hover:bg-red-700 transition-colors shadow-xs flex items-center gap-2"
+            className="px-5 py-3 rounded-2xl bg-red-600 text-white font-bold text-[14px] sm:text-[16px] hover:bg-red-700 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
           >
-            <BarChart3 className="w-4 h-4" />
-            <span>Xem Báo Cáo Học Tập Tuần/Tháng ➔</span>
+            <BarChart3 className="w-5 h-5" />
+            <span>Xem Báo Cáo Học Tập ➔</span>
           </button>
         </div>
       </div>
 
       {/* Detailed Question Review */}
       {exam && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
+        <div className="bg-white rounded-3xl border border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-6">
+          <div className="space-y-1">
+            <h3 className="font-serif text-[21px] sm:text-[24px] font-black text-[#18181B]">
               Chi tiết bài làm và đáp án giải thích
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-[19px] text-slate-600">
               Xem lại từng câu hỏi để nắm rõ lý do chọn đúng hoặc sai
             </p>
           </div>
@@ -179,51 +182,52 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
               return (
                 <div
                   key={q.id}
-                  className={`p-6 rounded-2xl border space-y-4 ${
+                  className={`p-6 rounded-3xl border-2 space-y-4 ${
                     isCorrect
-                      ? 'border-emerald-200 bg-emerald-50/20'
-                      : 'border-red-200 bg-red-50/20'
+                      ? 'border-emerald-300 bg-[#ECFDF5]'
+                      : 'border-red-300 bg-[#FFF5F3]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-slate-600 px-2.5 py-0.5 rounded-md bg-white border border-slate-200">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-mono font-bold text-[14px] text-[#18181B] px-3 py-1 rounded-xl bg-white border border-[#E8DFCE]">
                         Câu {idx + 1}
                       </span>
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase">
+                      <span className="text-[14px] font-bold text-slate-600">
                         {q.section === 'listening' ? 'Nghe hiểu' : q.section === 'reading' ? 'Đọc hiểu' : q.section === 'writing' ? 'Viết' : 'Nói & Phát âm'}
                       </span>
                     </div>
 
                     {isCorrect ? (
-                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        <Check className="w-3.5 h-3.5" />
+                      <span className="flex items-center gap-1.5 text-[14px] font-bold text-emerald-800 bg-emerald-100 px-3.5 py-1 rounded-full border border-emerald-300">
+                        <Check className="w-5 h-5" />
                         Đúng
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2.5 py-0.5 rounded-full border border-red-200">
-                        <X className="w-3.5 h-3.5" />
+                      <span className="flex items-center gap-1.5 text-[14px] font-bold text-red-700 bg-red-100 px-3.5 py-1 rounded-full border border-red-300">
+                        <X className="w-5 h-5" />
                         Sai
                       </span>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <h5 className="font-bold text-sm text-slate-900">{q.question}</h5>
+                  <div className="space-y-1.5">
+                    <h5 className="font-serif font-bold text-[19px] text-[#18181B]">{q.question}</h5>
                     {q.pinyin && showPinyin && (
-                      <p className="text-xs text-rose-600 font-mono italic">{q.pinyin}</p>
+                      <p className="text-[16px] text-red-600 font-mono font-semibold">{q.pinyin}</p>
                     )}
                   </div>
 
                   {q.audioPrompt && (
-                    <div className="flex items-center gap-2 text-xs bg-white p-2.5 rounded-xl border border-slate-200">
-                      <span className="text-slate-500">File nghe:</span>
-                      <span className="font-serif font-bold text-slate-900">{q.audioPrompt}</span>
+                    <div className="flex flex-wrap items-center gap-3 text-[16px] bg-white p-4 rounded-2xl border border-[#E8DFCE]">
+                      <span className="text-slate-600 font-semibold">File nghe:</span>
+                      <span className="font-serif font-bold text-[19px] text-[#18181B]">{q.audioPrompt}</span>
                       <button
+                        type="button"
                         onClick={() => speakChinese(q.audioPrompt!)}
-                        className="ml-auto text-red-700 hover:text-red-800 font-bold flex items-center gap-1"
+                        className="ml-auto px-4 py-2 rounded-xl bg-[#FFF5F3] text-red-700 hover:bg-red-600 hover:text-white font-bold text-[14px] flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <Volume2 className="w-3.5 h-3.5" />
+                        <Volume2 className="w-5 h-5" />
                         <span>Nghe lại</span>
                       </button>
                     </div>
@@ -231,14 +235,14 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
 
                   {/* Options review for multiple choice */}
                   {qType === 'choice' && q.options && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[16px]">
                       {q.options.map((opt, optIdx) => {
                         const isThisSelected = Number(userChoice) === optIdx;
                         const isThisCorrect = optIdx === q.correctAnswer;
 
-                        let style = 'border-slate-200 bg-white text-slate-600';
+                        let style = 'border-[#E8DFCE] bg-white text-[#18181B]';
                         if (isThisCorrect) {
-                          style = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold';
+                          style = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold';
                         } else if (isThisSelected && !isThisCorrect) {
                           style = 'border-red-500 bg-red-50 text-red-900 line-through';
                         }
@@ -246,14 +250,14 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
                         return (
                           <div
                             key={optIdx}
-                            className={`p-3 rounded-xl border flex items-center justify-between ${style}`}
+                            className={`p-4 rounded-2xl border-2 flex items-center justify-between gap-2 ${style}`}
                           >
                             <span>{opt}</span>
                             {isThisCorrect && (
-                              <span className="text-[11px] font-bold text-emerald-700">Đáp án đúng</span>
+                              <span className="text-[13px] font-bold text-emerald-700 shrink-0">Đáp án đúng</span>
                             )}
                             {isThisSelected && !isThisCorrect && (
-                              <span className="text-[11px] font-bold text-red-600">Bạn đã chọn</span>
+                              <span className="text-[13px] font-bold text-red-600 shrink-0">Bạn đã chọn</span>
                             )}
                           </div>
                         );
@@ -263,23 +267,23 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
 
                   {/* Text review for fill_blank, writing, speaking */}
                   {qType !== 'choice' && (
-                    <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Câu trả lời của bạn:</span>
-                        <span className={`font-bold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}`}>
+                    <div className="p-4 bg-white rounded-2xl border border-[#E8DFCE] space-y-2 text-[16px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-600">Câu trả lời của bạn:</span>
+                        <span className={`font-bold ${isCorrect ? 'text-emerald-700' : 'text-red-600'}`}>
                           {userChoice !== undefined && userChoice !== '' ? String(userChoice) : '(Chưa điền / chưa nói)'}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between border-t border-slate-100 pt-1.5">
-                        <span className="text-slate-500">Đáp án chuẩn:</span>
-                        <span className="font-bold text-slate-900">{q.correctText}</span>
+                      <div className="flex items-center justify-between gap-2 border-t border-[#F2ECE0] pt-2">
+                        <span className="text-slate-600">Đáp án chuẩn:</span>
+                        <span className="font-bold text-[#18181B]">{q.correctText}</span>
                       </div>
                     </div>
                   )}
 
                   {/* Explanation */}
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 leading-relaxed">
-                    <span className="font-bold text-slate-900 block mb-1">Giải thích chi tiết:</span>
+                  <div className="p-4 rounded-2xl bg-white border border-[#E8DFCE] text-[18px] text-slate-700 leading-relaxed">
+                    <span className="font-bold text-[#18181B] block mb-1">Giải thích chi tiết:</span>
                     {q.explanation}
                   </div>
                 </div>

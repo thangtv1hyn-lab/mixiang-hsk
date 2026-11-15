@@ -1,0 +1,40 @@
+{
+  "collection": "authUsers",
+  "updatedAt": "2026-11-15T04:16:52.875Z",
+  "count": 3,
+  "items": [
+    {
+      "id": "usr-std-1",
+      "name": "Đặng Tuấn Kiệt",
+      "email": "tuankiet.dang@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+      "provider": "email",
+      "role": "student",
+      "status": "active",
+      "targetLevel": "HSK 3",
+      "joinedAt": "2026-09-15"
+    },
+    {
+      "id": "usr-teach-1",
+      "name": "Cô Lý Mỹ Linh (Lão Sư)",
+      "email": "mylinh.laoshi@hskmaster.edu.vn",
+      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
+      "provider": "email",
+      "role": "teacher",
+      "status": "active",
+      "targetLevel": "HSK 5",
+      "joinedAt": "2026-02-15"
+    },
+    {
+      "id": "usr-admin-1",
+      "name": "Thắng Trần (Quản trị viên)",
+      "email": "thangtv1.hyn@gmail.com",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+      "provider": "google",
+      "role": "admin",
+      "status": "active",
+      "targetLevel": "HSK 5",
+      "joinedAt": "2026-01-10"
+    }
+  ]
+}

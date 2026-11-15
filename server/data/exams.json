@@ -1,0 +1,241 @@
+{
+  "collection": "exams",
+  "updatedAt": "2026-11-15T01:37:35.393Z",
+  "count": 5,
+  "items": [
+    {
+      "id": "exam-hsk1-std",
+      "level": "HSK 1",
+      "title": "Đề thi thử HSK 1 Chuẩn Quốc Tế - Đề số 01",
+      "subtitle": "Mô phỏng chuẩn cấu trúc đề thi HSK 1 với 3 phần: Nghe hiểu, Đọc hiểu và Cấu trúc",
+      "timeLimitMinutes": 20,
+      "passScore": 120,
+      "totalPoints": 200,
+      "questions": [
+        {
+          "id": "q1-1",
+          "section": "listening",
+          "question": "Nghe đoạn ghi âm và chọn bức tranh/ý nghĩa phù hợp nhất:",
+          "pinyin": "Qǐng tīng lùyīn: \"你好，很高兴认识你。\"",
+          "audioPrompt": "你好，很高兴认识你。",
+          "options": [
+            "A. Xin chào, rất vui được làm quen với bạn",
+            "B. Tạm biệt, ngày mai gặp lại nhé",
+            "C. Cảm ơn bạn rất nhiều vì sự giúp đỡ",
+            "D. Không có gì đâu, đừng khách sáo"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Câu trong file nghe là: \"你好，很高兴认识你。\" dịch là \"Xin chào, rất vui được làm quen với bạn\"."
+        },
+        {
+          "id": "q1-2",
+          "section": "listening",
+          "question": "Nghe đoạn ghi âm sau:",
+          "pinyin": "Qǐng tīng lùyīn: \"他们正在喝茶。\"",
+          "audioPrompt": "他们正在喝茶。",
+          "options": [
+            "A. Bọn họ đang đọc sách",
+            "B. Bọn họ đang uống trà",
+            "C. Bọn họ đang đi xem phim",
+            "D. Bọn họ đang nấu cơm"
+          ],
+          "correctAnswer": 1,
+          "explanation": "喝茶 (hē chá) nghĩa là uống trà."
+        },
+        {
+          "id": "q1-3",
+          "section": "reading",
+          "question": "Chọn từ đúng điền vào chỗ trống: \"我____李华，是中国人。\"",
+          "pinyin": "Wǒ ____ Lǐ Huá, shì Zhōngguó rén.",
+          "options": [
+            "A. 叫 (jiào)",
+            "B. 喝 (hē)",
+            "C. 看 (kàn)",
+            "D. 买 (mǎi)"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Giới thiệu tên tuổi dùng cấu trúc: 我叫... (Tôi tên là...)"
+        },
+        {
+          "id": "q1-4",
+          "section": "reading",
+          "question": "Chọn phiên âm Pinyin chính xác của từ \"谢谢\":",
+          "options": [
+            "A. xiéxie",
+            "B. xièxie",
+            "C. xǐexie",
+            "D. xīexie"
+          ],
+          "correctAnswer": 1,
+          "explanation": "Chữ 谢谢 có phiên âm chuẩn là xièxie (thanh 4 và khinh thanh)."
+        },
+        {
+          "id": "q1-5",
+          "section": "writing",
+          "question": "Sắp xếp các từ sau thành câu hoàn chỉnh: [好 / 朋友 / 他 / 是 / 我的]",
+          "pinyin": "Tā shì wǒ de hǎo péngyou.",
+          "options": [
+            "A. 他是我的好朋友。",
+            "B. 我的好朋友是他。",
+            "C. 好朋友他是我的。",
+            "D. 是我的好朋友他。"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Cấu trúc: Chủ ngữ (他) + Động từ (是) + Định ngữ (我的) + Danh từ (好朋友)."
+        }
+      ]
+    },
+    {
+      "id": "exam-hsk2-std",
+      "level": "HSK 2",
+      "title": "Đề thi thử HSK 2 Toàn Diện - Đề số 01",
+      "subtitle": "Đánh giá khả năng giao tiếp, vốn từ 300 chữ và phản xạ nghe - đọc",
+      "timeLimitMinutes": 30,
+      "passScore": 120,
+      "totalPoints": 200,
+      "questions": [
+        {
+          "id": "q2-1",
+          "section": "listening",
+          "question": "Nghe đoạn ghi âm sau:",
+          "pinyin": "Qǐng tīng lùyīn: \"这件衣服真便宜，只要五十块。\"",
+          "audioPrompt": "这件衣服真便宜，只要五十块。",
+          "options": [
+            "A. Chiếc áo này quá đắt",
+            "B. Chiếc áo này rất rẻ, chỉ 50 tệ",
+            "C. Chiếc áo này màu sắc không đẹp",
+            "D. Anh ấy không muốn mua áo"
+          ],
+          "correctAnswer": 1,
+          "explanation": "便宜 (piányi) = rẻ; 五十块 (wǔshí kuài) = 50 tệ."
+        },
+        {
+          "id": "q2-2",
+          "section": "reading",
+          "question": "Chọn đáp án đúng điền vào chỗ trống: \"我们坐飞机去北京，____坐火车快得多。\"",
+          "options": [
+            "A. 比",
+            "B. 和",
+            "C. 像",
+            "D. 跟"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Cấu trúc so sánh hơn: A + 比 + B + Tính từ + 得多 (A hơn B rất nhiều)."
+        },
+        {
+          "id": "q2-3",
+          "section": "writing",
+          "question": "Sắp xếp câu chuẩn: [准备 / 旅游 / 我们 / 去 / 已经 / 好了]",
+          "options": [
+            "A. 我们已经准备好去旅游了。",
+            "B. 去旅游我们已经准备好了。",
+            "C. 已经准备好我们去旅游了。",
+            "D. 我们去旅游已经准备好了。"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Trật tự: Chủ ngữ (我们) + Phó từ (已经) + Bổ ngữ (准备好) + Mục đích (去旅游了)."
+        }
+      ]
+    },
+    {
+      "id": "exam-hsk3-std",
+      "level": "HSK 3",
+      "title": "Đề thi thử HSK 3 Chuẩn Hán Ban - Đề số 01",
+      "subtitle": "Kiểm tra 600 từ vựng, ngữ pháp liên từ và khả năng xử lý tình huống thực tế",
+      "timeLimitMinutes": 35,
+      "passScore": 180,
+      "totalPoints": 300,
+      "questions": [
+        {
+          "id": "q3-1",
+          "section": "listening",
+          "question": "Nghe hội thoại và xác định thái độ nhân vật:",
+          "pinyin": "Qǐng tīng: \"虽然工作很辛苦，但能学到这么多东西，我觉得很值得。\"",
+          "audioPrompt": "虽然工作很辛苦，但能学到这么多东西，我觉得很值得。",
+          "options": [
+            "A. Anh ấy cảm thấy công việc nhàm chán",
+            "B. Anh ấy muốn từ chức ngay",
+            "C. Anh ấy thấy công việc vất vả nhưng rất đáng giá",
+            "D. Anh ấy không học được gì mới"
+          ],
+          "correctAnswer": 2,
+          "explanation": "值得 (zhídé) nghĩa là xứng đáng, đáng giá."
+        },
+        {
+          "id": "q3-2",
+          "section": "reading",
+          "question": "Chọn từ thích hợp: \"经常运动对身体健康有很大的____。\"",
+          "options": [
+            "A. 影响 (yǐngxiǎng)",
+            "B. 决定 (juédìng)",
+            "C. 习惯 (xíguàn)",
+            "D. 打算 (dǎsuàn)"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Cấu trúc \"对...有很大影响\" nghĩa là có ảnh hưởng lớn đối với cái gì."
+        }
+      ]
+    },
+    {
+      "id": "exam-hsk4-std",
+      "level": "HSK 4",
+      "title": "Đề thi thử HSK 4 Đẳng Cấp - Đề số 01",
+      "subtitle": "Thử thách 1200 từ vựng, câu chữ 把/被, và đọc hiểu các bài luận",
+      "timeLimitMinutes": 45,
+      "passScore": 180,
+      "totalPoints": 300,
+      "questions": [
+        {
+          "id": "q4-1",
+          "section": "reading",
+          "question": "Chọn câu viết đúng cấu trúc câu chữ 把:",
+          "options": [
+            "A. 老师把生词解释得非常清楚。",
+            "B. 老师生词把解释得非常清楚。",
+            "C. 把老师生词解释得非常清楚。",
+            "D. 老师解释得生词把非常清楚。"
+          ],
+          "correctAnswer": 0,
+          "explanation": "Chủ ngữ (老师) + 把 + Tân ngữ (生词) + Động từ (解释) + Bổ ngữ (得非常清楚)."
+        },
+        {
+          "id": "q4-2",
+          "section": "writing",
+          "question": "Điền từ nối văn bản thích hợp: \"他每天坚持跑步，____身体越来越健康了。\"",
+          "options": [
+            "A. 因此",
+            "B. 尽管",
+            "C. 否则",
+            "D. 无论"
+          ],
+          "correctAnswer": 0,
+          "explanation": "因此 (yīncǐ) biểu thị kết quả (Do đó, vì thế)."
+        }
+      ]
+    },
+    {
+      "id": "exam-hsk5-std",
+      "level": "HSK 5",
+      "title": "Đề thi thử HSK 5 Cao Cấp - Đề số 01",
+      "subtitle": "Đo lường năng lực học thuật 2500 từ vựng và tư duy phản biện tiếng Hán",
+      "timeLimitMinutes": 60,
+      "passScore": 180,
+      "totalPoints": 300,
+      "questions": [
+        {
+          "id": "q5-1",
+          "section": "reading",
+          "question": "Từ nào đồng nghĩa gần nhất với \"把握\" trong ngữ cảnh nắm bắt thời cơ?",
+          "options": [
+            "A. 抓住 (zhuāzhù)",
+            "B. 放弃 (fàngqì)",
+            "C. 犹豫 (yóuyù)",
+            "D. 逃避 (táobì)"
+          ],
+          "correctAnswer": 0,
+          "explanation": "把握机会 đồng nghĩa với 抓住机会 (nắm bắt lấy cơ hội)."
+        }
+      ]
+    }
+  ]
+}

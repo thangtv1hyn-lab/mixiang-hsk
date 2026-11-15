@@ -1,22 +1,9 @@
 import { Router } from 'express';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { db } from '../dataStore.ts';
 import { ForumPost, ForumReply } from '../../src/types/hsk.ts';
-import { GoogleGenAI } from '@google/genai';
 
 const router = Router();
-
-const apiKey = process.env.GEMINI_API_KEY || '';
-let ai: GoogleGenAI | null = null;
-if (apiKey) {
-  ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
-}
 
 // Get all forum posts
 router.get('/', (req, res) => {
@@ -52,38 +39,68 @@ router.get('/:id', (req, res) => {
   res.json(post);
 });
 
-// Create new forum post
+// Create new forum post (preserve client ID and author info if provided)
 router.post('/', (req, res) => {
   try {
-    const { title, content, level, category, tags = [] } = req.body;
+    const {
+      id,
+      title,
+      content,
+      level,
+      category,
+      tags = [],
+      authorName,
+      authorAvatar,
+      role,
+      isPinned = false,
+      isSolved = false,
+    } = req.body;
     if (!title || !content) {
       return res.status(400).json({ error: 'Tiêu đề và nội dung là bắt buộc' });
     }
 
-    const user = db.users[0];
+    const activeProfile = db.getActiveProfile(req);
     const newPost: ForumPost = {
-      id: `fp-${Date.now()}`,
-      authorName: user?.name || 'Học viên',
-      authorAvatar: user?.avatar || '',
-      role: 'student',
-      title: title.trim(),
-      content: content.trim(),
+      id: id || `fp-${Date.now()}`,
+      authorName: authorName || activeProfile?.name || 'Học viên',
+      authorAvatar: authorAvatar !== undefined ? authorAvatar : activeProfile?.avatar || '',
+      role: role || activeProfile?.role || 'student',
+      title: String(title).trim(),
+      content: String(content).trim(),
       level: level || 'HSK 3',
       category: category || 'Ngữ pháp',
       tags: Array.isArray(tags) ? tags : [tags],
       likes: 1,
       repliesCount: 0,
       createdAt: new Date().toISOString(),
-      isPinned: false,
-      isSolved: false,
+      isPinned: Boolean(isPinned),
+      isSolved: Boolean(isSolved),
       replies: [],
     };
 
-    db.forumPosts.unshift(newPost);
+    const existingIdx = db.forumPosts.findIndex((p) => p.id === newPost.id);
+    if (existingIdx !== -1) {
+      db.forumPosts[existingIdx] = newPost;
+    } else {
+      db.forumPosts.unshift(newPost);
+    }
+    db.save();
+
     res.status(201).json(newPost);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Delete forum post (Admin)
+router.delete('/:id', (req, res) => {
+  const index = db.forumPosts.findIndex((p) => p.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Không tìm thấy bài viết' });
+  }
+  const deleted = db.forumPosts.splice(index, 1)[0];
+  db.save();
+  res.json({ success: true, deleted });
 });
 
 // Add reply to post
@@ -94,24 +111,32 @@ router.post('/:id/replies', (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết' });
     }
 
-    const { content, role = 'student' } = req.body;
+    const { id: replyId, content, role = 'student', authorName, authorAvatar } = req.body;
     if (!content) {
       return res.status(400).json({ error: 'Nội dung câu trả lời là bắt buộc' });
     }
 
-    const user = db.users[0];
+    const activeProfile = db.getActiveProfile(req);
     const newReply: ForumReply = {
-      id: `fr-${Date.now()}`,
-      authorName: role === 'admin' ? 'Quản trị viên / Giáo viên' : user?.name || 'Học viên',
-      authorAvatar: role === 'admin' ? '' : user?.avatar || '',
+      id: replyId || `fr-${Date.now()}`,
+      authorName:
+        authorName ||
+        (role === 'admin' ? 'Quản trị viên / Giáo viên' : activeProfile?.name || 'Học viên'),
+      authorAvatar:
+        authorAvatar !== undefined
+          ? authorAvatar
+          : role === 'admin'
+            ? ''
+            : activeProfile?.avatar || '',
       role: role as any,
-      content: content.trim(),
+      content: String(content).trim(),
       createdAt: new Date().toISOString(),
       likes: 0,
     };
 
     post.replies.push(newReply);
     post.repliesCount = post.replies.length;
+    db.save();
 
     res.status(201).json(newReply);
   } catch (err: any) {
@@ -128,23 +153,41 @@ router.post('/:id/ai-solve', async (req, res) => {
     }
 
     let aiContent = '';
-    if (ai) {
-      const prompt = `Bạn là Lão Sư AI giảng viên tiếng Trung chuyên luyện thi HSK 1 - 5.
+    const apiKey = process.env.GEMINI_API_KEY || '';
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            },
+          },
+        });
+        const prompt = `Bạn là Lão Sư AI giảng viên tiếng Trung chuyên luyện thi HSK 1 - 5.
 Hãy giải đáp câu hỏi của học viên sau trên diễn đàn một cách chi tiết, sư phạm, có chữ Hán, Pinyin và ví dụ cụ thể:
 Tiêu đề: ${post.title}
 Nội dung: ${post.content}
 Cấp độ: ${post.level}`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-      });
+        const response = await ai.models.generateContent({
+          model: 'gemini-4-hydrogen',
+          contents: prompt,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
+        });
 
-      aiContent = response.text || 'Lão Sư đã tiếp nhận câu hỏi của bạn. Hãy kiên trì học tập nhé!';
-    } else {
-      aiContent = `Chào bạn! Lão Sư AI xin phân tích điểm ngữ pháp trong câu hỏi "${post.title}":
-1. Cấu trúc ngữ pháp chuẩn HSK và vị trí các từ.
-2. Ví dụ thực tế: 我每天都努力学习汉语 (Mỗi ngày tôi đều nỗ lực học tiếng Trung).
+        aiContent = response.text || '';
+      } catch (aiErr: any) {
+        console.warn('Forum AI solve fallback:', aiErr?.message);
+      }
+    }
+
+    if (!aiContent) {
+      aiContent = `Chào bạn! Lão Sư AI xin giải đáp chi tiết câu hỏi "${post.title}" (${post.level}):
+1. Phân tích ngữ pháp & từ vựng: Lưu ý vị trí phó từ/bổ ngữ đứng trước hoặc sau động từ chính theo chuẩn ngữ pháp HSK.
+2. Ví dụ thực tế: 我每天都认真复习汉语词汇总表。(Wǒ měitiān dōu rènzhēn fùxí Hànyǔ cíhuì zǒngbiǎo - Mỗi ngày tôi đều ôn tập kỹ bảng từ vựng tiếng Trung).
 加油！Cố lên bạn nhé!`;
     }
 
@@ -161,6 +204,7 @@ Cấp độ: ${post.level}`;
     post.replies.push(aiReply);
     post.repliesCount = post.replies.length;
     post.isSolved = true;
+    db.save();
 
     res.status(201).json({ success: true, reply: aiReply, post });
   } catch (err: any) {
@@ -175,6 +219,7 @@ router.post('/:id/like', (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy bài viết' });
   }
   post.likes += 1;
+  db.save();
   res.json({ success: true, likes: post.likes });
 });
 
@@ -185,6 +230,7 @@ router.post('/:id/toggle-solved', (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy bài viết' });
   }
   post.isSolved = !post.isSolved;
+  db.save();
   res.json({ success: true, isSolved: post.isSolved });
 });
 
@@ -195,6 +241,7 @@ router.post('/:id/toggle-pin', (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy bài viết' });
   }
   post.isPinned = !post.isPinned;
+  db.save();
   res.json({ success: true, isPinned: post.isPinned });
 });
 

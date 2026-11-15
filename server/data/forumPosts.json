@@ -1,0 +1,78 @@
+{
+  "collection": "forumPosts",
+  "updatedAt": "2026-11-15T01:37:35.396Z",
+  "count": 2,
+  "items": [
+    {
+      "id": "fp-1",
+      "authorName": "Nguyễn Thúy Hằng",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+      "role": "student",
+      "title": "Làm thế nào để phân biệt cách dùng câu chữ \"把\" và câu bình thường trong HSK 3 - HSK 4?",
+      "content": "Chào thầy cô và mọi người! Em học đến phần câu chữ 把 thường xuyên bị nhầm vị trí của phó từ như \"不\", \"没\" và động từ năng nguyện \"想\", \"要\". Khi nào bắt buộc phải dùng chữ 把 ạ?",
+      "level": "HSK 4",
+      "category": "Ngữ pháp",
+      "tags": [
+        "Ngữ pháp",
+        "Câu chữ 把",
+        "HSK 4"
+      ],
+      "likes": 24,
+      "repliesCount": 3,
+      "createdAt": "2026-11-06T10:30:00Z",
+      "isPinned": true,
+      "isSolved": true,
+      "replies": [
+        {
+          "id": "fr-1",
+          "authorName": "Lão Sư AI (Trợ lý Giáo viên)",
+          "authorAvatar": "",
+          "role": "ai",
+          "content": "Chào Thúy Hằng! Lão Sư giải đáp cho bạn 2 quy tắc vàng cực dễ nhớ nhé:\n1. **Quy tắc vị trí phó từ phủ định & động từ năng nguyện**:\n   Tất cả các từ phủ định (不, 没) và động từ nguyện vọng (想, 要, 应该, 愿意) luôn phải **ĐỨNG TRƯỚC \"把\"**, tuyệt đối không chen vào giữa \"把\" và động từ chính.\n   - Đúng: 我**还没把**作业做完。(Tôi vẫn chưa làm xong bài tập.)\n   - Sai: 我把作业没做完。❌\n\n2. **Khi nào bắt buộc dùng 把**:\n   Khi bạn muốn biểu thị sự di dời vị trí (把 A 放/搬到 B) hoặc biến đổi hình thức/kết quả (把 A 翻译成 B).\n   加油！Cố lên em nhé!",
+          "createdAt": "2026-11-06T10:32:00Z",
+          "likes": 18
+        },
+        {
+          "id": "fr-2",
+          "authorName": "Thầy Trần Quốc Tuấn",
+          "authorAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+          "role": "teacher",
+          "content": "Lời giải của Lão Sư AI rất chuẩn xác. Thầy bổ sung thêm: Các em hãy nhớ câu thần chú \"Phủ định và nguyện vọng đứng trước 把\" để khi làm bài thi trắc nghiệm không bao giờ chọn nhầm vị trí nhé.",
+          "createdAt": "2026-11-06T11:15:00Z",
+          "likes": 12
+        }
+      ]
+    },
+    {
+      "id": "fp-2",
+      "authorName": "Trần Văn Nam",
+      "authorAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+      "role": "student",
+      "title": "Kinh nghiệm luyện nghe HSK 3 để đạt điểm tối đa (90+)",
+      "content": "Mình vừa thi HSK 3 đạt 285/300, trong đó phần nghe được 98 điểm. Mình muốn chia sẻ với các bạn phương pháp \"nghe chép chính tả\" và luyện phát âm song song trên nền tảng MiXiangg HSK này...",
+      "level": "HSK 3",
+      "category": "Kinh nghiệm thi",
+      "tags": [
+        "Luyện nghe",
+        "HSK 3",
+        "Kinh nghiệm"
+      ],
+      "likes": 42,
+      "repliesCount": 5,
+      "createdAt": "2026-11-05T14:20:00Z",
+      "isPinned": false,
+      "isSolved": false,
+      "replies": [
+        {
+          "id": "fr-3",
+          "authorName": "Lê Phương Thảo",
+          "authorAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+          "role": "student",
+          "content": "Bài viết chia sẻ rất có tâm! Cho mình hỏi mỗi ngày bạn dành bao nhiêu phút để luyện flashcards và nghe vậy?",
+          "createdAt": "2026-11-05T16:00:00Z",
+          "likes": 5
+        }
+      ]
+    }
+  ]
+}

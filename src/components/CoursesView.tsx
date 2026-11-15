@@ -6,17 +6,10 @@ import {
   Sparkles,
   PlusCircle,
   ChevronRight,
-  Flame,
-  Award,
-  Layers,
   Search,
-  Filter,
-  PlayCircle,
-  HelpCircle,
-  BookmarkCheck,
 } from 'lucide-react';
 import { useHSK } from '../context/HSKContext';
-import { HSKLevel, Lesson, Course } from '../types/hsk';
+import { HSKLevel, Lesson } from '../types/hsk';
 
 interface CoursesViewProps {
   onOpenLesson: (lesson: Lesson) => void;
@@ -26,7 +19,6 @@ interface CoursesViewProps {
 
 export const CoursesView: React.FC<CoursesViewProps> = ({
   onOpenLesson,
-  onOpenAdminNewCourse,
   onOpenAiTutor,
 }) => {
   const {
@@ -47,17 +39,20 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
   const currentCourse = courses.find((c) => c.level === activeLevel) || courses[0];
 
   // Filter lessons
-  const filteredLessons = currentCourse?.lessons.filter((l) => {
-    const matchesSearch =
-      l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.vietnameseTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  }) || [];
+  const filteredLessons =
+    currentCourse?.lessons.filter((l) => {
+      const q = searchQuery.toLowerCase();
+      return (
+        l.title.toLowerCase().includes(q) ||
+        l.vietnameseTitle.toLowerCase().includes(q) ||
+        l.description.toLowerCase().includes(q)
+      );
+    }) || [];
 
-  const completedCount = currentCourse?.lessons.filter((l) =>
-    studentProfile.completedLessonIds.includes(l.id)
-  ).length || 0;
+  const completedCount =
+    currentCourse?.lessons.filter((l) =>
+      studentProfile.completedLessonIds.includes(l.id)
+    ).length || 0;
 
   const progressPercent = currentCourse?.lessons.length
     ? Math.round((completedCount / currentCourse.lessons.length) * 100)
@@ -65,46 +60,43 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-900 via-red-800 to-amber-900 text-white p-6 sm:p-8 shadow-lg">
-        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none select-none">
-          <span className="font-serif text-[180px] font-black">汉语</span>
-        </div>
-
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-rose-200 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Chương trình giảng dạy Tiếng Trung chuẩn HSK 3.0</span>
+      {/* Editorial Hero Banner (Đỏ - Be - Đen tươi sáng) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white p-6 sm:p-8 shadow-md border border-red-500/70">
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-2 text-[14px] font-bold text-amber-200">
+            <Sparkles className="w-5 h-5 shrink-0" />
+            <span>Chương trình Tiếng Trung chuẩn HSK 3.0</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2">
+          <h1 className="font-serif text-[24px] sm:text-[30px] font-black tracking-tight leading-tight text-balance">
             Lộ trình Chinh phục Tiếng Trung từ HSK 1 đến HSK 5
           </h1>
-          <p className="text-rose-100 text-sm sm:text-base leading-relaxed mb-6">
-            Học tập bài bản với ngữ pháp chuyên sâu, hội thoại thực tế, phát âm chuẩn Bắc Kinh có AI chấm điểm, và hệ thống đề thi thử tự động.
+
+          <p className="text-[19px] text-rose-50 leading-relaxed max-w-3xl">
+            Học bài bản với ngữ pháp chuyên sâu, hội thoại thực tế, phát âm chuẩn Bắc Kinh có AI chấm điểm.
           </p>
 
           {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-rose-700/50 text-xs sm:text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-white/15">
             <div>
-              <span className="text-rose-300 block text-[11px]">Trình độ hiện tại</span>
-              <span className="font-bold text-base text-white">{studentProfile.targetLevel}</span>
+              <span className="text-rose-100 block text-[14px]">Trình độ mục tiêu</span>
+              <span className="font-black text-[21px] text-white">{studentProfile.targetLevel}</span>
             </div>
             <div>
-              <span className="text-rose-300 block text-[11px]">Bài học hoàn thành</span>
-              <span className="font-bold text-base text-white">
+              <span className="text-rose-100 block text-[14px]">Đã hoàn thành</span>
+              <span className="font-black text-[21px] text-white tabular-nums">
                 {studentProfile.completedLessonIds.length} bài
               </span>
             </div>
             <div>
-              <span className="text-rose-300 block text-[11px]">Từ vựng thành thạo</span>
-              <span className="font-bold text-base text-emerald-300">
+              <span className="text-rose-100 block text-[14px]">Từ vựng thuộc</span>
+              <span className="font-black text-[21px] text-amber-300 tabular-nums">
                 {studentProfile.masteredVocabIds.length} từ
               </span>
             </div>
             <div>
-              <span className="text-rose-300 block text-[11px]">Điểm tích lũy</span>
-              <span className="font-bold text-base text-amber-300">
+              <span className="text-rose-100 block text-[14px]">Điểm tích lũy</span>
+              <span className="font-black text-[21px] text-amber-300 tabular-nums">
                 {studentProfile.xp} XP
               </span>
             </div>
@@ -112,19 +104,20 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
         </div>
       </div>
 
-      {/* Level Selector Tabs */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 p-1 bg-[#F5EFEB] rounded-xl border border-[#E6DEC8] overflow-x-auto">
+      {/* Level Selector & Controls */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 p-1.5 bg-[#F5EFEB] rounded-2xl border border-[#E6DEC8]">
           {levels.map((lvl) => {
             const isSelected = activeLevel === lvl;
             return (
               <button
                 key={lvl}
+                type="button"
                 onClick={() => setActiveLevel(lvl)}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                className={`px-5 py-2.5 rounded-xl text-[16px] font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   isSelected
-                    ? 'bg-white text-red-700 shadow-2xs border border-red-200'
-                    : 'text-[#18181B]/70 hover:text-red-700'
+                    ? 'bg-red-700 text-white shadow-sm'
+                    : 'text-[#18181B] hover:bg-white hover:text-red-700'
                 }`}
               >
                 {lvl}
@@ -133,97 +126,93 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
           })}
         </div>
 
-        {/* Actions Toolbar: Pinyin, AI Tutor, Search & Admin */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Pinyin Toggle Button */}
-          <button
-            onClick={() => setShowPinyin(!showPinyin)}
-            title={showPinyin ? 'Đang bật phiên âm Pinyin' : 'Đang ẩn phiên âm Pinyin'}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap shadow-xs ${
-              showPinyin
-                ? 'bg-red-50 text-red-700 border-red-300'
-                : 'bg-white text-slate-700 border-[#E6DEC8] hover:bg-[#FAF7F0]'
-            }`}
-          >
-            <span className="font-mono text-xs">Pinyin</span>
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                showPinyin ? 'bg-red-600' : 'bg-slate-300'
-              }`}
-            ></span>
-          </button>
-
-          {/* AI Tutor Button */}
-          {onOpenAiTutor && (
-            <button
-              onClick={onOpenAiTutor}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-red-700 via-red-600 to-rose-700 text-white shadow-xs hover:from-red-800 hover:to-rose-800 transition-all cursor-pointer whitespace-nowrap hover:shadow-md"
-            >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>Lão Sư AI</span>
-            </button>
-          )}
-
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search bar */}
-          <div className="relative flex-1 sm:w-56">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative flex-1">
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm bài học, chủ đề..."
+              placeholder="Tìm tên bài học, chủ đề..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-[#E6DEC8] bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="w-full pl-12 pr-4 py-3 text-[16px] rounded-2xl border border-[#E6DEC8] bg-white focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700"
             />
           </div>
 
-          {userRole !== 'student' && (
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
-              onClick={() => setActiveTab('admin')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#18181B] text-white text-xs font-bold hover:bg-black transition-colors shadow-xs cursor-pointer"
+              type="button"
+              onClick={() => setShowPinyin(!showPinyin)}
+              className={`px-4 py-3 rounded-2xl text-[14px] font-bold border transition-colors cursor-pointer whitespace-nowrap ${
+                showPinyin
+                  ? 'bg-red-50 text-red-800 border-red-300'
+                  : 'bg-white text-[#18181B] border-[#E6DEC8] hover:bg-[#FAF7F0]'
+              }`}
             >
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Quản lý</span>
+              Pinyin: {showPinyin ? 'Đang bật' : 'Đang ẩn'}
             </button>
-          )}
+
+            {onOpenAiTutor && (
+              <button
+                type="button"
+                onClick={onOpenAiTutor}
+                className="px-4 py-3 rounded-2xl text-[14px] font-bold bg-[#18181B] hover:bg-red-800 text-white flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Sparkles className="w-5 h-5 text-amber-300" />
+                <span>Lão Sư AI</span>
+              </button>
+            )}
+
+            {userRole !== 'student' && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className="px-4 py-3 rounded-2xl bg-red-700 hover:bg-red-800 text-white text-[14px] font-bold flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>Quản lý</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Course Overview Card */}
       {currentCourse && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${currentCourse.colorScheme.badge}`}>
-                  {currentCourse.level}
-                </span>
-                <span className="text-xs text-slate-400">•</span>
-                <span className="text-xs text-slate-500 font-medium">
-                  {currentCourse.lessons.length} bài học thực hành
-                </span>
+        <div className="bg-white rounded-3xl border border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 flex-1">
+              <div className="flex flex-wrap items-center gap-2.5 text-[14px] font-bold text-slate-600">
+                <span className="text-red-600 font-black">{currentCourse.level}</span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{currentCourse.lessons.length} bài học thực hành</span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{currentCourse.targetVocabCount} từ vựng</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+              <h2 className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] leading-snug">
                 {currentCourse.vietnameseTitle}
               </h2>
-              <p className="text-slate-600 text-sm leading-relaxed">
+              <p className="text-[19px] text-slate-700 leading-relaxed">
                 {currentCourse.description}
               </p>
             </div>
 
-            {/* Target metrics & Progress */}
-            <div className="bg-slate-50 rounded-xl p-4 min-w-[260px] border border-slate-100 space-y-3">
-              <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-                <span>Tiến độ hoàn thành</span>
-                <span className="font-bold text-slate-900">{progressPercent}%</span>
+            {/* Progress Card */}
+            <div className="bg-[#FAF7F0] rounded-2xl p-5 lg:w-[300px] border border-[#E8DFCE] space-y-3 shrink-0">
+              <div className="flex items-center justify-between text-[16px] font-bold text-[#18181B]">
+                <span>Tiến độ</span>
+                <span className="font-mono font-black text-red-600 tabular-nums">
+                  {progressPercent}%
+                </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-[#E8DFCE] rounded-full h-3 overflow-hidden">
                 <div
-                  className="bg-rose-500 h-2 rounded-full transition-all duration-500"
+                  className="bg-gradient-to-r from-red-600 to-amber-500 h-3 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
-                ></div>
+                />
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                <span>Mục tiêu: {currentCourse.targetVocabCount} từ vựng</span>
+              <div className="flex items-center justify-between text-[14px] font-semibold text-slate-600 tabular-nums">
+                <span>Đã học {completedCount}/{currentCourse.lessons.length} bài</span>
                 <span>{currentCourse.grammarPointsCount} ngữ pháp</span>
               </div>
             </div>
@@ -231,87 +220,84 @@ export const CoursesView: React.FC<CoursesViewProps> = ({
         </div>
       )}
 
-      {/* Lessons List Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-rose-600" />
-              <span>Danh sách bài học ({filteredLessons.length} bài)</span>
-            </h3>
-            <p className="text-xs text-slate-500">Mỗi bài học tích hợp từ vựng, ngữ pháp, hội thoại và bài tập tương tác</p>
-          </div>
+      {/* Lessons Grid */}
+      <div className="space-y-5">
+        <div className="text-center border-b border-[#E8DFCE] pb-4 space-y-1">
+          <h3 className="font-serif text-[21px] sm:text-[26px] font-black text-[#18181B] inline-flex items-center justify-center gap-2.5">
+            <BookOpen className="w-7 h-7 text-red-600 shrink-0" />
+            <span>Danh sách bài học ({filteredLessons.length} bài)</span>
+          </h3>
+          <p className="text-[19px] text-slate-600">
+            Chọn bài học để xem mô tả chi tiết, từ vựng, ngữ pháp và hội thoại
+          </p>
         </div>
 
         {filteredLessons.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-            <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium text-sm">Không tìm thấy bài học nào phù hợp với từ khóa.</p>
-            <p className="text-slate-400 text-xs mt-1">Hãy thử tìm kiếm với từ khóa khác hoặc chuyển sang cấp độ khác.</p>
+          <div className="bg-white rounded-3xl border border-dashed border-[#D6CBB3] p-12 text-center space-y-2">
+            <BookOpen className="w-12 h-12 text-slate-400 mx-auto" />
+            <p className="text-[#18181B] font-bold text-[19px]">
+              Không tìm thấy bài học phù hợp với từ khóa.
+            </p>
+            <p className="text-slate-600 text-[19px]">
+              Hãy thử từ khóa khác hoặc chuyển sang cấp độ HSK khác.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {filteredLessons.map((lesson) => {
               const isCompleted = studentProfile.completedLessonIds.includes(lesson.id);
 
               return (
-                <div
+                <button
                   key={lesson.id}
+                  type="button"
                   onClick={() => onOpenLesson(lesson)}
-                  className={`group relative bg-white rounded-xl border transition-all duration-200 p-5 cursor-pointer hover:shadow-md ${
+                  className={`group text-left rounded-3xl border-2 transition-all duration-300 ease-out p-6 cursor-pointer hover:-translate-y-1.5 hover:scale-[1.015] hover:shadow-xl flex flex-col justify-between ${
                     isCompleted
-                      ? 'border-red-200 hover:border-red-300 bg-red-50/20'
-                      : 'border-[#E6DEC8] hover:border-red-300'
+                      ? 'border-red-400/80 hover:border-amber-500/75 bg-[#FFF5F3] hover:bg-[#FFEAE6]'
+                      : 'bg-white border-[#E6DEC8] hover:border-amber-500/70 hover:bg-[#FFF9F6]'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-lg bg-red-50 text-red-700 font-bold text-xs flex items-center justify-center border border-red-200">
-                        {lesson.lessonNumber}
+                  <div className="space-y-3 w-full">
+                    <div className="flex items-center justify-between gap-2 text-[14px] font-bold">
+                      <span className="font-mono text-red-700 tabular-nums">
+                        Bài {String(lesson.lessonNumber).padStart(2, '0')}
                       </span>
-                      <span className="text-xs font-semibold text-slate-500">
-                        Bài {lesson.lessonNumber}
-                      </span>
+
+                      {isCompleted ? (
+                        <span className="flex items-center gap-1.5 text-red-700 font-extrabold">
+                          <CheckCircle2 className="w-5 h-5" />
+                          <span>Đã hoàn thành</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-slate-600 tabular-nums">
+                          <Clock className="w-5 h-5" />
+                          <span>{lesson.durationMinutes} phút</span>
+                        </span>
+                      )}
                     </div>
 
-                    {isCompleted ? (
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-100/90 px-2.5 py-0.5 rounded-full border border-red-200">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-red-600" />
-                        Đã học
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-[#F5EFEB] px-2 py-0.5 rounded-full border border-[#E6DEC8]">
-                        <Clock className="w-3 h-3" />
-                        {lesson.durationMinutes} phút
-                      </span>
-                    )}
+                    <h4 className="font-serif font-black text-[22px] text-[#18181B] group-hover:text-red-600 transition-colors leading-snug">
+                      {lesson.title}
+                    </h4>
+                    <div className="text-[18px] font-bold text-red-700">
+                      {lesson.vietnameseTitle}
+                    </div>
                   </div>
 
-                  {/* Title in Chinese and Vietnamese */}
-                  <h4 className="font-bold text-base text-[#18181B] group-hover:text-red-700 transition-colors mb-1">
-                    {lesson.title}
-                  </h4>
-                  <p className="text-xs text-red-800 font-medium mb-2">
-                    {lesson.vietnameseTitle}
-                  </p>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                    {lesson.description}
-                  </p>
-
-                  {/* Lesson Meta Badges */}
-                  <div className="flex items-center justify-between pt-3 border-t border-[#F5EFEB] text-xs text-slate-500">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between pt-4 mt-5 border-t border-[#F5EFEB] text-[14px] font-semibold text-slate-600 w-full">
+                    <div className="flex items-center gap-2 tabular-nums">
                       <span>{lesson.vocabulary.length} từ mới</span>
-                      <span>•</span>
-                      <span>{lesson.grammar.length} điểm ngữ pháp</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{lesson.grammar.length} ngữ pháp</span>
                     </div>
 
-                    <div className="flex items-center gap-1 font-bold text-red-700 group-hover:translate-x-1 transition-transform">
+                    <span className="flex items-center gap-1 font-extrabold text-red-700 group-hover:translate-x-1 transition-transform">
                       <span>Vào học</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
+                      <ChevronRight className="w-5 h-5" />
+                    </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

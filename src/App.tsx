@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HSKProvider, useHSK } from './context/HSKContext';
-import { Header } from './components/Header';
+import { LeftSidebar } from './components/LeftSidebar';
+import { RightSidebar } from './components/RightSidebar';
 import { IndexHomeView } from './components/IndexHomeView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { UserProfileModal } from './components/UserProfileModal';
@@ -17,7 +18,8 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { MobileAppCompanion } from './components/MobileAppCompanion';
 import { ReminderModal } from './components/ReminderModal';
 import { AITutorFloatingDrawer } from './components/AITutorFloatingDrawer';
-import { Sparkles, MessageCircle, Heart, Shield, BookOpen, Smartphone } from 'lucide-react';
+import { GamesView } from './components/GamesView';
+import { Sparkles, Menu, User, PhoneCall, Bell, Smartphone } from 'lucide-react';
 import { Exam, Lesson } from './types/hsk';
 
 function MainAppContent() {
@@ -30,127 +32,290 @@ function MainAppContent() {
     setCurrentExam,
     lastExamResult,
     setLastExamResult,
-    isMobileCompanionOpen,
-    setIsMobileCompanionOpen,
     isGoogleAuthModalOpen,
     setIsGoogleAuthModalOpen,
     isUserProfileOpen,
     setIsUserProfileOpen,
     userRole,
     isAuthenticated,
+    studentProfile,
+    setIsMobileCompanionOpen,
   } = useHSK();
 
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
+  const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(true);
 
-  // Open Lesson Detail
   const handleOpenLesson = (lesson: Lesson) => {
     setCurrentLesson(lesson);
     setActiveTab('lesson-detail');
   };
 
-  // Start Exam
   const handleStartExam = (exam: Exam) => {
     setCurrentExam(exam);
     setActiveTab('exam-taking');
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F0] text-[#18181B] flex flex-col font-sans selection:bg-rose-500 selection:text-white">
-      {/* Main Header */}
-      <Header
-        onOpenReminder={() => setIsReminderOpen(true)}
-        onOpenAiTutor={() => setIsAiTutorOpen(true)}
-        onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
-      />
+    <div className="min-h-screen bg-[#FDFBF6] text-[#18181B] flex flex-col font-sans selection:bg-red-600 selection:text-white">
+      {/* Compact Mobile/Tablet Top Bar */}
+      <div className="lg:hidden sticky top-0 z-40 h-14 px-3 bg-[#FDFBF6]/95 backdrop-blur-md border-b border-[#E8DFCE] flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setIsLeftDrawerOpen(true)}
+          aria-label="Mở menu điều hướng"
+          className="p-2 rounded-xl border border-[#E8DFCE] bg-white text-[#18181B] hover:border-red-600 cursor-pointer"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
 
-      {/* Main App Container */}
-      <main className="flex-1 max-w-7xl 2xl:max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-        {/* VIEW 0: Index Homepage with Google Registration */}
-        {activeTab === 'home' && (
-          <IndexHomeView
+        <button
+          type="button"
+          onClick={() => setActiveTab('home')}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <img
+            src="/assets/aistudio/logo_2cd38f9f.jpg"
+            alt="MiXiangg HSK"
+            className="w-8 h-8 rounded-lg border border-red-600 object-contain bg-white mix-blend-multiply"
+          />
+          <span className="font-black text-[14px] tracking-tight text-[#18181B]">
+            MIXIANGG HSK
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsRightDrawerOpen(true)}
+          aria-label="Mở bảng tài khoản cá nhân"
+          className="px-3 py-1.5 rounded-xl border border-[#E8DFCE] bg-white text-[#18181B] hover:border-red-600 flex items-center gap-1.5 font-bold text-[12px] cursor-pointer"
+        >
+          <User className="w-5 h-5 text-red-600" />
+          <span className="tabular-nums">
+            {isAuthenticated ? `${studentProfile.streakDays}d` : 'Tài khoản'}
+          </span>
+        </button>
+      </div>
+
+      {/* Persistent 3-Column Full-Width Shell (Cột 1 sát trái, Cột 3 sát phải, Cột 2 mở rộng tối đa) */}
+      <div className="flex-1 w-full px-3 sm:px-4 lg:px-5 pt-4 lg:pt-6 pb-10 lg:flex lg:items-start lg:gap-5 xl:gap-6">
+        {/* CỘT 1 (TRÁI): LOGO & MENU ĐIỀU HƯỚNG (CÓ THỂ ẨN/HIỆN MENU) */}
+        <aside
+          aria-label="Thanh điều hướng bên trái"
+          className={`hidden lg:block shrink-0 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto transition-all duration-200 ${
+            isLeftCollapsed ? 'w-[66px]' : 'w-[180px] xl:w-[196px]'
+          }`}
+        >
+          <LeftSidebar
             onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
+            onOpenAiTutor={() => setIsAiTutorOpen(true)}
+            isCollapsed={isLeftCollapsed}
+            onToggleCollapse={() => setIsLeftCollapsed((prev) => !prev)}
           />
-        )}
+        </aside>
 
-        {/* GATED ACCESS: REQUIRE AUTHENTICATION FOR ALL CONTENT OTHER THAN HOMEPAGE */}
-        {!isAuthenticated && activeTab !== 'home' ? (
-          <AuthRequiredGate
-            onLogin={() => setIsGoogleAuthModalOpen(true)}
-            onGoHome={() => setActiveTab('home')}
+        {/* CỘT 2 (GIỮA): NỘI DUNG CHÍNH */}
+        <main className="flex-1 min-w-0">
+          {activeTab === 'home' && (
+            <IndexHomeView
+              onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
+              onOpenReminder={() => setIsReminderOpen(true)}
+              onOpenAiTutor={() => setIsAiTutorOpen(true)}
+            />
+          )}
+
+          {!isAuthenticated && activeTab !== 'home' ? (
+            <AuthRequiredGate
+              onLogin={() => setIsGoogleAuthModalOpen(true)}
+              onGoHome={() => setActiveTab('home')}
+            />
+          ) : (
+            <>
+              {activeTab === 'courses' && (
+                <CoursesView
+                  onOpenLesson={handleOpenLesson}
+                  onOpenAiTutor={() => setIsAiTutorOpen(true)}
+                />
+              )}
+
+              {activeTab === 'lesson-detail' && currentLesson && (
+                <LessonDetailView
+                  lesson={currentLesson}
+                  onBack={() => setActiveTab('courses')}
+                />
+              )}
+
+              {activeTab === 'vocab' && <VocabularyFlashcardsView />}
+
+              {activeTab === 'games' && <GamesView />}
+
+              {activeTab === 'exams' && (
+                <ExamsView
+                  onStartExam={handleStartExam}
+                  onViewResult={() => setActiveTab('exam-result')}
+                />
+              )}
+
+              {activeTab === 'exam-taking' && currentExam && (
+                <ExamTakingView
+                  exam={currentExam}
+                  onFinishExam={(result) => {
+                    setLastExamResult(result);
+                    setActiveTab('exam-result');
+                  }}
+                  onCancel={() => setActiveTab('exams')}
+                />
+              )}
+
+              {activeTab === 'exam-result' && lastExamResult && (
+                <ExamResultView
+                  result={lastExamResult}
+                  onRetake={() => {
+                    if (currentExam) {
+                      setActiveTab('exam-taking');
+                    } else {
+                      setActiveTab('exams');
+                    }
+                  }}
+                  onGoToReports={() => setActiveTab('reports')}
+                  onGoToExamsList={() => setActiveTab('exams')}
+                />
+              )}
+
+              {activeTab === 'reports' && <ReportsView />}
+
+              {activeTab === 'forum' && <ForumView />}
+
+              {activeTab === 'admin' && userRole !== 'student' && <AdminDashboard />}
+            </>
+          )}
+        </main>
+
+        {/* CỘT 3 (PHẢI): ĐĂNG NHẬP & CHỨC NĂNG THEO VAI TRÒ (CÓ THỂ THU GỌN GIỐNG CỘT 1) */}
+        <aside
+          aria-label="Bảng thông tin cá nhân bên phải"
+          className={`hidden lg:block shrink-0 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto transition-all duration-200 ${
+            isRightCollapsed ? 'w-[66px]' : 'w-[216px] xl:w-[236px]'
+          }`}
+        >
+          <RightSidebar
+            onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
+            onOpenReminder={() => setIsReminderOpen(true)}
+            isCollapsed={isRightCollapsed}
+            onToggleCollapse={() => setIsRightCollapsed((prev) => !prev)}
           />
-        ) : (
-          <>
-            {/* VIEW 1: Courses Directory */}
-            {activeTab === 'courses' && (
-              <CoursesView
-                onOpenLesson={handleOpenLesson}
-                onOpenAiTutor={() => setIsAiTutorOpen(true)}
+        </aside>
+      </div>
+
+      {/* FULL-WIDTH SLIM FOOTER ACROSS ALL PAGES */}
+      <footer className="w-full bg-[#18181B] text-white border-t-4 border-red-600 mt-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          {/* Brand */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-white border border-red-600 p-1 shrink-0 flex items-center justify-center">
+              <img
+                src="/assets/aistudio/logo_2cd38f9f.jpg"
+                alt="MiXiangg HSK"
+                className="w-full h-full object-contain mix-blend-multiply"
               />
-            )}
+            </div>
+            <div>
+              <div className="font-serif font-black text-[16px] leading-tight text-white">
+                MIXIANGG HSK · CHINESE LEARNING
+              </div>
+              <div className="text-[12px] text-stone-300">
+                Đào tạo Tiếng Trung Boya & Luyện thi HSK 1–5 (Online & Offline)
+              </div>
+            </div>
+          </div>
 
-            {/* VIEW 2: Lesson Detail */}
-            {activeTab === 'lesson-detail' && currentLesson && (
-              <LessonDetailView
-                lesson={currentLesson}
-                onBack={() => setActiveTab('courses')}
-              />
-            )}
+          {/* Contact & Quick Links spread horizontally */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-stone-200">
+            <a
+              href="tel:0378105999"
+              className="inline-flex items-center gap-2 text-amber-300 hover:text-amber-200 font-bold tabular-nums"
+            >
+              <PhoneCall className="w-4 h-4 shrink-0" />
+              <span>Hotline / Zalo: 0378.105.999</span>
+            </a>
 
-            {/* VIEW 3: Vocabulary & Flashcards & AI Pronunciation */}
-            {activeTab === 'vocab' && <VocabularyFlashcardsView />}
+            <span className="text-stone-400 hidden sm:inline">|</span>
+            <span>Facebook: fb.com/nguyenminhhuong.min</span>
 
-            {/* VIEW 4: Exams Directory */}
-            {activeTab === 'exams' && (
-              <ExamsView
-                onStartExam={handleStartExam}
-                onViewResult={() => setActiveTab('exam-result')}
-              />
-            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsReminderOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-red-600 text-white text-[12px] font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Bell className="w-4 h-4 text-amber-300" />
+                <span>Lịch nhắc học</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileCompanionOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-red-600 text-white text-[12px] font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Smartphone className="w-4 h-4 text-amber-300" />
+                <span>App di động</span>
+              </button>
+            </div>
+          </div>
 
-            {/* VIEW 5: Taking Exam */}
-            {activeTab === 'exam-taking' && currentExam && (
-              <ExamTakingView
-                exam={currentExam}
-                onFinishExam={(result) => {
-                  setLastExamResult(result);
-                  setActiveTab('exam-result');
-                }}
-                onCancel={() => setActiveTab('exams')}
-              />
-            )}
+          {/* Copyright & Motto */}
+          <div className="text-[12px] text-stone-400 flex items-center gap-3 shrink-0">
+            <span>© 2026 MiXiangg HSK</span>
+            <span className="font-calligraphy text-[16px] text-amber-300">
+              学而时习之
+            </span>
+          </div>
+        </div>
+      </footer>
 
-            {/* VIEW 6: Exam Result */}
-            {activeTab === 'exam-result' && lastExamResult && (
-              <ExamResultView
-                result={lastExamResult}
-                onRetake={() => {
-                  const matched = currentExam || undefined;
-                  if (matched) {
-                    setActiveTab('exam-taking');
-                  } else {
-                    setActiveTab('exams');
-                  }
-                }}
-                onGoToReports={() => setActiveTab('reports')}
-                onGoToExamsList={() => setActiveTab('exams')}
-              />
-            )}
+      {/* Mobile Drawer: Left Sidebar */}
+      {isLeftDrawerOpen && (
+        <div
+          onClick={() => setIsLeftDrawerOpen(false)}
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[290px] max-w-[85vw] h-full bg-[#FDFBF6] border-r border-[#E8DFCE] p-5 overflow-y-auto shadow-2xl"
+          >
+            <LeftSidebar
+              onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
+              onOpenAiTutor={() => setIsAiTutorOpen(true)}
+              onCloseMobileDrawer={() => setIsLeftDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
-            {/* VIEW 7: Reports & Analytics */}
-            {activeTab === 'reports' && <ReportsView />}
-
-            {/* VIEW 8: Forum Q&A */}
-            {activeTab === 'forum' && <ForumView />}
-
-            {/* VIEW 9: Admin & Teacher Dashboard */}
-            {activeTab === 'admin' && userRole !== 'student' && <AdminDashboard />}
-          </>
-        )}
-      </main>
+      {/* Mobile Drawer: Right Sidebar */}
+      {isRightDrawerOpen && (
+        <div
+          onClick={() => setIsRightDrawerOpen(false)}
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[320px] max-w-[88vw] h-full bg-[#FDFBF6] border-l border-[#E8DFCE] p-5 overflow-y-auto shadow-2xl"
+          >
+            <RightSidebar
+              onOpenGoogleAuth={() => setIsGoogleAuthModalOpen(true)}
+              onOpenReminder={() => setIsReminderOpen(true)}
+              onCloseMobileDrawer={() => setIsRightDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Floating AI Tutor Launcher Button */}
       <button
+        type="button"
         onClick={() => {
           if (!isAuthenticated) {
             setIsGoogleAuthModalOpen(true);
@@ -158,17 +323,15 @@ function MainAppContent() {
             setIsAiTutorOpen(true);
           }
         }}
-        className="fixed bottom-6 right-6 z-40 p-3.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-red-800 via-red-600 to-rose-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer group border border-red-500/40"
+        className="fixed bottom-5 right-5 z-40 p-3.5 sm:px-5 sm:py-3 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl transition-transform hover:scale-105 flex items-center gap-2 cursor-pointer border border-amber-300/50"
         title="Trò chuyện với Lão Sư AI"
       >
-        <span className="font-serif text-lg font-bold">师</span>
-        <span className="hidden sm:inline font-bold text-xs tracking-wide">
-          Hỏi Lão Sư AI
-        </span>
-        <Sparkles className="w-4 h-4 text-amber-200 group-hover:rotate-12 transition-transform" />
+        <span className="font-serif text-[16px] font-bold">师</span>
+        <span className="hidden sm:inline font-bold text-[13px]">Hỏi Lão Sư AI</span>
+        <Sparkles className="w-4 h-4 text-amber-300" />
       </button>
 
-      {/* Floating Drawers & Modals */}
+      {/* Modals & Drawers */}
       <AITutorFloatingDrawer
         isOpen={isAiTutorOpen}
         onClose={() => setIsAiTutorOpen(false)}
@@ -190,42 +353,6 @@ function MainAppContent() {
       />
 
       <MobileAppCompanion />
-
-      {/* Global Footer */}
-      <footer className="bg-[#F5EFEB] border-t border-[#E6DEC8] mt-16 py-8 text-xs text-slate-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white border border-red-700/60 p-0.5 overflow-hidden flex items-center justify-center shadow-xs">
-              <img
-                src="/assets/aistudio/logo_2cd38f9f.jpg"
-                alt="MiXiangg HSK"
-                className="w-full h-full object-contain mix-blend-multiply"
-              />
-            </div>
-            <div>
-              <span className="font-extrabold text-[#18181B] text-sm">MiXiangg HSK</span>
-              <span className="text-[11px] text-slate-500 ml-2 hidden sm:inline">• Nền tảng học và luyện thi Tiếng Trung</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => setIsMobileCompanionOpen(true)}
-              className="hover:text-red-700 flex items-center gap-1 font-medium transition-colors"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Ứng dụng di động</span>
-            </button>
-            <button
-              onClick={() => setIsReminderOpen(true)}
-              className="hover:text-red-700 font-medium transition-colors"
-            >
-              Nhắc nhở học tập
-            </button>
-            <span>© 2026 MiXiangg HSK. All rights reserved.</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

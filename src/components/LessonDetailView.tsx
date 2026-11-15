@@ -100,144 +100,153 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-16">
+    <div className="w-full space-y-6 pb-16">
       {/* Top Navigation & Status */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
+          type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-rose-600 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-[#E8DFCE] text-[14px] sm:text-[16px] font-bold text-[#18181B] hover:border-red-500 hover:text-red-600 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
           <span>Quay lại danh sách khóa học</span>
         </button>
 
         <div className="flex items-center gap-2">
           {isCompleted ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold bg-[#ECFDF5] text-emerald-800 border border-emerald-300">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <span>Đã hoàn thành bài học</span>
             </span>
           ) : (
             <button
+              type="button"
               onClick={handleCompleteLesson}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold bg-red-600 text-white hover:bg-red-700 transition-colors shadow-xs cursor-pointer"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-5 h-5" />
               <span>Đánh dấu hoàn thành</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Lesson Header Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+      {/* Lesson Header Card (Đồng bộ Đỏ - Be - Đen) */}
+      <div className="bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] border border-red-500/70 text-white rounded-3xl p-6 sm:p-8 shadow-md space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+          <div className="space-y-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5 text-[14px] font-bold text-amber-200">
+              <span className="px-3 py-0.5 rounded-xl bg-black/30 border border-white/20 text-white">
                 {lesson.level}
               </span>
-              <span className="text-xs text-slate-400">•</span>
-              <span className="text-xs text-slate-500 font-medium">Bài {lesson.lessonNumber}</span>
-              <span className="text-xs text-slate-400">•</span>
-              <span className="text-xs text-slate-500 font-medium">{lesson.durationMinutes} phút</span>
+              <span aria-hidden="true">·</span>
+              <span>Bài {lesson.lessonNumber}</span>
+              <span aria-hidden="true">·</span>
+              <span className="tabular-nums">{lesson.durationMinutes} phút</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
+            <h1 className="font-serif text-[24px] sm:text-[30px] font-black text-white leading-tight">
               {lesson.title}
             </h1>
-            <p className="text-base text-rose-800 font-medium">
+            <p className="text-[19px] text-amber-200 font-bold leading-snug">
               {lesson.vietnameseTitle}
             </p>
           </div>
 
           <button
+            type="button"
             onClick={() => handlePlayAudio(lesson.title, 'lesson-title')}
-            className={`p-3 rounded-full border transition-all ${
+            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer shrink-0 ${
               isPlayingAudio === 'lesson-title'
-                ? 'bg-rose-600 text-white border-rose-600 scale-105 animate-pulse'
-                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                ? 'bg-amber-300 text-[#18181B] border-amber-200 scale-105 animate-pulse'
+                : 'bg-white/15 text-white border-white/30 hover:bg-white/25'
             }`}
             title="Nghe phát âm tiêu đề bài học"
+            aria-label="Nghe phát âm tiêu đề bài học"
           >
-            <Volume2 className="w-5 h-5" />
+            <Volume2 className="w-7 h-7" />
           </button>
         </div>
 
-        <p className="text-sm text-slate-600 mt-4 pt-4 border-t border-slate-100 leading-relaxed">
+        <p className="text-[19px] text-rose-50 pt-4 border-t border-white/20 leading-relaxed">
           {lesson.description}
         </p>
+      </div>
 
-        {/* Tab switcher */}
-        <div className="flex items-center gap-2 mt-6 pt-2 border-t border-slate-100 overflow-x-auto">
-          {[
-            { id: 'vocab', label: `Từ vựng (${lesson.vocabulary.length})`, icon: BookOpen },
-            { id: 'grammar', label: `Ngữ pháp (${lesson.grammar.length})`, icon: FileText },
-            { id: 'dialogue', label: `Hội thoại (${lesson.dialogue.length})`, icon: MessageCircle },
-            { id: 'practice', label: `Luyện tập (${lesson.practiceQuestions.length})`, icon: HelpCircle },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Tab switcher (Nền Be #F5EFEB đồng bộ Khóa học / Đề thi) */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-[#F5EFEB] rounded-2xl border border-[#E8DFCE]">
+        {[
+          { id: 'vocab', label: `Từ vựng (${lesson.vocabulary.length})`, icon: BookOpen },
+          { id: 'grammar', label: `Ngữ pháp (${lesson.grammar.length})`, icon: FileText },
+          { id: 'dialogue', label: `Hội thoại (${lesson.dialogue.length})`, icon: MessageCircle },
+          { id: 'practice', label: `Luyện tập (${lesson.practiceQuestions.length})`, icon: HelpCircle },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] sm:text-[16px] font-extrabold transition-all whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? 'bg-red-700 text-white shadow-sm'
+                  : 'text-[#18181B] hover:bg-white hover:text-red-700'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab 1: Vocabulary */}
       {activeTab === 'vocab' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs sm:text-sm text-slate-500 px-1">
-            <span className="font-medium">Bấm vào biểu tượng loa để nghe giọng đọc chuẩn bản xứ tiếng Trung.</span>
-            <span className="font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <p className="text-[19px] font-medium text-slate-700">
+              Bấm vào biểu tượng loa để nghe giọng đọc chuẩn bản xứ tiếng Trung.
+            </p>
+            <span className="font-bold text-[14px] text-red-700 bg-[#FFF5F3] px-4 py-1.5 rounded-2xl border border-red-200 tabular-nums">
               {lesson.vocabulary.length} từ vựng trọng tâm
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {lesson.vocabulary.map((vocab, idx) => {
               const isMastered = studentProfile.masteredVocabIds.includes(vocab.id);
 
               return (
                 <div
                   key={vocab.id}
-                  className={`bg-white rounded-2xl border p-5 sm:p-6 transition-all shadow-xs hover:shadow-md ${
-                    isMastered ? 'border-emerald-300 bg-emerald-50/15' : 'border-slate-200'
+                  className={`rounded-3xl border-2 p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg ${
+                    isMastered
+                      ? 'border-emerald-400 bg-[#ECFDF5]'
+                      : 'bg-white border-[#E8DFCE] hover:border-amber-500/70'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-white font-mono text-xs font-bold shadow-xs">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-3 py-1 rounded-xl bg-[#18181B] text-amber-300 font-mono text-[13px] font-bold">
                           #{String(idx + 1).padStart(2, '0')}
                         </span>
-                        <span className="text-xs sm:text-sm font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        <span className="text-[14px] font-bold text-[#18181B] bg-[#FAF7F0] border border-[#E8DFCE] px-3 py-0.5 rounded-xl">
                           Hán Việt: {vocab.sinoVietnamese || '-'}
                         </span>
                         {vocab.radical && (
-                          <span className="text-xs text-slate-400 font-medium">
+                          <span className="text-[14px] text-slate-600 font-semibold">
                             Bộ: {vocab.radical}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-baseline gap-3 flex-wrap">
-                        <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-wide">
+                      <div className="flex items-baseline gap-3 flex-wrap pt-1">
+                        <h2 className="font-serif text-[37px] sm:text-[43px] font-black text-[#18181B] tracking-wide leading-none">
                           {vocab.word}
                         </h2>
                         {showPinyin && (
-                          <span className="text-lg sm:text-xl font-bold font-mono text-rose-600">
+                          <span className="text-[19px] sm:text-[21px] font-bold font-mono text-red-600">
                             {vocab.pinyin}
                           </span>
                         )}
@@ -245,61 +254,68 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => handlePlayAudio(vocab.word, vocab.id)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer shrink-0 ${
                         isPlayingAudio === vocab.id
-                          ? 'bg-rose-600 text-white border-rose-600 shadow-md scale-105 animate-pulse'
-                          : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300'
+                          ? 'bg-red-600 text-white border-red-600 shadow-md scale-105 animate-pulse'
+                          : 'bg-[#FFF5F3] text-red-700 border-red-200 hover:bg-red-600 hover:text-white'
                       }`}
                       title="Nghe phát âm chuẩn từ này"
+                      aria-label={`Nghe phát âm ${vocab.word}`}
                     >
-                      <Volume2 className="w-5 h-5" />
+                      <Volume2 className="w-6 h-6" />
                     </button>
                   </div>
 
-                  <div className="text-base sm:text-lg font-bold text-slate-900 mb-3.5 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/50">
-                    <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider block mb-0.5">
-                      Nghĩa tiếng Việt:
+                  <div className="text-[19px] font-extrabold text-[#18181B] mb-4 bg-[#FEFCE8] p-4 rounded-2xl border border-amber-200/80">
+                    <span className="text-[13px] font-bold text-amber-800 uppercase tracking-wider block mb-0.5">
+                      Nghĩa tiếng Việt
                     </span>
                     {vocab.meaning}
                   </div>
 
                   {/* Example sentence */}
-                  <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-1.5">
+                  <div className="bg-[#FDFBF6] rounded-2xl p-4 border border-[#E8DFCE] space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-sm sm:text-base text-slate-900">{vocab.exampleSentence}</span>
+                      <span className="font-serif font-bold text-[19px] text-[#18181B]">
+                        {vocab.exampleSentence}
+                      </span>
                       <button
+                        type="button"
                         onClick={() => handlePlayAudio(vocab.exampleSentence, `ex-${vocab.id}`)}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded-md transition-colors cursor-pointer shrink-0"
+                        className="text-red-600 hover:bg-[#FFF5F3] p-2 rounded-xl transition-colors cursor-pointer shrink-0"
                         title="Nghe câu ví dụ"
+                        aria-label="Nghe câu ví dụ"
                       >
-                        <Volume2 className="w-4 h-4" />
+                        <Volume2 className="w-5 h-5" />
                       </button>
                     </div>
                     {showPinyin && (
-                      <p className="text-xs sm:text-sm font-mono text-rose-700 font-semibold">{vocab.examplePinyin}</p>
+                      <p className="text-[16px] font-mono text-red-700 font-semibold">
+                        {vocab.examplePinyin}
+                      </p>
                     )}
-                    <p className="text-xs sm:text-sm text-slate-700 font-medium">{vocab.exampleMeaning}</p>
+                    <p className="text-[19px] text-slate-700 font-medium">{vocab.exampleMeaning}</p>
                   </div>
 
                   {/* Mastery toggle */}
-                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
-                    <span className="text-xs text-slate-400">
-                      HSK {lesson.level}
-                    </span>
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#EFE7D6]">
+                    <span className="text-[14px] font-bold text-slate-500">{lesson.level}</span>
                     <button
+                      type="button"
                       onClick={() =>
                         isMastered
                           ? markVocabLearning(vocab.id)
                           : markVocabMastered(vocab.id)
                       }
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[14px] font-bold transition-colors cursor-pointer ${
                         isMastered
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-[#FAF7F0] text-[#18181B] border border-[#E8DFCE] hover:border-red-500 hover:bg-[#FFF5F3]'
                       }`}
                     >
-                      <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+                      <BookmarkCheck className="w-5 h-5 text-emerald-600" />
                       <span>{isMastered ? 'Đã thành thạo' : 'Đánh dấu đã thuộc'}</span>
                     </button>
                   </div>
@@ -314,58 +330,58 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       {activeTab === 'grammar' && (
         <div className="space-y-6">
           {lesson.grammar.map((item, idx) => (
-            <div key={item.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-md bg-rose-600 text-white text-xs font-bold flex items-center justify-center">
-                    {idx + 1}
-                  </span>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                    {item.title}
-                  </h3>
-                </div>
+            <div key={item.id} className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-red-600 text-white text-[16px] font-black flex items-center justify-center shrink-0">
+                  {idx + 1}
+                </span>
+                <h3 className="font-serif text-[21px] sm:text-[22px] font-black text-[#18181B]">
+                  {item.title}
+                </h3>
               </div>
 
               {/* Structure box */}
-              <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-200/60">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-800 block mb-1">
-                  Cấu trúc ngữ pháp:
+              <div className="bg-[#FEFCE8] rounded-2xl p-5 border border-amber-300/70 space-y-1">
+                <span className="text-[14px] font-bold uppercase tracking-wider text-amber-900 block">
+                  Cấu trúc ngữ pháp
                 </span>
-                <p className="text-sm font-semibold text-amber-950 font-mono">
+                <p className="text-[19px] font-bold text-[#18181B] font-mono">
                   {item.structure}
                 </p>
               </div>
 
               {/* Explanation */}
-              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              <p className="text-[19px] text-slate-700 leading-relaxed whitespace-pre-line">
                 {item.explanation}
-              </div>
+              </p>
 
               {/* Examples */}
-              <div className="space-y-2 pt-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Ví dụ minh họa:
+              <div className="space-y-3 pt-2">
+                <span className="text-[14px] font-bold text-red-700 uppercase tracking-wider block">
+                  Ví dụ minh họa
                 </span>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {item.examples.map((ex, exIdx) => (
                     <div
                       key={exIdx}
-                      className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between gap-3"
+                      className="bg-[#FDFBF6] rounded-2xl p-4 sm:p-5 border border-[#E8DFCE] flex items-center justify-between gap-3"
                     >
-                      <div className="space-y-0.5">
-                        <p className="font-semibold text-slate-900 text-sm">{ex.hanzi}</p>
+                      <div className="space-y-1">
+                        <p className="font-serif font-bold text-[#18181B] text-[21px]">{ex.hanzi}</p>
                         {showPinyin && (
-                          <p className="text-xs text-rose-700 italic">{ex.pinyin}</p>
+                          <p className="text-[16px] font-mono text-red-700 font-semibold">{ex.pinyin}</p>
                         )}
-                        <p className="text-xs text-slate-600">➔ {ex.translation}</p>
+                        <p className="text-[19px] text-slate-700">➔ {ex.translation}</p>
                       </div>
 
                       <button
+                        type="button"
                         onClick={() => handlePlayAudio(ex.hanzi, `gram-ex-${idx}-${exIdx}`)}
-                        className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 transition-colors shrink-0"
+                        className="p-3 rounded-xl bg-white border border-[#E8DFCE] text-red-600 hover:bg-red-600 hover:text-white transition-colors shrink-0 cursor-pointer"
                         title="Nghe phát âm"
+                        aria-label="Nghe ví dụ ngữ pháp"
                       >
-                        <Volume2 className="w-4 h-4" />
+                        <Volume2 className="w-6 h-6" />
                       </button>
                     </div>
                   ))}
@@ -380,13 +396,13 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       {activeTab === 'dialogue' && (
         <div className="space-y-6">
           {/* Sân Khấu Minh Họa 2 Nhân Vật Giao Tiếp */}
-          <div className="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-slate-700 shadow-xl relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#18181B] via-red-950 to-[#18181B] rounded-3xl p-6 sm:p-8 text-white border border-red-800/60 shadow-xl relative overflow-hidden">
             {/* Background ambient lighting */}
-            <div className="absolute -top-12 -left-12 w-48 h-48 bg-rose-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -top-12 -left-12 w-48 h-48 bg-red-500/20 rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-              {/* Nhân vật A (Tiểu Minh - Học viên) */}
+              {/* Nhân vật A */}
               <div className="flex items-center md:items-start gap-4">
                 <div className="relative">
                   <div
@@ -401,64 +417,67 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   </div>
                   {activeDialogueIndex !== null &&
                     (lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') || activeDialogueIndex % 2 === 0) && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white shadow-xs whitespace-nowrap animate-bounce">
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[13px] font-extrabold bg-red-600 text-white shadow-xs whitespace-nowrap animate-bounce">
                         Đang nói 🔊
                       </span>
                     )}
                 </div>
                 <div className="text-left">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-950/60 text-red-200 border border-red-600/40 uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 rounded-md text-[12px] font-bold bg-red-950/80 text-red-200 border border-red-600/40 uppercase tracking-wider">
                     Nhân vật A
                   </span>
-                  <h4 className="text-lg font-bold text-white mt-1">Tiểu Minh</h4>
-                  <p className="text-xs text-slate-300">Học viên tiếng Trung HSK</p>
+                  <h4 className="font-serif text-[18px] font-bold text-white mt-1">Tiểu Minh</h4>
+                  <p className="text-[14px] text-stone-300">Học viên tiếng Trung</p>
                 </div>
               </div>
 
               {/* Bộ Điều Khiển Trung Tâm */}
-              <div className="flex flex-col items-center gap-3 text-center px-4 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-                <span className="text-xs font-semibold text-slate-300">
+              <div className="flex flex-col items-center gap-3 text-center px-5 py-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md">
+                <span className="text-[14px] font-bold text-amber-200">
                   {isAutoPlayingDialogue
                     ? `Đang phát câu ${activeDialogueIndex !== null ? activeDialogueIndex + 1 : 1} / ${lesson.dialogue.length}`
-                    : 'Luyện nghe & phản xạ hội thoại thực tế'}
+                    : 'Luyện nghe & phản xạ hội thoại'}
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <button
+                    type="button"
                     onClick={handlePlayAllDialogue}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer ${
+                    className={`px-5 py-3 rounded-xl font-bold text-[14px] flex items-center gap-2 shadow-md transition-all cursor-pointer ${
                       isAutoPlayingDialogue
-                        ? 'bg-rose-500 hover:bg-rose-600 text-white ring-2 ring-rose-300 animate-pulse'
-                        : 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white'
+                        ? 'bg-red-500 hover:bg-red-600 text-white ring-2 ring-amber-300 animate-pulse'
+                        : 'bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white'
                     }`}
                   >
                     {isAutoPlayingDialogue ? (
                       <>
-                        <Pause className="w-4 h-4 fill-white" />
+                        <Pause className="w-5 h-5 fill-white" />
                         <span>Tạm dừng</span>
                       </>
                     ) : (
                       <>
-                        <Play className="w-4 h-4 fill-white" />
+                        <Play className="w-5 h-5 fill-white" />
                         <span>Phát toàn bộ bài thoại</span>
                       </>
                     )}
                   </button>
 
-                  <div className="flex items-center bg-black/40 rounded-xl p-1 border border-white/10 text-xs">
+                  <div className="flex items-center bg-black/40 rounded-xl p-1 border border-white/15 text-[13px]">
                     <button
+                      type="button"
                       onClick={() => setDialogueSpeed(0.85)}
-                      className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
-                        dialogueSpeed === 0.85 ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-white'
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
+                        dialogueSpeed === 0.85 ? 'bg-red-600 text-white' : 'text-stone-300 hover:text-white'
                       }`}
                       title="Tốc độ 0.85x chuẩn sư phạm để nghe rõ âm điệu"
                     >
                       0.85x
                     </button>
                     <button
+                      type="button"
                       onClick={() => setDialogueSpeed(1.0)}
-                      className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
-                        dialogueSpeed === 1.0 ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-white'
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
+                        dialogueSpeed === 1.0 ? 'bg-red-600 text-white' : 'text-stone-300 hover:text-white'
                       }`}
                       title="Tốc độ 1.0x tự nhiên bản xứ"
                     >
@@ -466,24 +485,20 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     </button>
                   </div>
                 </div>
-
-                <p className="text-[11px] text-slate-400">
-                  Bấm vào từng bong bóng thoại bên dưới để nghe riêng từng câu
-                </p>
               </div>
 
-              {/* Nhân vật B (Cô Mỹ Linh - Giảng viên) */}
+              {/* Nhân vật B */}
               <div className="flex items-center md:items-start gap-4 flex-row-reverse md:flex-row">
-                <div className="text-right md:text-right">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 uppercase tracking-wider">
+                <div className="text-right">
+                  <span className="px-2.5 py-0.5 rounded-md text-[12px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/30 uppercase tracking-wider">
                     Nhân vật B
                   </span>
-                  <h4 className="text-lg font-bold text-white mt-1">Cô Mỹ Linh</h4>
-                  <p className="text-xs text-amber-200/80">Giảng viên / Lão Sư</p>
+                  <h4 className="font-serif text-[18px] font-bold text-white mt-1">Cô Mỹ Linh</h4>
+                  <p className="text-[14px] text-amber-200/90">Giảng viên / Lão Sư</p>
                 </div>
                 <div className="relative">
                   <div
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
                       activeDialogueIndex !== null &&
                       (!lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') && activeDialogueIndex % 2 !== 0)
                         ? 'border-amber-300 ring-4 ring-amber-400/50 scale-105 animate-pulse'
@@ -494,7 +509,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   </div>
                   {activeDialogueIndex !== null &&
                     (!lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') && activeDialogueIndex % 2 !== 0) && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white shadow-xs whitespace-nowrap animate-bounce">
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[13px] font-extrabold bg-amber-500 text-[#18181B] shadow-xs whitespace-nowrap animate-bounce">
                         Đang nói 🔊
                       </span>
                     )}
@@ -503,7 +518,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
             </div>
           </div>
 
-          {/* Dòng Bong Bóng Hội Thoại (Comic Speech Bubbles) */}
+          {/* Dòng Bong Bóng Hội Thoại */}
           <div className="space-y-6 pt-2">
             {lesson.dialogue.map((line, idx) => {
               const isSpeakerA =
@@ -519,46 +534,43 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     isSpeakerA ? 'justify-start' : 'justify-end flex-row-reverse'
                   }`}
                 >
-                  {/* Avatar Mini Icon */}
                   <div
-                    className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md transition-all duration-300 ${
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-md transition-all duration-300 ${
                       isSpeakerA
-                        ? 'bg-gradient-to-tr from-zinc-800 to-zinc-950 text-white border border-[#E6DEC8]'
+                        ? 'bg-gradient-to-tr from-zinc-800 to-zinc-950 text-white border border-[#E8DFCE]'
                         : 'bg-gradient-to-tr from-amber-600 to-red-600 text-white'
-                    } ${isCurrentActive ? 'ring-4 ring-red-500 scale-110 animate-bounce' : 'opacity-90'}`}
+                    } ${isCurrentActive ? 'ring-4 ring-red-500 scale-110 animate-bounce' : 'opacity-95'}`}
                   >
                     {isSpeakerA ? '👦' : '👩‍🏫'}
                   </div>
 
-                  {/* Speech Bubble Container */}
                   <div
                     onClick={() => handlePlaySingleDialogue(line.chinese, idx)}
-                    className={`relative max-w-xl sm:max-w-2xl p-5 sm:p-6 rounded-3xl transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg ${
+                    className={`relative max-w-2xl p-6 rounded-3xl transition-all duration-300 cursor-pointer shadow-xs hover:shadow-lg ${
                       isSpeakerA
-                        ? 'bg-white border-2 border-[#E6DEC8] rounded-tl-xs text-left'
+                        ? 'bg-white border-2 border-[#E8DFCE] rounded-tl-xs text-left'
                         : 'bg-[#FAF7F0] border-2 border-red-200/80 rounded-tr-xs text-left'
                     } ${
                       isCurrentActive
                         ? isSpeakerA
-                          ? 'border-red-600 ring-4 ring-red-200 bg-[#FAF7F0] shadow-xl scale-[1.015]'
-                          : 'border-amber-600 ring-4 ring-amber-200 bg-[#F5EFEB] shadow-xl scale-[1.015]'
-                        : 'hover:border-red-400'
+                          ? 'border-red-600 ring-4 ring-red-200 bg-[#FFF5F3] shadow-xl scale-[1.015]'
+                          : 'border-amber-600 ring-4 ring-amber-200 bg-[#FEFCE8] shadow-xl scale-[1.015]'
+                        : 'hover:border-amber-500/70'
                     }`}
                   >
-                    {/* Header: Speaker & Controls */}
-                    <div className="flex items-center justify-between gap-3 mb-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[#EFE7D6]">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          className={`px-3 py-1 rounded-full text-[13px] font-bold ${
                             isSpeakerA
-                              ? 'bg-sky-100 text-sky-800'
-                              : 'bg-amber-100 text-amber-900'
+                              ? 'bg-[#FFF5F3] text-red-700 border border-red-200'
+                              : 'bg-amber-100 text-amber-900 border border-amber-200'
                           }`}
                         >
-                          Lượt #{idx + 1} • {line.speaker}
+                          Lượt #{idx + 1} · {line.speaker}
                         </span>
                         {isCurrentActive && (
-                          <span className="flex items-center gap-1 text-[11px] font-extrabold text-rose-600 animate-pulse">
+                          <span className="flex items-center gap-1 text-[13px] font-extrabold text-red-600 animate-pulse">
                             <span>●</span> Đang phát âm thanh
                           </span>
                         )}
@@ -570,35 +582,33 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                           e.stopPropagation();
                           handlePlaySingleDialogue(line.chinese, idx);
                         }}
-                        className={`p-2 rounded-xl transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-xl transition-all cursor-pointer ${
                           isCurrentActive
-                            ? 'bg-rose-600 text-white shadow-sm scale-105'
-                            : 'bg-slate-100 text-slate-700 hover:bg-rose-100 hover:text-rose-700'
+                            ? 'bg-red-600 text-white shadow-sm scale-105'
+                            : 'bg-[#FAF7F0] text-[#18181B] hover:bg-red-600 hover:text-white'
                         }`}
                         title="Bấm để nghe phát âm câu này"
+                        aria-label="Nghe câu thoại"
                       >
-                        <Volume2 className="w-4 h-4" />
+                        <Volume2 className="w-5 h-5" />
                       </button>
                     </div>
 
-                    {/* Chinese Text (Cỡ chữ to rõ 25-40%) */}
-                    <p className="font-serif text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-wide mb-2 leading-relaxed">
+                    <p className="font-serif text-[22px] sm:text-[26px] font-black text-[#18181B] tracking-wide mb-2 leading-relaxed">
                       {line.chinese}
                     </p>
 
-                    {/* Pīnyīn */}
                     {showPinyin && (
                       <p
-                        className={`text-base sm:text-lg font-mono font-bold mb-2.5 ${
-                          isSpeakerA ? 'text-sky-700' : 'text-amber-800'
+                        className={`text-[16px] sm:text-[18px] font-mono font-bold mb-2.5 ${
+                          isSpeakerA ? 'text-red-600' : 'text-amber-800'
                         }`}
                       >
                         {line.pinyin}
                       </p>
                     )}
 
-                    {/* Vietnamese Translation */}
-                    <p className="text-sm sm:text-base font-semibold text-slate-700 pt-2 border-t border-slate-200/60 leading-relaxed">
+                    <p className="text-[19px] font-semibold text-slate-700 pt-2.5 border-t border-[#EFE7D6] leading-relaxed">
                       {line.vietnamese}
                     </p>
                   </div>
@@ -612,9 +622,15 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       {/* Tab 4: Practice Quiz */}
       {activeTab === 'practice' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="font-bold text-slate-900 text-lg mb-1">Luyện tập củng cố kiến thức</h3>
-            <p className="text-xs text-slate-500 mb-6">Trả lời câu hỏi trắc nghiệm để kiểm tra mức độ hiểu bài</p>
+          <div className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-6">
+            <div className="space-y-1">
+              <h3 className="font-serif font-black text-[#18181B] text-[21px] sm:text-[24px]">
+                Luyện tập củng cố kiến thức
+              </h3>
+              <p className="text-[19px] text-slate-600">
+                Trả lời câu hỏi trắc nghiệm để kiểm tra mức độ hiểu bài
+              </p>
+            </div>
 
             <div className="space-y-6">
               {lesson.practiceQuestions.map((q, idx) => {
@@ -623,36 +639,40 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                 const isCorrect = selected === q.correctAnswer;
 
                 return (
-                  <div key={q.id} className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <span className="font-bold text-xs text-rose-600 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200">
+                  <div key={q.id} className="p-6 rounded-3xl border border-[#E8DFCE] bg-[#FDFBF6] space-y-4">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <span className="font-bold text-[14px] text-red-700 px-3 py-1 rounded-xl bg-[#FFF5F3] border border-red-200 shrink-0">
                         Câu {idx + 1}
                       </span>
-                      <p className="font-semibold text-sm text-slate-900 flex-1">{q.question}</p>
+                      <p className="font-serif font-bold text-[19px] sm:text-[21px] text-[#18181B] flex-1 leading-snug">
+                        {q.question}
+                      </p>
                     </div>
 
                     {q.pinyin && showPinyin && (
-                      <p className="text-xs text-slate-500 italic pl-8">{q.pinyin}</p>
+                      <p className="text-[16px] font-mono text-red-600 font-semibold">{q.pinyin}</p>
                     )}
 
                     {/* Options */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {q.options.map((opt, optIdx) => {
                         const isThisSelected = selected === optIdx;
                         const isThisCorrect = optIdx === q.correctAnswer;
 
-                        let optClasses = 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100';
+                        let optClasses =
+                          'border-[#E8DFCE] bg-white text-[#18181B] hover:bg-[#FFF9F6] hover:border-amber-500/70';
                         if (isAnswered) {
                           if (isThisCorrect) {
-                            optClasses = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold';
+                            optClasses = 'border-emerald-500 bg-[#ECFDF5] text-emerald-900 font-bold';
                           } else if (isThisSelected) {
-                            optClasses = 'border-red-500 bg-red-50 text-red-900 font-semibold';
+                            optClasses = 'border-red-500 bg-[#FFF5F3] text-red-900 font-bold';
                           }
                         }
 
                         return (
                           <button
                             key={optIdx}
+                            type="button"
                             disabled={isAnswered}
                             onClick={() =>
                               setPracticeAnswers((prev) => ({
@@ -660,14 +680,14 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                                 [q.id]: optIdx,
                               }))
                             }
-                            className={`p-3 rounded-xl border text-left text-xs sm:text-sm transition-all flex items-center justify-between ${optClasses}`}
+                            className={`p-4 rounded-2xl border-2 text-left text-[16px] sm:text-[18px] font-semibold transition-all flex items-center justify-between gap-2 cursor-pointer disabled:cursor-default ${optClasses}`}
                           >
                             <span>{opt}</span>
                             {isAnswered && isThisCorrect && (
-                              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <Check className="w-6 h-6 text-emerald-600 shrink-0" />
                             )}
                             {isAnswered && isThisSelected && !isThisCorrect && (
-                              <X className="w-4 h-4 text-red-600 shrink-0" />
+                              <X className="w-6 h-6 text-red-600 shrink-0" />
                             )}
                           </button>
                         );
@@ -677,13 +697,13 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     {/* Explanation */}
                     {isAnswered && (
                       <div
-                        className={`p-3 rounded-lg text-xs leading-relaxed mt-2 ${
+                        className={`p-4 rounded-2xl text-[18px] sm:text-[19px] leading-relaxed border ${
                           isCorrect
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                            ? 'bg-[#ECFDF5] text-emerald-900 border-emerald-300'
+                            : 'bg-[#FEFCE8] text-amber-950 border-amber-300'
                         }`}
                       >
-                        <span className="font-bold block mb-0.5">
+                        <span className="font-bold block mb-1">
                           {isCorrect ? '✓ Chính xác!' : '✗ Chưa chính xác. Giải thích:'}
                         </span>
                         {q.explanation}
@@ -698,32 +718,34 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       )}
 
       {/* Bottom Action Footer */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-        <div>
-          <h4 className="font-bold text-slate-900 text-sm">
+      <div className="bg-[#FFF5F3] rounded-3xl border-2 border-red-200 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+        <div className="space-y-1">
+          <h4 className="font-serif font-black text-[#18181B] text-[21px]">
             {isCompleted ? 'Bạn đã hoàn thành bài học này!' : 'Đã học xong nội dung bài học?'}
           </h4>
-          <p className="text-xs text-slate-500">
+          <p className="text-[19px] text-slate-700 leading-relaxed">
             {isCompleted
               ? 'Tiếp tục luyện tập từ vựng hoặc chuyển sang bài học tiếp theo.'
               : 'Bấm nút hoàn thành để ghi nhận thời gian học tập và nhận điểm thưởng 50 XP.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           {!isCompleted && (
             <button
+              type="button"
               onClick={handleCompleteLesson}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold text-sm hover:from-rose-700 hover:to-red-700 transition-all shadow-md shadow-rose-200 flex items-center gap-2"
+              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-[14px] sm:text-[16px] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-5 h-5 text-amber-300" />
               <span>Hoàn thành bài học (+50 XP)</span>
             </button>
           )}
 
           <button
+            type="button"
             onClick={onBack}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+            className="px-5 py-3 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[#18181B] font-bold text-[14px] sm:text-[16px] hover:border-red-500 transition-colors cursor-pointer"
           >
             Bài tiếp theo ➔
           </button>

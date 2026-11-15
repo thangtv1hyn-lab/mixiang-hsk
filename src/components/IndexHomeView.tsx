@@ -1,106 +1,102 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
-  BookOpen,
-  Layers,
-  GraduationCap,
-  Award,
-  CheckCircle2,
   ArrowRight,
-  Flame,
   Volume2,
-  Check,
-  Trophy,
-  Play,
-  RotateCcw,
   X,
-  ExternalLink,
   ChevronRight,
   ChevronLeft,
   PhoneCall,
-  Headphones,
+  MessageSquare,
+  RotateCw,
+  CheckCircle2,
+  Users,
+  Award,
+  Globe,
+  Quote,
+  Clock,
+  Trophy,
   Gamepad2,
-  BookMarked,
-  FileQuestion,
-  Lock,
-  Mic,
-  Camera,
-  Coins,
-  Smile,
-  Crown,
-  Medal,
-  TrendingUp,
 } from 'lucide-react';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese } from '../utils/audioSpeech';
-import confetti from 'canvas-confetti';
-import { HSKLevel } from '../types/hsk';
+import { Exam, HSKLevel } from '../types/hsk';
 
 interface IndexHomeViewProps {
   onOpenGoogleAuth: () => void;
+  onOpenReminder?: () => void;
+  onOpenAiTutor?: () => void;
 }
 
-export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }) => {
+export const IndexHomeView: React.FC<IndexHomeViewProps> = ({
+  onOpenGoogleAuth,
+}) => {
   const {
     setActiveTab,
     setActiveLevel,
     isAuthenticated,
-    currentUser,
     courses,
+    exams,
+    setCurrentExam,
     vocabularies,
+    forumPosts,
   } = useHSK();
 
-  // Daily Tasks state
-  const [tasks, setTasks] = useState({
-    task1: false,
-    task2: false,
-    task3: false,
-  });
-
-  // Modals for interactive exploration
-  const [activeGameModal, setActiveGameModal] = useState<string | null>(null);
+  // Interactive Modals State
   const [activeRadicalModal, setActiveRadicalModal] = useState(false);
   const [activeHanziStoryModal, setActiveHanziStoryModal] = useState(false);
   const [activePinyinModal, setActivePinyinModal] = useState(false);
+  const [activePosterModal, setActivePosterModal] = useState<string | null>(null);
 
-  // Hero Carousel / Slides State (3 authentic slides: Boya Red, Boya Black, Brand Banner)
+  // Hero Carousel / Slides State
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSlidePaused, setIsSlidePaused] = useState(false);
-  const [activePosterModal, setActivePosterModal] = useState<string | null>(null);
 
   const heroSlides = [
     {
       id: 'boya-red',
-      badge: 'LỚP HỌC TIẾNG TRUNG · DÀNH CHO NGƯỜI MỚI',
-      title: 'Tuyển sinh Lớp Học Tiếng Trung Cơ Bản',
-      subtitle: 'Khóa 40 buổi (02 buổi/tuần) · Giáo trình Boya chuẩn quốc tế · Cam kết chuẩn đầu ra HSK 3',
+      badge: 'Lớp học Tiếng Trung · Dành cho người mới',
+      title: 'Tuyển sinh Lớp Tiếng Trung Cơ Bản',
+      subtitle: 'Khóa 40 buổi (02 buổi/tuần) · Giáo trình Boya chuẩn quốc tế · Cam kết đầu ra HSK 3',
       image: '/assets/aistudio/1794493556654_2645543663410262361_g4922351168579610784_e99743bc4875704f02020ec30504d074_7a96f4ba.jpg',
-      teacher: 'Giảng viên Boya Chuẩn Sư Phạm',
-      highlights: ['Khóa 40 buổi · 02 buổi/tuần', 'Tối đa 08 học viên 1 lớp', 'Hình thức Online / Offline', 'Đầu ra HSK 3 & 5 kỹ năng'],
+      highlights: [
+        'Khóa 40 buổi · 02 buổi/tuần',
+        'Tối đa 08 học viên / lớp',
+        'Học Online / Offline',
+        'Đầu ra HSK 3 & 5 kỹ năng',
+      ],
       hotline: '0378.105.999',
       ctaText: 'Đăng ký tư vấn xếp lớp',
     },
     {
       id: 'boya-black',
-      badge: 'LỘ TRÌNH CHUYÊN SÂU · HSK 3.0',
-      title: 'Tuyển sinh Khóa Học Tiếng Trung Toàn Diện',
-      subtitle: 'Học bài bản cùng giáo trình Boya và giảng viên tận tâm · Luyện giao tiếp phản xạ tự nhiên',
+      badge: 'Lộ trình chuyên sâu · HSK 3.0',
+      title: 'Tuyển sinh Khóa Tiếng Trung Toàn Diện',
+      subtitle: 'Học bài bản cùng giáo trình Boya và giảng viên tận tâm · Luyện phản xạ giao tiếp tự nhiên',
       image: '/assets/aistudio/1794493556657_2645543663410262361_g4922351168579610784_dce6dc1e88bf0bec69888aec30c627a0_f9b8c805.jpg',
-      teacher: 'Lão Sư MiXiangg HSK',
-      highlights: ['5 kỹ năng: Nghe - Nói - Đọc - Viết - Dịch', 'Giáo trình Boya chuẩn Bắc Kinh', 'Tặng tài khoản luyện thi HSK 3.0', 'Tư vấn: 0378.105.999'],
+      highlights: [
+        '5 kỹ năng Nghe Nói Đọc Viết Dịch',
+        'Giáo trình Boya chuẩn Bắc Kinh',
+        'Tặng tài khoản luyện HSK 3.0',
+        'Tư vấn: 0378.105.999',
+      ],
       hotline: '0378.105.999',
       ctaText: 'Khám phá bài học HSK',
     },
     {
       id: 'calligraphy-seal',
-      badge: 'TÔN CHỈ HỌC TẬP TRUYỀN THỐNG',
+      badge: 'Tôn chỉ học tập truyền thống',
       title: '勤学好问 · Chuyên Cần Luyện HSK 3.0',
-      subtitle: 'Sách bài tập · Giáo trình chuẩn · Luyện ngữ âm · Thẻ từ vựng · Thi thử có phân tích điểm',
-      sealImage: '/assets/aistudio/logo_2cd38f9f.jpg',
-      teacher: 'Ấn triện chu sa MiXiangg HSK',
-      highlights: ['Nghe máy phát âm chuẩn', 'Nhận diện giọng nói tiếng Trung', 'Hơn 2,000 từ vựng & ngữ pháp', 'Bộ đề thi thử sát đề thật'],
+      subtitle: 'Giáo trình chuẩn · Luyện ngữ âm · Thẻ từ vựng · Đề thi thử tự chấm điểm',
+      sealImage: '/assets/aistudio/mh_c19ddbdc.jpg',
+      highlights: [
+        'Nghe phát âm chuẩn bản xứ',
+        'Chấm khẩu hình bằng AI',
+        'Hơn 2.000 từ vựng & ngữ pháp',
+        'Bộ đề thi sát đề thật',
+      ],
       hotline: '0378.105.999',
-      ctaText: 'Luyện tập Flashcard ngay',
+      ctaText: 'Luyện Flashcard ngay',
     },
   ];
 
@@ -108,175 +104,26 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
     if (isSlidePaused) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, [isSlidePaused, heroSlides.length]);
 
-  // Leaderboard timeframe: 'today' | 'week' | 'month'
-  const [leaderboardTimeframe, setLeaderboardTimeframe] = useState<'today' | 'week' | 'month'>('today');
-
-  const leaderboardData = {
-    today: [
-      { rank: 1, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 380, level: 'HSK 4', title: 'Trạng nguyên', avatar: '👩‍🏫', isCurrentUser: false },
-      { rank: 2, name: 'Lê Tuấn Kiệt', score: 320, level: 'HSK 3', title: 'Bảng nhãn', avatar: '🧑‍🎓', isCurrentUser: false },
-      { rank: 3, name: 'Hoàng Mai Anh', score: 290, level: 'HSK 3', title: 'Thám hoa', avatar: '👩', isCurrentUser: false },
-      { rank: 4, name: 'Đặng Quốc Bảo', score: 240, level: 'HSK 2', title: 'Cử nhân', avatar: '👨‍💼', isCurrentUser: false },
-      { rank: 5, name: 'Trần Phương Thảo', score: 210, level: 'HSK 2', title: 'Tú tài', avatar: '👧', isCurrentUser: false },
-      { rank: 6, name: 'Phạm Minh Đức', score: 180, level: 'HSK 1', title: 'Tú tài', avatar: '👦', isCurrentUser: false },
-      { rank: 7, name: 'Vũ Hải Yến', score: 150, level: 'HSK 1', title: 'Đồng sinh', avatar: '👩‍🦰', isCurrentUser: false },
-      { rank: 8, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 95, level: 'HSK 1', title: 'Đồng sinh', avatar: '👤', isCurrentUser: true },
-    ],
-    week: [
-      { rank: 1, name: 'Lê Tuấn Kiệt', score: 1850, level: 'HSK 3', title: 'Trạng nguyên', avatar: '🧑‍🎓', isCurrentUser: false },
-      { rank: 2, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 1720, level: 'HSK 4', title: 'Bảng nhãn', avatar: '👩‍🏫', isCurrentUser: false },
-      { rank: 3, name: 'Hoàng Mai Anh', score: 1490, level: 'HSK 3', title: 'Thám hoa', avatar: '👩', isCurrentUser: false },
-      { rank: 4, name: 'Trần Phương Thảo', score: 1280, level: 'HSK 2', title: 'Cử nhân', avatar: '👧', isCurrentUser: false },
-      { rank: 5, name: 'Đặng Quốc Bảo', score: 1140, level: 'HSK 2', title: 'Cử nhân', avatar: '👨‍💼', isCurrentUser: false },
-      { rank: 6, name: 'Phạm Minh Đức', score: 950, level: 'HSK 1', title: 'Tú tài', avatar: '👦', isCurrentUser: false },
-      { rank: 7, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 620, level: 'HSK 1', title: 'Đồng sinh', avatar: '👤', isCurrentUser: true },
-      { rank: 8, name: 'Vũ Hải Yến', score: 580, level: 'HSK 1', title: 'Đồng sinh', avatar: '👩‍🦰', isCurrentUser: false },
-    ],
-    month: [
-      { rank: 1, name: 'Nguyễn Mỹ Linh (Cô Linh)', score: 6450, level: 'HSK 4', title: 'Trạng nguyên', avatar: '👩‍🏫', isCurrentUser: false },
-      { rank: 2, name: 'Lê Tuấn Kiệt', score: 5820, level: 'HSK 3', title: 'Bảng nhãn', avatar: '🧑‍🎓', isCurrentUser: false },
-      { rank: 3, name: 'Đặng Quốc Bảo', score: 4920, level: 'HSK 2', title: 'Thám hoa', avatar: '👨‍💼', isCurrentUser: false },
-      { rank: 4, name: 'Hoàng Mai Anh', score: 4310, level: 'HSK 3', title: 'Cử nhân', avatar: '👩', isCurrentUser: false },
-      { rank: 5, name: 'Trần Phương Thảo', score: 3890, level: 'HSK 2', title: 'Cử nhân', avatar: '👧', isCurrentUser: false },
-      { rank: 6, name: currentUser?.name || 'Thắng Trần (Bạn)', score: 2150, level: 'HSK 1', title: 'Tú tài', avatar: '👤', isCurrentUser: true },
-    ],
+  // Homepage Interactive Flashcard Preview state
+  const sampleVocab = vocabularies.slice(0, 6);
+  const [previewCardIdx, setPreviewCardIdx] = useState(0);
+  const [isPreviewFlipped, setIsPreviewFlipped] = useState(false);
+  const activePreviewCard = sampleVocab[previewCardIdx] || {
+    id: 'demo-1',
+    word: '你好',
+    pinyin: 'nǐ hǎo',
+    sinoVietnamese: 'Nhĩ hảo',
+    meaning: 'Xin chào',
+    level: 'HSK 1' as HSKLevel,
+    exampleSentence: '你好，很高兴认识你！',
+    examplePinyin: 'Nǐ hǎo, hěn gāoxìng rènshi nǐ!',
+    exampleMeaning: 'Xin chào, rất vui được làm quen với bạn!',
   };
 
-  // Mini-game playable states for "Gõ pinyin" & "Nối từ"
-  const [typingInput, setTypingInput] = useState('');
-  const [typingScore, setTypingScore] = useState(0);
-  const [matchedPairs, setMatchedPairs] = useState<number[]>([]);
-
-  const completedTaskCount = (tasks.task1 ? 1 : 0) + (tasks.task2 ? 1 : 0) + (tasks.task3 ? 1 : 0);
-
-  const toggleTask = (taskId: 'task1' | 'task2' | 'task3') => {
-    setTasks((prev) => {
-      const next = { ...prev, [taskId]: !prev[taskId] };
-      if (!prev[taskId]) {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.7 },
-        });
-      }
-      return next;
-    });
-  };
-
-  const handleNavigateCourse = (level: HSKLevel) => {
-    setActiveLevel(level);
-    if (!isAuthenticated) {
-      onOpenGoogleAuth();
-      return;
-    }
-    setActiveTab('courses');
-  };
-
-  // 12 Gamified Mini-games definition matching Image 2
-  const gamesList = [
-    {
-      id: 'go-pinyin',
-      title: 'Gõ pinyin',
-      desc: 'Chữ Hán rơi xuống — gõ pinyin (không dấu) để bắn hạ trước khi chạm đáy.',
-      color: 'bg-blue-600',
-      tag: 'Phản xạ gõ phím',
-      icon: '⌨️',
-    },
-    {
-      id: 'chay-tren-may',
-      title: 'Chạy trên mây',
-      desc: 'Chạy sang làn có từ đúng nghĩa trước khi tới cổng. Trả lời đúng liên tiếp sẽ chạy nhanh hơn.',
-      color: 'bg-teal-600',
-      tag: 'Nhanh mắt nhanh tay',
-      icon: '🏃',
-    },
-    {
-      id: 'ban-bong-bong',
-      title: 'Bắn bong bóng',
-      desc: 'Bong bóng chữ Hán bay lên — chạm đúng bong bóng có nghĩa ở trên trước khi nó bay mất.',
-      color: 'bg-rose-700',
-      tag: 'Phản xạ từ vựng',
-      icon: '🫧',
-    },
-    {
-      id: 'noi-tu',
-      title: 'Nối từ',
-      desc: 'Nối chữ Hán ở cột trái với nghĩa đúng ở cột phải. Nối càng nhanh càng nhiều điểm.',
-      color: 'bg-red-700',
-      tag: 'Ghép đôi từ vựng',
-      icon: '🔗',
-    },
-    {
-      id: 'nghe-chon-chu',
-      title: 'Nghe chọn chữ',
-      desc: 'Nghe máy đọc một từ rồi chọn đúng chữ Hán trong 4 đáp án trước khi hết giờ.',
-      color: 'bg-amber-600',
-      tag: 'Luyện thính lực',
-      icon: '🎧',
-    },
-    {
-      id: 'chon-thanh-dieu',
-      title: 'Chọn thanh điệu',
-      desc: 'Nhìn chữ Hán, chọn cách viết pinyin có thanh điệu đúng trong 4 đáp án.',
-      color: 'bg-emerald-600',
-      tag: 'Chuẩn 4 thanh điệu',
-      icon: '🎵',
-    },
-    {
-      id: 'ghep-chu-thanh-tu',
-      title: 'Ghép chữ thành từ',
-      desc: 'Xem nghĩa, bấm các chữ Hán theo đúng thứ tự để ghép thành từ.',
-      color: 'bg-lime-800',
-      tag: 'Cấu tạo từ vựng',
-      icon: '🧩',
-    },
-    {
-      id: 'nghieng-dau-chon-dung',
-      title: 'Nghiêng đầu chọn đúng',
-      desc: 'Camera nhìn em: nghiêng đầu, quay mặt hoặc chỉ tay sang trái/phải để chọn đáp án đúng.',
-      color: 'bg-sky-600',
-      tag: 'Vận động thể chất',
-      icon: '🧒',
-    },
-    {
-      id: 'chem-hoa-qua',
-      title: 'Chém hoa quả',
-      desc: 'Hoa quả có chữ Hán bay lên — vung ngón tay trước camera (hoặc vuốt màn hình) chém đúng quả có từ được hỏi!',
-      color: 'bg-red-600',
-      tag: 'Ninja từ vựng',
-      icon: '🍉',
-    },
-    {
-      id: 'nhay-sang-dung-cong',
-      title: 'Nhảy sang đúng cổng',
-      desc: 'Vừa học vừa tập thể dục: di chuyển cả người sang cổng có từ đúng rồi bật nhảy — camera sẽ nhìn em!',
-      color: 'bg-emerald-700',
-      tag: 'Vừa học vừa nhảy',
-      icon: '🐫',
-    },
-    {
-      id: 'noi-de-nhay',
-      title: 'Nói để nhảy',
-      desc: 'Khủng long chạy gặp chướng ngại có ghi từ tiếng Trung — đọc to, đúng từ đó thì khủng long mới nhảy qua!',
-      color: 'bg-amber-700',
-      tag: 'Luyện phát âm to rõ',
-      icon: '🦖',
-    },
-    {
-      id: 'karaoke-bai-khoa',
-      title: 'Karaoke bài khoá',
-      desc: 'Nghe giọng đọc gốc của sách từng câu rồi đọc theo — chữ đọc đúng sáng xanh. Có chế độ đóng vai và học thuộc.',
-      color: 'bg-[#18181B]',
-      tag: 'Hát theo bài khoá',
-      icon: '🎤',
-    },
-  ];
-
-  // 214 Radicals sample list
   const sampleRadicals = [
     { char: '亻', pinyin: 'rén', sino: 'Nhân', meaning: 'Người, con người', ex: '你 (bạn), 他 (anh ấy)' },
     { char: '口', pinyin: 'kǒu', sino: 'Khẩu', meaning: 'Miệng, lời nói', ex: '吃 (ăn), 喝 (uống)' },
@@ -284,952 +131,1041 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
     { char: '木', pinyin: 'mù', sino: 'Mộc', meaning: 'Cây, gỗ', ex: '林 (rừng), 桌 (bàn)' },
     { char: '心', pinyin: 'xīn', sino: 'Tâm', meaning: 'Trái tim, tình cảm', ex: '想 (nghĩ), 念 (nhớ)' },
     { char: '讠', pinyin: 'yán', sino: 'Ngôn', meaning: 'Lời nói, ngôn ngữ', ex: '语 (ngữ), 说 (nói)' },
-    { char: '扌', pinyin: 'shǒu', sino: 'Thủ', meaning: 'Tay, động tác tay', ex: '打 (đánh), 提 (xách)' },
-    { char: '女', pinyin: 'nǚ', sino: 'Nữ', meaning: 'Phụ nữ, giống cái', ex: '好 (tốt), 妈 (mẹ)' },
+    { char: '女', pinyin: 'nǚ', sino: 'Nữ', meaning: 'Phụ nữ, mẹ', ex: '好 (tốt), 妈 (mẹ)' },
     { char: '日', pinyin: 'rì', sino: 'Nhật', meaning: 'Mặt trời, ban ngày', ex: '明 (sáng), 早 (sớm)' },
-    { char: '饣', pinyin: 'shí', sino: 'Thực', meaning: 'Ăn uống, thức ăn', ex: '饭 (cơm), 饱 (no)' },
-    { char: '宀', pinyin: 'mián', sino: 'Miên', meaning: 'Mái nhà, chỗ ở', ex: '家 (nhà), 安 (an)' },
-    { char: '走', pinyin: 'zǒu', sino: 'Tẩu', meaning: 'Đi lại, chạy', ex: '起 (dậy), 超 (vượt)' },
   ];
 
-  // 1063 Hanzi Stories sample
   const sampleStories = [
     {
       char: '休',
       pinyin: 'xiū',
       meaning: 'Nghỉ ngơi',
-      story: 'Gồm bộ Nhân (亻- người) đứng tựa lưng vào gốc cây (木 - mộc) dưới bóng râm để nghỉ ngơi sau giờ làm việc vất vả.',
+      story: 'Người (亻) đứng tựa lưng vào gốc cây (木) dưới bóng râm để nghỉ ngơi.',
       structure: '亻 (Nhân) + 木 (Mộc)',
     },
     {
       char: '明',
       pinyin: 'míng',
       meaning: 'Sáng sủa, thông minh',
-      story: 'Kết hợp giữa Mặt Trời (日 - nhật) và Mặt Trăng (月 - nguyệt), hai vật thể sáng nhất trên bầu trời cùng tỏa ánh sáng chan hòa.',
+      story: 'Mặt Trời (日) và Mặt Trăng (月) cùng tỏa sáng trên bầu trời.',
       structure: '日 (Nhật) + 月 (Nguyệt)',
     },
     {
       char: '好',
       pinyin: 'hǎo',
       meaning: 'Tốt đẹp, hay',
-      story: 'Hình ảnh người Mẹ (女 - nữ) ôm đứa con trai nhỏ (子 - tử) trong lòng, biểu trưng cho sự hòa thuận, hạnh phúc và vẹn tròn.',
+      story: 'Người Mẹ (女) ôm đứa con nhỏ (子) trong lòng, biểu trưng cho sự vẹn tròn.',
       structure: '女 (Nữ) + 子 (Tử)',
     },
     {
       char: '安',
       pinyin: 'ān',
       meaning: 'Bình an, yên ổn',
-      story: 'Bên dưới mái nhà (宀 - miên) có người phụ nữ (女 - nữ) trông coi chăm sóc gia đình thì mọi sự đều bình an, an lành.',
+      story: 'Dưới mái nhà (宀) có người phụ nữ (女) chăm lo gia đình thì mọi sự bình an.',
       structure: '宀 (Miên) + 女 (Nữ)',
     },
   ];
 
-  return (
-    <div className="space-y-10 pb-20 max-w-5xl mx-auto">
-      {/* ========================================================= */}
-      {/* PHÂN KHU 1: THEO HÌNH 1 (BANNER CÂU ĐỐI, NHIỆM VỤ, SÁCH BÀI TẬP) */}
-      {/* ========================================================= */}
-      <section className="space-y-6">
-        {/* 1.1. TOP HERO WITH TRADITIONAL COUPLETS */}
-        <div className="flex items-stretch justify-center gap-2 sm:gap-4 select-none">
-          {/* Câu đối bên trái (Thẻ trúc thư pháp) */}
-          <div className="w-12 sm:w-16 rounded-2xl bg-[#FAF7F0] border-2 border-red-700/60 shadow-md flex flex-col items-center justify-around py-6 px-1 text-slate-900 font-serif font-black text-sm sm:text-lg leading-tight tracking-widest text-center shadow-stone-300/40">
-            <span className="text-red-700">学</span>
-            <span>而</span>
-            <span>时</span>
-            <span>习</span>
-            <span className="text-red-700">之</span>
-          </div>
+  const testimonialScrollRef = useRef<HTMLDivElement | null>(null);
 
-          {/* Banner & Slider ảnh tuyển sinh trung tâm (Selector 2 target) */}
+  const scrollTestimonials = (direction: 'left' | 'right') => {
+    if (!testimonialScrollRef.current) return;
+    const scrollAmount = 420;
+    testimonialScrollRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  const testimonials = [
+    {
+      name: 'Nguyễn Minh Anh',
+      role: 'Sinh viên ĐH Ngoại Thương · Đạt HSK 4 (268/300)',
+      avatar:
+        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Trước đây mình rất sợ nhớ chữ Hán và hay sai thanh 3. Sau 40 buổi học lớp sĩ số nhỏ tại MiXiangg HSK kết hợp luyện phát âm AI mỗi tối, mình giao tiếp tự tin và vượt HSK 4 chỉ sau 5 tháng.',
+      bgClass: 'bg-[#FFF5F3] border-red-200',
+    },
+    {
+      name: 'Trần Hoàng Nam',
+      role: 'Nhân viên xuất nhập khẩu · Đạt HSK 3 (280/300)',
+      avatar:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Giao diện chữ to rõ, Flashcard kèm chiết tự bộ thủ giúp mình học cực nhanh trên đường đi làm. Nhờ phòng thi thử bấm giờ giống hệt đề thật, lúc vào thi chính thức mình không còn bỡ ngỡ.',
+      bgClass: 'bg-[#F0FDF9] border-teal-200',
+    },
+    {
+      name: 'Lê Thu Hà',
+      role: 'Học viên lớp Boya Online · HSK 2 lên HSK 4',
+      avatar:
+        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Giáo viên sửa từng khẩu hình phát âm rất kỹ vì mỗi lớp chỉ tối đa 8 bạn. Lão Sư AI và diễn đàn giải đáp thắc mắc ngữ pháp giúp mình giữ chuỗi học liên tục hơn 60 ngày.',
+      bgClass: 'bg-[#FFFBEB] border-amber-200',
+    },
+    {
+      name: 'Đặng Tuấn Kiệt',
+      role: 'Kỹ sư CNTT · Hoàn thành Giáo trình Boya Sơ cấp 1 & 2',
+      avatar:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Mình rất thích bộ Flashcard chia sẵn theo từng bài của Giáo trình Boya và trò chơi Mưa Từ Vựng 2D. Mỗi ngày chỉ cần ôn 20 từ trên web là nhớ mặt chữ Hán cực kỳ lâu.',
+      bgClass: 'bg-[#EFF6FF] border-sky-200',
+    },
+    {
+      name: 'Phạm Phương Thảo',
+      role: 'Chuyên viên Thu mua Quốc tế · Đạt HSK 4 (276/300)',
+      avatar:
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Lộ trình học kết hợp giữa Giáo trình Boya và luyện đề HSK 3.0 tại MiXiangg rất thực tế. Mình áp dụng được ngay các mẫu câu đàm phán đơn hàng với đối tác Quảng Châu.',
+      bgClass: 'bg-[#ECFDF5] border-emerald-200',
+    },
+    {
+      name: 'Hoàng Minh Quân',
+      role: 'Du học sinh Thạc sĩ · Chinh phục HSK 5 (265/300)',
+      avatar:
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      quote:
+        'Kho thành ngữ tứ tự HSK 5 và phần chấm phát âm bằng AI giúp mình hoàn thiện cả kỹ năng viết luận lẫn khẩu ngữ học thuật trước khi sang Bắc Kinh nhập học.',
+      bgClass: 'bg-[#FAF5FF] border-purple-200',
+    },
+  ];
+
+  const courseCardThemes = [
+    {
+      kanji: '课一',
+      gradient: 'from-red-600 to-rose-700',
+      textAccent: 'text-amber-200',
+    },
+    {
+      kanji: '课二',
+      gradient: 'from-teal-700 to-cyan-800',
+      textAccent: 'text-teal-100',
+    },
+    {
+      kanji: '课三',
+      gradient: 'from-amber-700 to-orange-800',
+      textAccent: 'text-amber-100',
+    },
+    {
+      kanji: '课四',
+      gradient: 'from-emerald-700 to-green-900',
+      textAccent: 'text-emerald-100',
+    },
+    {
+      kanji: '课五',
+      gradient: 'from-zinc-800 to-[#18181B]',
+      textAccent: 'text-amber-300',
+    },
+  ];
+
+  const handleNavigateWithAuth = (tab: string, level?: HSKLevel) => {
+    if (level) setActiveLevel(level);
+    if (!isAuthenticated) {
+      onOpenGoogleAuth();
+      return;
+    }
+    setActiveTab(tab);
+  };
+
+  const handleStartExamWithAuth = (exam: Exam) => {
+    if (!isAuthenticated) {
+      onOpenGoogleAuth();
+      return;
+    }
+    setCurrentExam(exam);
+    setActiveTab('exam-taking');
+  };
+
+  return (
+    <div className="space-y-8 pb-4">
+      {/* ========================================================= */}
+      {/* 1. SLIDE GIỚI THIỆU + CÂU ĐỐI */}
+      {/* ========================================================= */}
+      <section aria-label="Slide giới thiệu">
+        <div className="flex items-stretch justify-center select-none">
+          {/* Slider trung tâm */}
           <div
-            className="flex-1 rounded-3xl bg-gradient-to-r from-red-950 via-red-900 to-[#18181B] text-white shadow-xl relative overflow-hidden flex flex-col justify-between border-2 border-red-700/60 min-h-[220px] sm:min-h-[280px] md:min-h-[310px] group/slider transition-all"
+            className="flex-1 rounded-3xl bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white shadow-lg relative overflow-hidden flex flex-col justify-between border border-red-500/70 min-h-[248px]"
             onMouseEnter={() => setIsSlidePaused(true)}
             onMouseLeave={() => setIsSlidePaused(false)}
           >
-            {/* Top Indicator & Badge */}
-            <div className="relative z-10 p-4 sm:p-6 pb-2 flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-white/10 text-amber-300 border border-amber-400/30 backdrop-blur-md shadow-xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>{heroSlides[currentSlide].badge}</span>
+            {/* Top Bar */}
+            <div className="relative z-10 p-5 sm:p-6 pb-2 flex items-start justify-between gap-3">
+              <span className="inline-flex items-center gap-2.5 font-black text-amber-200 leading-tight">
+                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-amber-300 shrink-0" />
+                <span className="text-[19px] sm:text-[26px] lg:text-[27px] font-black leading-tight tracking-tight">
+                  {heroSlides[currentSlide].badge}
+                </span>
               </span>
 
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/40 text-[11px] font-mono font-bold text-white/90 border border-white/10">
+              <div className="flex items-center gap-1.5 text-[13px] font-mono font-bold text-white/95 tabular-nums shrink-0 pt-1">
                 <span>{currentSlide + 1}</span>
-                <span className="text-white/40">/</span>
+                <span className="text-white/45">/</span>
                 <span>{heroSlides.length}</span>
               </div>
             </div>
 
-            {/* Slide Content Rendering */}
-            <div className="relative z-10 px-4 sm:px-6 py-1 flex-1 flex flex-col md:flex-row items-center justify-between gap-4">
-              {/* Left Column: Text & CTAs */}
-              <div className="space-y-2 max-w-xl text-left">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-sm font-serif">
+            {/* Split Slide Content (2/3 nội dung bên trái - 1/3 ảnh slide bên phải) */}
+            <div className="relative z-10 px-5 sm:px-7 py-4 flex-1 flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-8">
+              <div className="space-y-3.5 text-left w-full md:w-2/3 flex-1 min-w-0">
+                <h1 className="font-serif text-[22px] sm:text-[29px] font-black text-white leading-tight text-balance">
                   {heroSlides[currentSlide].title}
-                </h2>
-                <p className="text-xs sm:text-sm text-red-100/90 leading-relaxed font-medium line-clamp-2">
+                </h1>
+                <p className="text-[19px] text-rose-50 leading-snug font-medium">
                   {heroSlides[currentSlide].subtitle}
                 </p>
 
-                {/* Highlights tags */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-[18px] sm:text-[19px] text-amber-200 font-semibold">
                   {heroSlides[currentSlide].highlights.map((h, hIdx) => (
-                    <span
-                      key={hIdx}
-                      className="px-2.5 py-0.5 rounded-md bg-white/10 border border-white/15 text-amber-200 text-[10px] sm:text-[11px] font-semibold"
-                    >
-                      ✓ {h}
-                    </span>
+                    <span key={hIdx}>✓ {h}</span>
                   ))}
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap items-center gap-2 pt-2">
+                <div className="flex flex-wrap items-center gap-3 pt-3">
                   <button
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        onOpenGoogleAuth();
-                        return;
-                      }
-                      setActiveTab('courses');
-                    }}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105"
+                    type="button"
+                    onClick={() => handleNavigateWithAuth('courses')}
+                    className="px-5 py-3 rounded-xl bg-amber-300 hover:bg-amber-200 text-[#18181B] font-black text-[14px] sm:text-[16px] shadow-sm transition-colors cursor-pointer flex items-center gap-2"
                   >
                     <span>{heroSlides[currentSlide].ctaText}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-5 h-5" />
                   </button>
 
                   {heroSlides[currentSlide].hotline && (
                     <a
                       href="tel:0378105999"
-                      className="px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
-                      title="Gọi ngay hotline tư vấn khóa học"
+                      className="px-4 py-3 rounded-xl bg-black/35 hover:bg-black/55 border border-amber-300/60 text-amber-200 font-bold text-[14px] flex items-center gap-2 transition-colors"
                     >
-                      <PhoneCall className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Hotline: 0378.105.999</span>
+                      <PhoneCall className="w-5 h-5 text-amber-300 shrink-0" />
+                      <span className="tabular-nums">0378.105.999</span>
                     </a>
                   )}
 
                   {heroSlides[currentSlide].image && (
                     <button
+                      type="button"
                       onClick={() => setActivePosterModal(heroSlides[currentSlide].image!)}
-                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                      title="Xem ảnh poster phóng to chi tiết"
+                      className="px-4 py-3 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-[14px] cursor-pointer transition-colors"
                     >
-                      <span>Xem poster 🔍</span>
+                      Xem poster
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Right Column: Poster / Banner Thumbnail Preview */}
-              <div className="shrink-0 relative">
+              {/* Right Thumbnail (Chiếm 1/3 diện tích chiều ngang của Slide) */}
+              <div className="w-full max-w-[240px] md:max-w-none md:w-1/3 shrink-0 relative">
                 {heroSlides[currentSlide].image ? (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setActivePosterModal(heroSlides[currentSlide].image!)}
-                    className="relative cursor-pointer group/img transition-transform hover:scale-105"
+                    className="relative w-full cursor-pointer transition-transform hover:scale-[1.02] block"
                     title="Bấm để xem ảnh phóng to đầy đủ"
                   >
                     <img
                       src={heroSlides[currentSlide].image}
                       alt={heroSlides[currentSlide].title}
-                      className="w-32 h-32 sm:w-44 sm:h-44 md:w-52 md:h-52 object-cover rounded-2xl border-2 border-amber-400/60 shadow-xl shadow-black/40 bg-white"
+                      referrerPolicy="no-referrer"
+                      className="w-full aspect-square object-cover rounded-2xl border-2 border-amber-300/80 shadow-xl bg-white"
                     />
-                    <div className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold text-white backdrop-blur-2xs">
-                      Bấm phóng to 🔍
-                    </div>
-                  </div>
+                  </button>
                 ) : heroSlides[currentSlide].sealImage ? (
-                  <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-2xl bg-white border-2 border-red-700/80 p-3 shadow-xl flex items-center justify-center">
+                  <div
+                    onClick={() => setActivePosterModal(heroSlides[currentSlide].sealImage!)}
+                    className="w-full aspect-square rounded-2xl bg-white border-2 border-amber-300/80 shadow-xl overflow-hidden flex items-center justify-center cursor-pointer transition-transform hover:scale-[1.02]"
+                    title="Bấm để xem ảnh phóng to đầy đủ"
+                  >
                     <img
                       src={heroSlides[currentSlide].sealImage}
-                      alt="Triện khắc MiXiangg HSK"
-                      className="w-full h-full object-contain mix-blend-multiply"
+                      alt={heroSlides[currentSlide].title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-top"
                     />
                   </div>
                 ) : null}
               </div>
             </div>
 
-            {/* Bottom Controls: Previous / Next & Dots */}
-            <div className="relative z-10 p-3 sm:p-4 pt-2 flex items-center justify-between gap-2 border-t border-white/10 bg-black/20">
+            {/* Bottom Controls */}
+            <div className="relative z-10 p-4 flex items-center justify-between gap-2 border-t border-white/15 bg-black/20">
               <button
+                type="button"
                 onClick={() =>
                   setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
                 }
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
-                title="Slide trước"
+                className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                aria-label="Slide trước"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
 
-              {/* Dots */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {heroSlides.map((_, dotIdx) => (
                   <button
                     key={dotIdx}
+                    type="button"
                     onClick={() => setCurrentSlide(dotIdx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                    aria-label={`Chuyển tới slide ${dotIdx + 1}`}
+                    className={`h-2.5 rounded-full transition-all cursor-pointer ${
                       currentSlide === dotIdx
-                        ? 'w-7 bg-amber-400 shadow-xs'
-                        : 'w-2 bg-white/30 hover:bg-white/60'
+                        ? 'w-8 bg-amber-300'
+                        : 'w-2.5 bg-white/40 hover:bg-white/70'
                     }`}
-                    title={`Chuyển tới slide ${dotIdx + 1}`}
                   />
                 ))}
               </div>
 
               <button
+                type="button"
                 onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
-                title="Slide kế tiếp"
+                className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                aria-label="Slide kế tiếp"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-5 h-5" />
               </button>
-            </div>
-          </div>
-
-          {/* Câu đối bên phải (Thẻ trúc thư pháp) */}
-          <div className="w-12 sm:w-16 rounded-2xl bg-[#FAF7F0] border-2 border-red-700/60 shadow-md flex flex-col items-center justify-around py-6 px-1 text-slate-900 font-serif font-black text-sm sm:text-lg leading-tight tracking-widest text-center shadow-stone-300/40">
-            <span className="text-red-700">不</span>
-            <span>亦</span>
-            <span>说</span>
-            <span className="text-red-700">乎</span>
-          </div>
-        </div>
-
-        {/* 1.2. STATS BAR: CHUỖI NGÀY & CẤP BẬC */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
-          {/* Thẻ chuỗi ngày liên tiếp */}
-          <div className="md:col-span-3 bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center">
-            <div className="text-slate-400 mb-1">
-              <Flame className="w-6 h-6 text-slate-400" />
-            </div>
-            <span className="text-2xl font-black text-slate-900">1</span>
-            <span className="text-xs font-bold text-slate-600">ngày liên tiếp</span>
-            <span className="text-[11px] text-slate-400 mt-0.5">Học ngay để giữ chuỗi!</span>
-          </div>
-
-          {/* Thẻ Cấp bậc & Xu */}
-          <div className="md:col-span-9 bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-xl bg-rose-500 text-white font-serif font-extrabold text-sm shadow-xs">
-                  童生
-                </span>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">Đồng sinh</h3>
-                  <p className="text-xs text-slate-500">
-                    0 điểm · còn 150 điểm lên <strong className="text-slate-800">Tú tài</strong>
-                  </p>
-                </div>
-              </div>
-
-              {/* Coin counter */}
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs">
-                <span>🪙</span>
-                <span>0</span>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1">
-              <div className="bg-rose-500 h-2 rounded-full w-[8%]"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* 1.3. NHIỆM VỤ HÔM NAY (DAILY TASKS) */}
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
-              Nhiệm vụ hôm nay
-            </h3>
-            <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
-              Làm đủ 3 nhiệm vụ: +15 điểm
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {/* Task 1 */}
-            <div
-              onClick={() => toggleTask('task1')}
-              className={`p-3 sm:p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                tasks.task1 ? 'bg-emerald-50/60 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-sky-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                  {tasks.task1 ? <Check className="w-4 h-4" /> : '📖'}
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">Làm 1 phần bài tập</h4>
-                  <p className="text-[11px] text-slate-500">Sách bài tập, giáo trình, ngữ âm...</p>
-                </div>
-              </div>
-              <span className={`text-xs font-mono font-bold ${tasks.task1 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                {tasks.task1 ? '1/1' : '0/1'}
-              </span>
-            </div>
-
-            {/* Task 2 */}
-            <div
-              onClick={() => toggleTask('task2')}
-              className={`p-3 sm:p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                tasks.task2 ? 'bg-emerald-50/60 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                  {tasks.task2 ? <Check className="w-4 h-4" /> : '🎮'}
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">Chơi 1 lượt trò chơi</h4>
-                  <p className="text-[11px] text-slate-500">Bất kỳ trò nào</p>
-                </div>
-              </div>
-              <span className={`text-xs font-mono font-bold ${tasks.task2 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                {tasks.task2 ? '1/1' : '0/1'}
-              </span>
-            </div>
-
-            {/* Task 3 */}
-            <div
-              onClick={() => toggleTask('task3')}
-              className={`p-3 sm:p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                tasks.task3 ? 'bg-emerald-50/60 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                  {tasks.task3 ? <Check className="w-4 h-4" /> : '🗂️'}
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">Ôn tập 20 thẻ / từ</h4>
-                  <p className="text-[11px] text-slate-500">Flashcard, sổ lỗi sai hoặc luyện đọc</p>
-                </div>
-              </div>
-              <span className={`text-xs font-mono font-bold ${tasks.task3 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                {tasks.task3 ? '20/20' : '0/20'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 1.4. ROW OF 3 QUICK ACTION SHORTCUTS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {/* Card 1: Ôn lỗi sai hôm nay */}
-          <div
-            onClick={() => {
-              if (!isAuthenticated) {
-                onOpenGoogleAuth();
-                return;
-              }
-              setActiveTab('vocab');
-            }}
-            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#18181B] via-zinc-800 to-[#18181B] border border-red-900/30 text-white shadow-md cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-0.5 space-y-1"
-          >
-            <div className="text-lg">🗂️</div>
-            <h4 className="font-extrabold text-sm sm:text-base">Ôn lỗi sai hôm nay</h4>
-            <p className="text-xs text-slate-300">Không có từ đến hạn</p>
-          </div>
-
-          {/* Card 2: Bài được giao */}
-          <div
-            onClick={() => {
-              if (!isAuthenticated) {
-                onOpenGoogleAuth();
-                return;
-              }
-              setActiveTab('courses');
-            }}
-            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-0.5 space-y-1"
-          >
-            <div className="text-lg">📋</div>
-            <h4 className="font-extrabold text-sm sm:text-base">Bài được giao</h4>
-            <p className="text-xs text-orange-100">Chưa xếp lớp</p>
-          </div>
-
-          {/* Card 3: Thi thử mini */}
-          <div
-            onClick={() => {
-              if (!isAuthenticated) {
-                onOpenGoogleAuth();
-                return;
-              }
-              setActiveTab('exams');
-            }}
-            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-700 text-white shadow-md cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-0.5 space-y-1"
-          >
-            <div className="text-lg">📝</div>
-            <h4 className="font-extrabold text-sm sm:text-base">Thi thử mini</h4>
-            <p className="text-xs text-teal-100">15 phút · báo cáo kỹ năng</p>
-          </div>
-        </div>
-
-        {/* 1.5. DANH SÁCH KHÓA HỌC 新HSK教程 */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
-            <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Danh sách khóa học <span className="font-serif font-bold text-slate-700">新HSK教程</span>
-            </h3>
-          </div>
-          <p className="text-xs text-slate-500">
-            Chọn khóa học ➔ chọn bài học ➔ học từ vựng, ngữ pháp, đối thoại và làm bài tập.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            {/* Khóa học HSK 1 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 1')}
-              className="p-6 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
-            >
-              <div className="font-serif text-5xl font-black text-white/90">1</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 1</h4>
-                <p className="text-xs text-pink-100 font-serif">新HSK教程 1 · Khóa học chuẩn</p>
-                <div className="pt-2">
-                  <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    16/16 bài học
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Khóa học HSK 2 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 2')}
-              className="p-6 rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
-            >
-              <div className="font-serif text-5xl font-black text-white/90">2</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 2</h4>
-                <p className="text-xs text-amber-100 font-serif">新HSK教程 2 · Khóa học chuẩn</p>
-                <div className="pt-2">
-                  <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    16/16 bài học
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Khóa học HSK 3 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 3')}
-              className="p-6 rounded-3xl bg-gradient-to-br from-[#18181B] via-zinc-800 to-stone-900 border border-red-700/40 text-white shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] flex flex-col justify-between min-h-[160px] relative overflow-hidden"
-            >
-              <div className="font-serif text-5xl font-black text-amber-400/90">3</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-base sm:text-lg font-black">Khóa học HSK 3</h4>
-                <p className="text-xs text-red-200 font-serif">新HSK教程 3 · Khóa học chuẩn</p>
-                <div className="pt-2">
-                  <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                    19/19 bài học
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ========================================================= */}
-      {/* PHÂN KHU 2: LUYỆN NGỮ ÂM */}
+      {/* KHỐI NỘI DUNG LIỀN MẠCH · TIÊU ĐỀ CĂN GIỮA · ĐA SẮC TƯƠI TRẺ */}
       {/* ========================================================= */}
-      <section className="space-y-6 pt-4">
-        {/* 2.1. LUYỆN NGỮ ÂM CARD */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
-            <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Luyện ngữ âm
-            </h3>
+      <div className="bg-white rounded-3xl border border-[#E8DFCE] shadow-xs overflow-hidden divide-y divide-[#EFE7D6]">
+        {/* 2. DANH SÁCH KHÓA HỌC (THẺ ĐA SẮC NHƯ MẪU + BỎ MÔ TẢ DƯỚI THẺ) */}
+        <section aria-labelledby="section-courses" className="p-6 sm:p-8 space-y-6 bg-white">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-red-600" />
+              <h2
+                id="section-courses"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Danh sách khóa học <span className="text-red-600">新HSK教程</span>
+              </h2>
+            </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Chọn cấp độ để vào xem chi tiết giáo trình, bài giảng và bài tập luyện tập
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => handleNavigateWithAuth('courses')}
+                className="inline-flex items-center gap-1.5 text-[16px] font-extrabold text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                <span>Xem tất cả khóa học</span>
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
-          <div
-            onClick={() => setActivePinyinModal(true)}
-            className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#803322] to-[#541E12] text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all hover:scale-[1.01] flex items-center justify-between gap-6 relative overflow-hidden border border-[#A24832]/30"
-          >
-            <div className="space-y-2 z-10">
-              <div className="font-serif text-5xl sm:text-6xl font-black text-white/90">
-                音
-              </div>
-              <h4 className="text-xl sm:text-2xl font-black text-white">
-                Luyện ngữ âm (Pinyin)
-              </h4>
-              <p className="text-xs sm:text-sm text-amber-200/90 font-serif">
-                汉语听力教程 1 · 语音练习
-              </p>
-              <div className="pt-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white border border-white/20">
-                  15 bài · Nghe - chọn - điền pinyin
-                </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {courses.slice(0, 4).map((course, idx) => {
+              const theme = courseCardThemes[idx % courseCardThemes.length];
+              return (
+                <button
+                  key={course.id}
+                  type="button"
+                  onClick={() => handleNavigateWithAuth('courses', course.level)}
+                  className={`group relative overflow-hidden p-6 sm:p-7 rounded-3xl text-left border-2 border-white/25 hover:border-amber-300/75 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.015] hover:brightness-105 cursor-pointer flex flex-col justify-between min-h-[160px] bg-gradient-to-br ${theme.gradient} text-white shadow-md hover:shadow-xl`}
+                >
+                  {/* Decorative translucent circle watermark like reference design */}
+                  <div className="absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-white/10 group-hover:scale-110 transition-transform duration-300 ease-out pointer-events-none" />
+
+                  <div className="relative z-10 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-calligraphy text-[30px] leading-none text-white">
+                        {theme.kanji}
+                      </span>
+                      <span className="px-3 py-1 rounded-xl bg-black/25 font-mono font-bold text-[14px] text-white tabular-nums">
+                        {course.level}
+                      </span>
+                    </div>
+
+                    <h3 className="font-serif text-[21px] sm:text-[22px] font-black leading-snug text-white pt-1">
+                      {course.vietnameseTitle}
+                    </h3>
+                  </div>
+
+                  <div className="relative z-10 pt-4 mt-4 border-t border-white/20 flex items-center justify-between text-[14px] font-bold">
+                    <span className={`${theme.textAccent} font-mono tabular-nums`}>
+                      {course.lessons.length} bài · {course.targetVocabCount} từ
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-white font-extrabold group-hover:translate-x-0.5 transition-transform duration-300 ease-out">
+                      <span>Vào học</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 2B. ĐỀ THI THỬ HSK NỔI BẬT (FLOAT-UP + VIỀN ẤM BÁN TRONG SUỐT KHI HOVER) */}
+        <section aria-labelledby="section-exams" className="p-6 sm:p-8 space-y-6 bg-[#FFFBF4]">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-amber-500" />
+              <h2
+                id="section-exams"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Đề thi thử chuẩn <span className="text-red-600">模拟考试</span>
+              </h2>
+            </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Chọn bộ đề theo cấp độ để bấm giờ làm bài và chấm điểm tự động ngay lập tức
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => handleNavigateWithAuth('exams')}
+                className="inline-flex items-center gap-1.5 text-[16px] font-extrabold text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                <span>Xem tất cả đề thi</span>
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {exams.slice(0, 4).map((exam) => (
+              <button
+                key={exam.id}
+                type="button"
+                onClick={() => handleStartExamWithAuth(exam)}
+                className="group relative overflow-hidden p-6 sm:p-7 rounded-3xl text-left bg-white hover:bg-[#FFF6F2] border-2 border-[#E8DFCE] hover:border-amber-500/70 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.015] shadow-sm hover:shadow-xl cursor-pointer flex flex-col justify-between min-h-[152px]"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 text-[14px] font-bold">
+                    <span className="inline-flex items-center gap-1.5 text-red-600 font-black">
+                      <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
+                      <span>{exam.level}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-slate-600 font-mono tabular-nums">
+                      <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                      <span>{exam.timeLimitMinutes} phút</span>
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-[21px] sm:text-[22px] font-black leading-snug text-[#18181B] group-hover:text-red-700 transition-colors duration-300 ease-out">
+                    {exam.title}
+                  </h3>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-[#EFE7D6] flex items-center justify-between text-[14px] font-bold">
+                  <span className="text-slate-600 font-mono tabular-nums">
+                    {exam.questions.length} câu · Đạt {exam.passScore}/{exam.totalPoints}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-red-600 font-extrabold group-hover:translate-x-0.5 transition-transform duration-300 ease-out">
+                    <span>Thi thử</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 3. LUYỆN NGỮ ÂM (NỀN PASTEL XANH MINT NHẸ) */}
+        <section aria-labelledby="section-phonetics" className="p-6 sm:p-8 space-y-6 bg-[#ECFDF5]">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-amber-500" />
+              <h2
+                id="section-phonetics"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Luyện ngữ âm <span className="text-red-600">语音练习</span>
+              </h2>
+            </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Chạm vào từng thanh điệu hoặc mở bảng Pinyin đầy đủ để nghe phát âm chuẩn Bắc Kinh
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setActivePinyinModal(true)}
+                className="px-5 py-2.5 rounded-xl bg-[#18181B] hover:bg-red-600 text-white font-bold text-[15px] inline-flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <span>Mở bảng Pinyin đầy đủ</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              {
+                tone: 'mā',
+                name: 'Thanh 1',
+                desc: 'Ngân cao ngang',
+                cardBg: 'from-rose-500 to-red-600',
+              },
+              {
+                tone: 'má',
+                name: 'Thanh 2',
+                desc: 'Đi lên rõ nét',
+                cardBg: 'from-amber-500 to-orange-600',
+              },
+              {
+                tone: 'mǎ',
+                name: 'Thanh 3',
+                desc: 'Xuống rồi lên',
+                cardBg: 'from-teal-500 to-emerald-600',
+              },
+              {
+                tone: 'mà',
+                name: 'Thanh 4',
+                desc: 'Dứt khoát xuống',
+                cardBg: 'from-sky-600 to-blue-700',
+              },
+            ].map((item) => (
+              <button
+                key={item.tone}
+                type="button"
+                onClick={() => speakChinese(item.tone)}
+                className={`p-5 rounded-2xl bg-gradient-to-br ${item.cardBg} text-white text-left transition-all duration-200 hover:scale-[1.03] hover:brightness-105 cursor-pointer space-y-1 shadow-sm hover:shadow-md`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[26px] font-black text-amber-200">
+                    {item.tone}
+                  </span>
+                  <Volume2 className="w-6 h-6 text-white/90" />
+                </div>
+                <div className="text-[16px] font-extrabold text-white">{item.name}</div>
+                <div className="text-[13px] text-white/90">{item.desc}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. FLASHCARD TỪ VỰNG (NỀN PASTEL HỒNG NHẠT + CHỮ HÁN CỠ LỚN) */}
+        <section aria-labelledby="section-flashcards" className="p-6 sm:p-8 space-y-6 bg-[#FFF1F2]">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-teal-600" />
+              <h2
+                id="section-flashcards"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Flashcard từ vựng <span className="text-red-600">生词卡片</span>
+              </h2>
+            </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Chạm vào thẻ để lật xem nghĩa tiếng Việt, Hán Việt và ví dụ giao tiếp cỡ chữ lớn
+            </p>
+          </div>
+
+          {/* Interactive 3D Flip Preview */}
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div
+              onClick={() => setIsPreviewFlipped(!isPreviewFlipped)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsPreviewFlipped(!isPreviewFlipped);
+                }
+              }}
+              className="relative h-[290px] w-full cursor-pointer perspective-1000 select-none"
+            >
+              <div
+                className="relative w-full h-full rounded-3xl transition-transform duration-500 transform-style-3d shadow-sm"
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: isPreviewFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                }}
+              >
+                {/* Front */}
+                <div
+                  className="absolute inset-0 w-full h-full rounded-3xl bg-[#FDFBF6] border-2 border-[#E8DFCE] hover:border-red-500 p-6 flex flex-col justify-between items-center text-center backface-hidden"
+                  style={{ backfaceVisibility: 'hidden' }}
+                >
+                  <div className="w-full flex items-center justify-between text-[14px] text-slate-500 font-bold">
+                    <span className="text-red-600">{activePreviewCard.level}</span>
+                    <span>Chạm thẻ để lật</span>
+                  </div>
+
+                  <div className="my-auto space-y-2">
+                    <div className="font-serif text-[59px] sm:text-[70px] font-black text-[#18181B] leading-none">
+                      {activePreviewCard.word}
+                    </div>
+                    <div className="text-[22px] font-mono font-extrabold text-red-600">
+                      {activePreviewCard.pinyin}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      speakChinese(activePreviewCard.word);
+                    }}
+                    className="px-5 py-2 rounded-xl bg-white hover:bg-red-600 hover:text-white border border-[#E8DFCE] text-[#18181B] font-bold text-[14px] flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                    <span>Nghe phát âm</span>
+                  </button>
+                </div>
+
+                {/* Back */}
+                <div
+                  className="absolute inset-0 w-full h-full rounded-3xl bg-gradient-to-br from-[#18181B] to-red-950 text-white border-2 border-red-600 p-6 flex flex-col justify-between backface-hidden"
+                  style={{
+                    backfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                  }}
+                >
+                  <div className="flex items-center justify-between text-[14px] text-amber-300 font-bold">
+                    <span className="font-mono">{activePreviewCard.pinyin}</span>
+                    <span>Hán Việt: {activePreviewCard.sinoVietnamese || '-'}</span>
+                  </div>
+
+                  <div className="my-auto space-y-3 text-center">
+                    <div className="font-serif text-[26px] font-black text-white leading-tight">
+                      {activePreviewCard.meaning}
+                    </div>
+                    <p className="text-[19px] text-stone-100 font-medium">
+                      {activePreviewCard.exampleSentence}
+                    </p>
+                    <p className="text-[14px] text-stone-300">
+                      {activePreviewCard.exampleMeaning}
+                    </p>
+                  </div>
+
+                  <div className="text-center text-[13px] text-stone-300">
+                    Chạm lại để quay về mặt trước
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPreviewFlipped(false);
+                  setPreviewCardIdx((prev) => (prev - 1 + sampleVocab.length) % sampleVocab.length);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#FDFBF6] border border-[#E8DFCE] hover:border-red-500 text-[#18181B] font-bold text-[14px] flex items-center gap-1.5 cursor-pointer"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span>Thẻ trước</span>
+              </button>
+
+              <span className="font-mono text-[14px] font-bold text-slate-700 tabular-nums">
+                {previewCardIdx + 1} / {sampleVocab.length}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPreviewFlipped(false);
+                  setPreviewCardIdx((prev) => (prev + 1) % sampleVocab.length);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#FDFBF6] border border-[#E8DFCE] hover:border-red-500 text-[#18181B] font-bold text-[14px] flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Thẻ sau</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Stacked Full-Width Vibrant Gradient Bars (matching the layout structure of the reference image) */}
+          <div className="space-y-4 pt-2">
+            <button
+              type="button"
+              onClick={() => handleNavigateWithAuth('vocab')}
+              className="w-full p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-teal-500 via-cyan-600 to-sky-600 hover:brightness-105 text-white text-left transition-all cursor-pointer flex items-center gap-4 shadow-sm"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/25 flex items-center justify-center shrink-0">
+                <RotateCw className="w-7 h-7 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-serif text-[21px] font-black leading-tight text-white">
+                  Kho Flashcard HSK 1–5
+                </h3>
+                <p className="text-[19px] text-cyan-50 mt-0.5 leading-snug">
+                  Chữ cực lớn, lật thẻ 3D và ghi nhớ theo chu kỳ lặp lại thông minh
+                </p>
+              </div>
+              <ChevronRight className="w-7 h-7 shrink-0 text-white" />
+            </button>
 
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                speakChinese('拼音发音练习：b, p, m, f, d, t, n, l, ā, á, ǎ, à');
-              }}
-              className="p-4 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-lg transition-transform hover:scale-110 cursor-pointer shadow-lg z-10"
-              title="Nghe mẫu phát âm"
+              onClick={() => setActiveRadicalModal(true)}
+              className="w-full p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:brightness-105 text-white text-left transition-all cursor-pointer flex items-center gap-4 shadow-sm"
             >
-              <Volume2 className="w-7 h-7 text-amber-300" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* PHÂN KHU 3: THEO HÌNH 3 (BẢNG XẾP HẠNG, FLASHCARD, GIÁO TRÌNH) */}
-      {/* ========================================================= */}
-      <section className="space-y-6 pt-4">
-        {/* 3.1. BẢNG XẾP HẠNG HỌC VIÊN XUẤT SẮC (THEME ĐỎ - BE - ĐEN) */}
-        <div className="rounded-3xl bg-[#FFFDF9] border-2 border-red-600/30 shadow-lg overflow-hidden space-y-5">
-          {/* Header Banner - Đỏ sơn mài truyền thống */}
-          <div className="bg-gradient-to-r from-red-800 via-red-600 to-rose-700 text-white p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-2 border-amber-400/40">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 shadow-inner border border-white/20">
-                🏆
+              <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/25 font-calligraphy text-[27px] text-white flex items-center justify-center shrink-0">
+                部
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif font-black text-lg sm:text-xl tracking-wide text-amber-200">
-                    Bảng Xếp Hạng Học Viên Xuất Sắc
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 uppercase">
-                    HSK 3.0
-                  </span>
-                </div>
-                <p className="text-xs text-rose-100/90 mt-0.5">
-                  Tích lũy điểm khi học bài, làm bài tập và luyện đề để vinh danh trên bảng vàng
+              <div className="min-w-0 flex-1">
+                <h3 className="font-serif text-[21px] font-black leading-tight text-white">
+                  214 Bộ Thủ Chữ Hán
+                </h3>
+                <p className="text-[19px] text-amber-50 mt-0.5 leading-snug">
+                  Nhận diện mặt chữ qua gốc bộ thủ và nghe đọc phát âm mẫu
                 </p>
               </div>
-            </div>
+              <ChevronRight className="w-7 h-7 shrink-0 text-white" />
+            </button>
 
-            {/* Timeframe Filter Tabs (Đen & Be) */}
-            <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/15 self-stretch md:self-auto justify-center">
-              {[
-                { id: 'today', label: 'Hôm nay' },
-                { id: 'week', label: 'Tuần này' },
-                { id: 'month', label: 'Tháng này' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setLeaderboardTimeframe(tab.id as any)}
-                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                    leaderboardTimeframe === tab.id
-                      ? 'bg-amber-300 text-red-950 shadow-sm scale-105'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveHanziStoryModal(true)}
+              className="w-full p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-[#18181B] hover:brightness-105 text-white text-left transition-all cursor-pointer flex items-center gap-4 shadow-sm"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/25 font-calligraphy text-[27px] text-white flex items-center justify-center shrink-0">
+                字
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-serif text-[21px] font-black leading-tight text-white">
+                  Câu Chuyện Chiết Tự
+                </h3>
+                <p className="text-[19px] text-rose-50 mt-0.5 leading-snug">
+                  Hiểu nguồn gốc tượng hình song ngữ để nhớ chữ Hán trọn đời
+                </p>
+              </div>
+              <ChevronRight className="w-7 h-7 shrink-0 text-white" />
+            </button>
           </div>
+        </section>
 
-          <div className="p-5 sm:p-6 space-y-6">
-            {/* Top 3 Podium (Bục Vinh Quang 3 Hạng Đầu) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 items-end pt-2">
-              {/* Top 2 - Bảng nhãn */}
-              {leaderboardData[leaderboardTimeframe][1] && (
-                <div className="order-2 sm:order-1 p-4 rounded-2xl bg-[#FAF7F0] border-2 border-slate-300 shadow-xs flex flex-col items-center text-center relative hover:shadow-md transition-shadow">
-                  <div className="absolute -top-3.5 px-3 py-0.5 rounded-full bg-slate-200 border border-slate-400 text-slate-800 font-extrabold text-xs shadow-xs">
-                    🥈 Hạng 2 · {leaderboardData[leaderboardTimeframe][1].title}
-                  </div>
-                  <div className="w-16 h-16 rounded-full bg-slate-200 border-2 border-slate-400 text-3xl flex items-center justify-center mt-2 shadow-inner">
-                    {leaderboardData[leaderboardTimeframe][1].avatar}
-                  </div>
-                  <h4 className="font-extrabold text-slate-900 text-sm sm:text-base mt-2 line-clamp-1">
-                    {leaderboardData[leaderboardTimeframe][1].name}
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold mt-0.5">
-                    {leaderboardData[leaderboardTimeframe][1].level}
-                  </span>
-                  <div className="mt-2 text-base font-black text-slate-900 font-mono">
-                    {leaderboardData[leaderboardTimeframe][1].score.toLocaleString()} <span className="text-xs font-semibold text-slate-500">điểm</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Top 1 - Trạng nguyên (Cao nhất, Nổi bật Đỏ - Vàng) */}
-              {leaderboardData[leaderboardTimeframe][0] && (
-                <div className="order-1 sm:order-2 p-5 rounded-3xl bg-gradient-to-b from-[#FFFDF9] to-[#FAF7F0] border-2 border-red-600 shadow-xl flex flex-col items-center text-center relative -translate-y-1 sm:-translate-y-2">
-                  <div className="absolute -top-4 px-4 py-1 rounded-full bg-red-600 border border-amber-300 text-amber-200 font-extrabold text-xs shadow-md flex items-center gap-1 animate-pulse">
-                    <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                    <span>🥇 Quán Quân · {leaderboardData[leaderboardTimeframe][0].title}</span>
-                  </div>
-                  <div className="w-20 h-20 rounded-full bg-red-100 border-3 border-red-500 text-4xl flex items-center justify-center mt-2 shadow-lg ring-4 ring-amber-300/40">
-                    {leaderboardData[leaderboardTimeframe][0].avatar}
-                  </div>
-                  <h4 className="font-black text-red-950 text-base sm:text-lg mt-2 line-clamp-1">
-                    {leaderboardData[leaderboardTimeframe][0].name}
-                  </h4>
-                  <span className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 text-xs font-bold mt-0.5 border border-red-200">
-                    {leaderboardData[leaderboardTimeframe][0].level}
-                  </span>
-                  <div className="mt-2 text-xl font-black text-red-700 font-mono">
-                    {leaderboardData[leaderboardTimeframe][0].score.toLocaleString()} <span className="text-xs font-semibold text-red-900">điểm</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Top 3 - Thám hoa */}
-              {leaderboardData[leaderboardTimeframe][2] && (
-                <div className="order-3 p-4 rounded-2xl bg-[#FAF7F0] border-2 border-amber-700/30 shadow-xs flex flex-col items-center text-center relative hover:shadow-md transition-shadow">
-                  <div className="absolute -top-3.5 px-3 py-0.5 rounded-full bg-amber-100 border border-amber-600 text-amber-900 font-extrabold text-xs shadow-xs">
-                    🥉 Hạng 3 · {leaderboardData[leaderboardTimeframe][2].title}
-                  </div>
-                  <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-600 text-3xl flex items-center justify-center mt-2 shadow-inner">
-                    {leaderboardData[leaderboardTimeframe][2].avatar}
-                  </div>
-                  <h4 className="font-extrabold text-slate-900 text-sm sm:text-base mt-2 line-clamp-1">
-                    {leaderboardData[leaderboardTimeframe][2].name}
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold mt-0.5">
-                    {leaderboardData[leaderboardTimeframe][2].level}
-                  </span>
-                  <div className="mt-2 text-base font-black text-slate-900 font-mono">
-                    {leaderboardData[leaderboardTimeframe][2].score.toLocaleString()} <span className="text-xs font-semibold text-slate-500">điểm</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Danh sách học viên từ Hạng 4 trở đi */}
-            <div className="rounded-2xl border border-[#EBE4D5] overflow-hidden bg-white shadow-2xs">
-              <div className="bg-[#F5EFEB] px-4 py-2.5 text-slate-700 text-xs font-bold flex items-center justify-between border-b border-[#EBE4D5]">
-                <span>Thứ hạng & Học viên</span>
-                <span>Cấp độ & Điểm tích lũy</span>
+        {/* 4B. THẺ GIỚI THIỆU NHANH: TRÒ CHƠI ÔN TỪ VỰNG 2D */}
+        <section aria-labelledby="section-games" className="p-6 sm:p-8 space-y-5 bg-[#FAF7F0]">
+          <div className="rounded-3xl bg-gradient-to-br from-[#18181B] via-[#3B1117] to-red-700 text-white p-6 sm:p-8 border-2 border-red-500/60 shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2.5 max-w-2xl">
+              <div className="inline-flex items-center gap-2 text-[14px] font-bold text-amber-300">
+                <Gamepad2 className="w-6 h-6 shrink-0" />
+                <span>Mini-Game 2D siêu nhẹ · 趣味学习</span>
               </div>
-
-              <div className="divide-y divide-[#F0EAE1]">
-                {leaderboardData[leaderboardTimeframe].slice(3).map((item) => (
-                  <div
-                    key={item.rank}
-                    className={`px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
-                      item.isCurrentUser
-                        ? 'bg-red-50/90 border-l-4 border-red-600'
-                        : 'hover:bg-[#FAF7F0]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs ${
-                          item.isCurrentUser
-                            ? 'bg-red-600 text-white'
-                            : 'bg-slate-900 text-white'
-                        }`}
-                      >
-                        #{item.rank}
-                      </span>
-                      <div className="text-xl">{item.avatar}</div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs sm:text-sm text-slate-900">
-                            {item.name}
-                          </span>
-                          {item.isCurrentUser && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white">
-                              Bạn
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-500 font-medium">
-                          Học vị: <strong className="text-slate-700">{item.title}</strong>
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="font-black text-sm text-red-700 font-mono block">
-                        {item.score.toLocaleString()} điểm
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                        {item.level}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Thanh thông tin thứ hạng của bạn */}
-            <div className="p-4 rounded-2xl bg-[#FAF7F0] border border-red-600/30 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3 text-center sm:text-left">
-                <div className="w-10 h-10 rounded-xl bg-red-600 text-white font-serif font-black text-lg flex items-center justify-center shadow-xs">
-                  榜
-                </div>
-                <div>
-                  <h5 className="font-bold text-xs sm:text-sm text-slate-900">
-                    Thứ hạng hiện tại: <strong className="text-red-700">#8</strong> • Còn thiếu <strong className="text-slate-900">55 điểm</strong> để vượt qua hạng #7!
-                  </h5>
-                  <p className="text-[11px] text-slate-500">
-                    Làm bài tập hoặc luyện flashcard ngay hôm nay để leo hạng cao hơn
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    onOpenGoogleAuth();
-                    return;
-                  }
-                  setActiveTab('courses');
-                }}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              <h2
+                id="section-games"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-white leading-tight"
               >
-                <span>Học ngay để leo hạng</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                Mưa Từ Vựng 2D & Ghép Cặp Hán – Việt
+              </h2>
+              <p className="text-[19px] text-rose-50 leading-snug">
+                Chọn chế độ <strong>Bấm 4 đáp án</strong> hoặc <strong>Gõ Pinyin</strong> trước khi chơi, tự động lưu kỷ lục và đồng bộ phút học vào hồ sơ.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleNavigateWithAuth('games')}
+                className="px-6 py-4 rounded-2xl bg-amber-300 hover:bg-amber-200 text-[#18181B] font-black text-[16px] flex items-center justify-center gap-2.5 shadow-sm transition-transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                <Gamepad2 className="w-6 h-6 shrink-0" />
+                <span>Chơi ngay tại Trò chơi</span>
+                <ArrowRight className="w-5 h-5 shrink-0" />
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 3.2. FLASHCARD TỪ VỰNG (3 WIDE CARDS) */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
-            <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Flashcard từ vựng
-            </h3>
-          </div>
-
-          <div className="space-y-3">
-            {/* Card 1: Flashcard HSK 1 - 4 */}
-            <div
-              onClick={() => {
-                if (!isAuthenticated) {
-                  onOpenGoogleAuth();
-                  return;
-                }
-                setActiveTab('vocab');
-              }}
-              className="p-5 rounded-2xl bg-gradient-to-r from-red-800 to-rose-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
-            >
-              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
-                🗂️
-              </div>
-              <div className="flex-1">
-                <h4 className="font-black text-sm sm:text-base">Flashcard HSK 1 – 4</h4>
-                <p className="text-xs text-red-100/90">
-                  Chọn các bài đã học · lật từng thẻ hoặc xem 6/8 thẻ một trang để luyện đọc · đánh dấu từ đã thuộc
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-white/70" />
+        {/* 5. GIỚI THIỆU VỀ MIXIANGG HSK (NỀN PASTEL VÀNG NHẠT - ẢNH TRÁI, GIỚI THIỆU PHẢI) */}
+        <section aria-labelledby="section-about" className="p-6 sm:p-8 space-y-6 bg-[#FEFCE8]">
+          <div className="flex flex-col md:flex-row items-center gap-6 lg:gap-8">
+            <div className="w-full max-w-[260px] sm:max-w-[240px] md:w-[270px] lg:w-[310px] aspect-square rounded-3xl bg-white border-2 border-red-600 p-2 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+              <img
+                src="/assets/aistudio/image_f2d52981.png"
+                alt="Giới thiệu về MiXiangg HSK"
+                className="w-full h-full object-cover rounded-2xl"
+              />
             </div>
 
-            {/* Card 2: Học bộ thủ */}
-            <div
-              onClick={() => setActiveRadicalModal(true)}
-              className="p-5 rounded-2xl bg-gradient-to-r from-[#18181B] via-zinc-800 to-stone-900 border border-red-900/40 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
-            >
-              <div className="w-11 h-11 rounded-xl bg-white/20 font-serif font-black text-2xl flex items-center justify-center shrink-0">
-                部
+            <div className="flex-1 text-center md:text-left space-y-3 min-w-0">
+              <div className="inline-flex items-center justify-center md:justify-start gap-2">
+                <span className="w-1.5 h-7 rounded-full bg-red-600" />
+                <h2
+                  id="section-about"
+                  className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B]"
+                >
+                  Giới thiệu về <span className="text-red-600">MiXiangg HSK</span>
+                </h2>
               </div>
-              <div className="flex-1">
-                <h4 className="font-black text-sm sm:text-base">Học bộ thủ</h4>
-                <p className="text-xs text-slate-300">
-                  Tên, nghĩa, cách nhận biết các bộ thủ trong từ vựng HSK 1–4 · luyện đoán bộ thủ · 214 bộ thủ
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-white/70" />
-            </div>
-
-            {/* Card 3: Câu chuyện chữ Hán */}
-            <div
-              onClick={() => setActiveHanziStoryModal(true)}
-              className="p-5 rounded-2xl bg-gradient-to-r from-stone-900 via-amber-950 to-[#18181B] border border-amber-600/30 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-4"
-            >
-              <div className="w-11 h-11 rounded-xl bg-white/20 font-serif font-black text-2xl flex items-center justify-center shrink-0">
-                字
-              </div>
-              <div className="flex-1">
-                <h4 className="font-black text-sm sm:text-base">Câu chuyện chữ Hán</h4>
-                <p className="text-xs text-amber-100/90">
-                  1063 chữ trong từ mới HSK 1–4: chữ vẽ hình gì, vì sao mang nghĩa đó · song ngữ Trung – Việt
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-white/70" />
+              <p className="text-[19px] text-slate-700 leading-relaxed">
+                MiXiangg HSK là trung tâm đào tạo tiếng Trung kết hợp nền tảng công nghệ luyện thi HSK 3.0 hiện đại, giảng dạy theo giáo trình Boya chuẩn mực với cam kết đầu ra vững vàng cả 5 kỹ năng: Nghe – Nói – Đọc – Viết – Dịch.
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* 3.3. GIÁO TRÌNH HSK (GRID OF 4 BOOKS) */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
-            <h3 className="font-black text-slate-900 text-base sm:text-lg">
-              Giáo trình
-            </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white space-y-1.5 shadow-xs">
+              <div className="flex items-center gap-2 text-amber-200 font-black text-[21px] tabular-nums">
+                <Users className="w-6 h-6 shrink-0" />
+                <span>Tối đa 8 HV</span>
+              </div>
+              <p className="text-[19px] text-rose-50 font-medium leading-snug">
+                Sĩ số lớp nhỏ giúp giảng viên kèm cặp phát âm từng người.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-700 to-cyan-800 text-white space-y-1.5 shadow-xs">
+              <div className="flex items-center gap-2 text-teal-100 font-black text-[21px] tabular-nums">
+                <Award className="w-6 h-6 shrink-0" />
+                <span>Chuẩn HSK 3.0</span>
+              </div>
+              <p className="text-[19px] text-cyan-50 font-medium leading-snug">
+                Lộ trình 40 buổi đạt giao tiếp cơ bản và chứng chỉ HSK 3+.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-600 to-orange-700 text-white space-y-1.5 shadow-xs">
+              <div className="flex items-center gap-2 text-amber-100 font-black text-[21px]">
+                <Globe className="w-6 h-6 shrink-0" />
+                <span>Online & Offline</span>
+              </div>
+              <p className="text-[19px] text-amber-50 font-medium leading-snug">
+                Linh hoạt hình thức học trực tiếp hoặc tương tác trực tuyến.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 6. CẢM NHẬN CỦA HỌC VIÊN (LIST NGANG + ẢNH ĐẠI DIỆN + THANH SCROLL NGANG) */}
+        <section aria-labelledby="section-testimonials" className="p-6 sm:p-8 space-y-6 bg-white">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-red-600" />
+              <h2
+                id="section-testimonials"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Cảm nhận của học viên
+              </h2>
+            </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Chia sẻ thực tế từ các học viên đã hoàn thành lộ trình Boya và chinh phục chứng chỉ HSK
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {/* 课1: HSK 1 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 1')}
-              className="p-5 rounded-3xl bg-[#7F1D1D] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="font-serif text-4xl font-black text-white/90">课1</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 1</h4>
-                <p className="text-[11px] text-red-200 font-serif">新HSK教程 1 · 课本</p>
-                <div className="pt-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                    15 bài · Thẻ từ & Bài khoá · Tập viết chữ
+          {/* Điều hướng nhanh & chỉ dẫn cuộn ngang */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[14px] font-bold text-slate-600">
+              Vuốt hoặc kéo thanh cuộn ngang bên dưới để xem tất cả ({testimonials.length} học viên)
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollTestimonials('left')}
+                aria-label="Xem cảm nhận trước"
+                className="w-11 h-11 rounded-xl border border-[#E8DFCE] bg-[#FDFBF6] hover:bg-red-600 hover:text-white hover:border-red-600 text-[#18181B] flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTestimonials('right')}
+                aria-label="Xem cảm nhận tiếp theo"
+                className="w-11 h-11 rounded-xl border border-[#E8DFCE] bg-[#FDFBF6] hover:bg-red-600 hover:text-white hover:border-red-600 text-[#18181B] flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Horizontal Scrollable List of Student Testimonials */}
+          <div
+            ref={testimonialScrollRef}
+            className="flex flex-nowrap items-stretch gap-5 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scroll-smooth"
+            style={{ scrollbarWidth: 'auto' }}
+          >
+            {testimonials.map((t, idx) => (
+              <article
+                key={idx}
+                className={`w-[320px] sm:w-[390px] lg:w-[420px] shrink-0 snap-start p-6 rounded-3xl border-2 flex flex-col justify-between gap-4 shadow-xs hover:shadow-md transition-all duration-200 ${t.bgClass}`}
+              >
+                {/* Header: Student Avatar + Name + Role */}
+                <div className="flex items-center gap-4 pb-3 border-b border-black/10">
+                  <img
+                    src={t.avatar}
+                    alt={`Ảnh đại diện học viên ${t.name}`}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.onerror = null;
+                      target.src = `data:image/svg+xml;utf8,${encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="48" fill="#DC2626"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="36" font-weight="bold">${t.name
+                          .split(' ')
+                          .slice(-1)[0]
+                          .charAt(0)}</text></svg>`
+                      )}`;
+                    }}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-red-600 shadow-xs shrink-0 bg-white"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[18px] font-black text-[#18181B] truncate">
+                      {t.name}
+                    </h3>
+                    <p className="text-[14px] font-bold text-red-700 leading-snug line-clamp-2 mt-0.5">
+                      {t.role}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quote Body */}
+                <div className="flex items-start gap-3 my-auto">
+                  <Quote className="w-7 h-7 text-red-600 shrink-0 mt-1" />
+                  <p className="text-[16px] sm:text-[18px] text-[#18181B] leading-relaxed font-medium">
+                    "{t.quote}"
+                  </p>
+                </div>
+
+                {/* Footer Star Rating */}
+                <div className="pt-2 flex items-center justify-between text-[13px] font-bold text-slate-600">
+                  <span>Học viên MiXiangg HSK</span>
+                  <span className="text-amber-500 tracking-wider" aria-label="5 trên 5 sao">
+                    ★★★★★
                   </span>
                 </div>
-              </div>
-            </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-            {/* 课2: HSK 2 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 2')}
-              className="p-5 rounded-3xl bg-[#991B1B] text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="font-serif text-4xl font-black text-white/90">课2</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 2</h4>
-                <p className="text-[11px] text-red-100 font-serif">新HSK教程 2 · 课本</p>
-                <div className="pt-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                    15 bài · Thẻ từ & Bài khoá · Tập viết chữ
-                  </span>
-                </div>
-              </div>
+        {/* 7. DIỄN ĐÀN (TIÊU ĐỀ GIỮA) */}
+        <section aria-labelledby="section-forum" className="p-6 sm:p-8 space-y-6 bg-[#FFF5F3]">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center justify-center gap-2">
+              <span className="w-1.5 h-7 rounded-full bg-rose-600" />
+              <h2
+                id="section-forum"
+                className="font-serif text-[22px] sm:text-[27px] font-black text-[#18181B] tracking-tight"
+              >
+                Diễn đàn hỏi đáp HSK
+              </h2>
             </div>
-
-            {/* 课3: HSK 3 */}
-            <div
-              onClick={() => handleNavigateCourse('HSK 3')}
-              className="p-5 rounded-3xl bg-[#18181B] border border-amber-600/30 text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[170px]"
-            >
-              <div className="font-serif text-4xl font-black text-amber-400">课3</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 3</h4>
-                <p className="text-[11px] text-amber-200 font-serif">新HSK教程 3 · 课本</p>
-                <div className="pt-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                    18 bài · Thẻ từ & Bài khoá
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* 课4: HSK 4 */}
-            <div
-              onClick={() => {
-                alert('Tài liệu HSK 4 đang được cập nhật thêm các bài tập ngữ pháp nâng cao. Bạn vui lòng hoàn thành HSK 1-3 trước nhé!');
-              }}
-              className="p-5 rounded-3xl bg-[#27272A] border border-zinc-700 text-white shadow-md transition-all flex flex-col justify-between min-h-[170px] cursor-pointer hover:bg-[#18181B]"
-            >
-              <div className="font-serif text-4xl font-black text-zinc-400">课4</div>
-              <div className="space-y-1 mt-3">
-                <h4 className="text-sm sm:text-base font-black">Giáo trình HSK 4 (Thượng + hạ)</h4>
-                <p className="text-[11px] text-zinc-300 font-serif">新HSK教程 4上·4下 · 课本</p>
-                <div className="pt-2 flex items-center gap-1 text-[11px] font-bold text-amber-200 bg-black/40 px-2 py-0.5 rounded-full w-fit">
-                  <Lock className="w-3 h-3" />
-                  <span>Chưa được cấp quyền</span>
-                </div>
-              </div>
+            <p className="text-[19px] text-slate-600 leading-relaxed">
+              Thảo luận ngữ pháp, cách dùng từ và kinh nghiệm luyện đề cùng giảng viên và Lão Sư AI
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => handleNavigateWithAuth('forum')}
+                className="inline-flex items-center gap-1.5 text-[16px] font-extrabold text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                <span>Vào diễn đàn</span>
+                <ChevronRight className="w-6 h-6" />
+              </button>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ========================================================= */}
-      {/* PHÂN KHU 4: TRÒ CHƠI TỪ VỰNG (DƯỚI CÙNG TRANG CHỦ) */}
-      {/* ========================================================= */}
-      <section className="space-y-4 pt-4 pb-6">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-5 rounded-full bg-red-600"></span>
-          <h3 className="font-black text-slate-900 text-base sm:text-lg">
-            Trò chơi từ vựng
-          </h3>
-        </div>
-        <p className="text-xs text-slate-500">
-          Luyện phản xạ gõ pinyin, nhận diện chữ Hán và ngữ âm qua 12 trò chơi tương tác thú vị.
-        </p>
+          <div className="space-y-4">
+            {forumPosts.slice(0, 3).map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => handleNavigateWithAuth('forum')}
+                className="w-full p-6 rounded-2xl bg-white border border-red-200/80 hover:border-red-500 text-left transition-colors cursor-pointer space-y-2.5 block shadow-2xs"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[14px] text-slate-600 font-semibold">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-[#18181B]">{post.authorName}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-red-600 font-bold">{post.level}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{post.category}</span>
+                  </div>
+                  {post.isSolved && (
+                    <span className="inline-flex items-center gap-1 text-teal-700 font-bold">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span>Đã giải đáp</span>
+                    </span>
+                  )}
+                </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {gamesList.map((game) => (
-            <div
-              key={game.id}
-              onClick={() => setActiveGameModal(game.id)}
-              className={`p-5 rounded-3xl ${game.color} text-white shadow-md hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between min-h-[160px] border border-white/15`}
-            >
-              <div>
-                <div className="text-2xl mb-2">{game.icon}</div>
-                <h4 className="text-base sm:text-lg font-black tracking-wide mb-1">
-                  {game.title}
-                </h4>
-                <p className="text-xs text-white/90 leading-relaxed font-medium">
-                  {game.desc}
+                <h3 className="font-serif text-[21px] font-black text-[#18181B] leading-snug">
+                  {post.title}
+                </h3>
+
+                <p className="text-[19px] text-slate-700 leading-relaxed line-clamp-2">
+                  {post.content}
                 </p>
-              </div>
-              <div className="pt-3">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/20 text-white/90">
-                  {game.tag}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+
+                <div className="flex items-center gap-6 pt-1 text-[14px] font-bold text-slate-600 tabular-nums">
+                  <span className="flex items-center gap-1.5">
+                    <MessageSquare className="w-5 h-5 text-red-600" />
+                    <span>{post.repliesCount} phản hồi</span>
+                  </span>
+                  <span>{post.likes} lượt thích</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
 
       {/* ========================================================= */}
       {/* INTERACTIVE MODAL: 214 BỘ THỦ CHỮ HÁN */}
       {/* ========================================================= */}
       {activeRadicalModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+        <div
+          onClick={() => setActiveRadicalModal(false)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto border-2 border-[#E8DFCE]"
+          >
             <button
+              type="button"
               onClick={() => setActiveRadicalModal(false)}
-              className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              aria-label="Đóng"
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-500 hover:text-red-600 hover:bg-[#FFF5F3] cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 font-serif font-black text-2xl flex items-center justify-center">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="w-12 h-12 rounded-2xl bg-[#18181B] text-amber-300 font-calligraphy text-[24px] flex items-center justify-center">
                 部
               </span>
               <div>
-                <h3 className="font-black text-lg text-slate-900">214 Bộ Thủ Tiếng Trung Thường Gặp</h3>
-                <p className="text-xs text-slate-500">Chìa khóa ghi nhớ nhanh chữ Hán và tra cứu từ điển</p>
+                <h3 className="font-serif font-black text-[21px] text-[#18181B]">
+                  Bộ Thủ Tiếng Trung Thường Gặp
+                </h3>
+                <p className="text-[16px] text-slate-600">Chìa khóa ghi nhớ nhanh chữ Hán</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {sampleRadicals.map((rad, idx) => (
                 <div
                   key={idx}
-                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start justify-between gap-3 hover:border-blue-300 transition-colors"
+                  className="p-4 rounded-2xl border border-[#E8DFCE] bg-[#FDFBF6] flex items-start justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-serif text-3xl font-extrabold text-blue-600">{rad.char}</span>
+                    <span className="font-serif text-[32px] font-black text-red-600 leading-none">
+                      {rad.char}
+                    </span>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-sm text-slate-900">{rad.pinyin}</span>
-                        <span className="text-xs text-slate-500">({rad.sino})</span>
+                      <div className="text-[18px] font-bold text-[#18181B]">
+                        {rad.pinyin}{' '}
+                        <span className="text-[14px] text-slate-500">({rad.sino})</span>
                       </div>
-                      <p className="text-xs font-semibold text-slate-700">{rad.meaning}</p>
-                      <p className="text-[11px] text-slate-500 italic mt-0.5">Ví dụ: {rad.ex}</p>
+                      <p className="text-[16px] font-semibold text-slate-700">{rad.meaning}</p>
+                      <p className="text-[13px] text-slate-500 mt-0.5">{rad.ex}</p>
                     </div>
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => speakChinese(`${rad.char}, ${rad.pinyin}`)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white"
+                    className="p-2 rounded-xl text-red-600 hover:bg-white cursor-pointer"
                     title="Nghe phát âm"
                   >
-                    <Volume2 className="w-4 h-4" />
+                    <Volume2 className="w-6 h-6" />
                   </button>
                 </div>
               ))}
@@ -1242,50 +1178,70 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       {/* INTERACTIVE MODAL: CÂU CHUYỆN CHỮ HÁN */}
       {/* ========================================================= */}
       {activeHanziStoryModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+        <div
+          onClick={() => setActiveHanziStoryModal(false)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto border-2 border-[#E8DFCE]"
+          >
             <button
+              type="button"
               onClick={() => setActiveHanziStoryModal(false)}
-              className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              aria-label="Đóng"
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-500 hover:text-red-600 hover:bg-[#FFF5F3] cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 font-serif font-black text-2xl flex items-center justify-center">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="w-12 h-12 rounded-2xl bg-red-600 text-white font-calligraphy text-[24px] flex items-center justify-center">
                 字
               </span>
               <div>
-                <h3 className="font-black text-lg text-slate-900">Câu Chuyện Chiết Tự Chữ Hán</h3>
-                <p className="text-xs text-slate-500">Hiểu nguồn gốc tượng hình để nhớ chữ trọn đời</p>
+                <h3 className="font-serif font-black text-[21px] text-[#18181B]">
+                  Câu Chuyện Chiết Tự Chữ Hán
+                </h3>
+                <p className="text-[16px] text-slate-600">
+                  Hiểu nguồn gốc tượng hình để nhớ chữ lâu dài
+                </p>
               </div>
             </div>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4">
               {sampleStories.map((story, idx) => (
-                <div key={idx} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
+                <div
+                  key={idx}
+                  className="p-5 rounded-2xl border border-[#E8DFCE] bg-[#FDFBF6] space-y-2"
+                >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-serif text-3xl font-extrabold text-emerald-700">{story.char}</span>
-                      <span className="font-mono font-bold text-sm text-slate-800">{story.pinyin}</span>
-                      <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        {story.meaning}
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-serif text-[34px] font-black text-red-600 leading-none">
+                        {story.char}
+                      </span>
+                      <span className="font-mono font-bold text-[19px] text-[#18181B]">
+                        {story.pinyin}
+                      </span>
+                      <span className="text-[18px] font-bold text-slate-700">
+                        · {story.meaning}
                       </span>
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => speakChinese(`${story.char}, ${story.pinyin}`)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-white"
+                      className="p-2 rounded-xl text-red-600 hover:bg-white cursor-pointer"
                       title="Nghe phát âm"
                     >
-                      <Volume2 className="w-4 h-4" />
+                      <Volume2 className="w-6 h-6" />
                     </button>
                   </div>
 
-                  <div className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-100">
-                    <p className="font-medium">{story.story}</p>
-                    <p className="text-[11px] text-slate-500 mt-1 font-mono">Cấu tạo: {story.structure}</p>
-                  </div>
+                  <p className="text-[18px] text-[#18181B] leading-relaxed">{story.story}</p>
+                  <p className="text-[14px] font-mono font-bold text-slate-600">
+                    Cấu tạo: {story.structure}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1294,38 +1250,52 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       )}
 
       {/* ========================================================= */}
-      {/* INTERACTIVE MODAL: LUYỆN PHÁT ÂM NGỮ ÂM PINYIN */}
+      {/* INTERACTIVE MODAL: LUYỆN NGỮ ÂM PINYIN */}
+      {/* ========================================================= */}
       {activePinyinModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+        <div
+          onClick={() => setActivePinyinModal(false)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto border-2 border-[#E8DFCE]"
+          >
             <button
+              type="button"
               onClick={() => setActivePinyinModal(false)}
-              className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              aria-label="Đóng"
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-500 hover:text-red-600 hover:bg-[#FFF5F3] cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-serif font-black text-2xl flex items-center justify-center">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="w-12 h-12 rounded-2xl bg-[#18181B] text-amber-300 font-calligraphy text-[24px] flex items-center justify-center">
                 音
               </span>
               <div>
-                <h3 className="font-black text-lg text-slate-900">Luyện Ngữ Âm Pinyin (Thanh mẫu & Vận mẫu)</h3>
-                <p className="text-xs text-slate-500">Bấm từng âm để nghe giọng phát âm chuẩn bản xứ</p>
+                <h3 className="font-serif font-black text-[21px] text-[#18181B]">
+                  Bảng Thanh Mẫu & Thanh Điệu Pinyin
+                </h3>
+                <p className="text-[16px] text-slate-600">Bấm vào từng âm để nghe giọng đọc chuẩn</p>
               </div>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6">
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-2 uppercase tracking-wider">
-                  1. Thanh mẫu (Phụ âm):
-                </span>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r'].map((p) => (
+                <div className="text-[18px] font-black text-[#18181B] mb-3">
+                  1. Thanh mẫu (Phụ âm)
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+                  {[
+                    'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r',
+                  ].map((p) => (
                     <button
                       key={p}
+                      type="button"
                       onClick={() => speakChinese(p)}
-                      className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 font-mono font-bold text-sm text-slate-800 transition-colors"
+                      className="p-3 rounded-xl border border-[#E8DFCE] bg-[#FDFBF6] hover:bg-red-600 hover:text-white font-mono font-black text-[19px] text-[#18181B] transition-colors cursor-pointer"
                     >
                       {p}
                     </button>
@@ -1334,23 +1304,28 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
               </div>
 
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-2 uppercase tracking-wider">
-                  2. Bốn thanh điệu (Thanh 1, 2, 3, 4):
-                </span>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="text-[18px] font-black text-[#18181B] mb-3">
+                  2. Bốn thanh điệu cơ bản
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { t: 'mā', desc: 'Thanh 1 (Ngân cao ngang)' },
-                    { t: 'má', desc: 'Thanh 2 (Đi lên như dấu sắc)' },
-                    { t: 'mǎ', desc: 'Thanh 3 (Xuống rồi lên)' },
-                    { t: 'mà', desc: 'Thanh 4 (Dứt khoát từ cao xuống)' },
+                    { t: 'mā', desc: 'Thanh 1 (Ngang)' },
+                    { t: 'má', desc: 'Thanh 2 (Đi lên)' },
+                    { t: 'mǎ', desc: 'Thanh 3 (Võng xuống)' },
+                    { t: 'mà', desc: 'Thanh 4 (Dứt khoát)' },
                   ].map((tone) => (
                     <button
                       key={tone.t}
+                      type="button"
                       onClick={() => speakChinese(tone.t)}
-                      className="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 flex flex-col items-center gap-1 transition-colors"
+                      className="p-4 rounded-2xl border border-[#E8DFCE] bg-[#FDFBF6] hover:bg-red-600 hover:text-white flex flex-col items-center gap-1 transition-colors cursor-pointer group"
                     >
-                      <span className="font-mono text-xl font-extrabold text-rose-600">{tone.t}</span>
-                      <span className="text-[10px] text-slate-500 text-center leading-tight">{tone.desc}</span>
+                      <span className="font-mono text-[24px] font-black text-red-600 group-hover:text-amber-300">
+                        {tone.t}
+                      </span>
+                      <span className="text-[13px] font-bold text-slate-600 group-hover:text-white text-center">
+                        {tone.desc}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -1361,112 +1336,37 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
       )}
 
       {/* ========================================================= */}
-      {/* INTERACTIVE MODAL: MINI GAME CHƠI TRỰC TIẾP */}
-      {activeGameModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setActiveGameModal(null)}
-              className="absolute top-5 right-5 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-red-100 text-red-700 font-black text-xl flex items-center justify-center">
-                🎮
-              </span>
-              <div>
-                <h3 className="font-black text-lg text-slate-900">
-                  {gamesList.find((g) => g.id === activeGameModal)?.title || 'Trò chơi từ vựng'}
-                </h3>
-                <p className="text-xs text-slate-500">Trải nghiệm vừa học vừa chơi sinh động</p>
-              </div>
-            </div>
-
-            {/* Quick playable challenge for "Gõ pinyin" or "Nghe chọn chữ" */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-4">
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Chữ Hán mục tiêu:
-                </span>
-                <span className="font-serif text-5xl font-black text-slate-900 tracking-wider">
-                  谢谢
-                </span>
-                <p className="text-xs text-rose-600 font-semibold mt-1">Gõ pinyin tương ứng (không dấu)</p>
-              </div>
-
-              <div className="flex items-center justify-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Gõ pinyin..."
-                  value={typingInput}
-                  onChange={(e) => setTypingInput(e.target.value)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white font-mono font-bold text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={() => {
-                    if (typingInput.trim().toLowerCase() === 'xiexie') {
-                      setTypingScore((s) => s + 10);
-                      speakChinese('谢谢, 非常好！');
-                      confetti({ particleCount: 40 });
-                      alert('Chính xác! +10 điểm (+1 lượt nhiệm vụ hôm nay)!');
-                      setTasks((t) => ({ ...t, task2: true }));
-                      setTypingInput('');
-                    } else {
-                      alert('Chưa chính xác, đáp án là: xiexie');
-                    }
-                  }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 cursor-pointer shadow-xs"
-                >
-                  Bắn hạ
-                </button>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
-                <span>Điểm tích lũy: <strong className="text-blue-600 font-bold">{typingScore}</strong></span>
-                <button
-                  onClick={() => speakChinese('谢谢')}
-                  className="flex items-center gap-1 text-slate-600 hover:text-rose-600"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Nghe phát âm</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL PHÓNG TO POSTER TUYỂN SINH */}
+      {/* ========================================================= */}
       {activePosterModal && (
         <div
           onClick={() => setActivePosterModal(null)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-red-700/60 p-2 sm:p-3 space-y-3 cursor-default animate-in fade-in zoom-in-95 duration-200"
+            className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-red-600 p-4 space-y-4 cursor-default"
           >
-            <div className="flex items-center justify-between px-3 pt-2">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-red-700 text-white flex items-center justify-center font-serif font-bold text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-serif font-bold text-[16px]">
                   汉
                 </span>
-                <h4 className="font-extrabold text-sm sm:text-base text-slate-900">
-                  Thông Tin Tuyển Sinh Khóa Học Tiếng Trung HSK
+                <h4 className="font-serif font-black text-[19px] text-[#18181B]">
+                  Thông Tin Tuyển Sinh MiXiangg HSK
                 </h4>
               </div>
               <button
+                type="button"
                 onClick={() => setActivePosterModal(null)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                title="Đóng"
+                className="p-2 rounded-full text-slate-500 hover:text-red-600 hover:bg-[#FFF5F3] cursor-pointer"
+                aria-label="Đóng"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="max-h-[75vh] overflow-y-auto rounded-2xl border border-slate-200">
+            <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-[#E8DFCE]">
               <img
                 src={activePosterModal}
                 alt="Poster tuyển sinh chi tiết"
@@ -1474,31 +1374,30 @@ export const IndexHomeView: React.FC<IndexHomeViewProps> = ({ onOpenGoogleAuth }
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 bg-[#FAF7F0] rounded-2xl border border-[#E6DEC8]">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <PhoneCall className="w-4 h-4 text-red-600" />
-                <span>Hotline tư vấn & ghi danh: <strong className="text-red-700 text-sm">0378.105.999</strong></span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-[#FDFBF6] rounded-2xl border border-[#E8DFCE]">
+              <div className="flex items-center gap-2 text-[16px] font-bold text-[#18181B]">
+                <PhoneCall className="w-5 h-5 text-red-600" />
+                <span>
+                  Hotline: <strong className="text-red-600 tabular-nums">0378.105.999</strong>
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <a
                   href="tel:0378105999"
-                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
+                  className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-[14px]"
                 >
-                  Gọi tư vấn ngay
+                  Gọi ngay
                 </a>
                 <button
+                  type="button"
                   onClick={() => {
                     setActivePosterModal(null);
-                    if (!isAuthenticated) {
-                      onOpenGoogleAuth();
-                    } else {
-                      setActiveTab('courses');
-                    }
+                    handleNavigateWithAuth('courses');
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#18181B] hover:bg-black text-white font-bold text-xs shadow-xs cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[#18181B] hover:bg-black text-white font-bold text-[14px] cursor-pointer"
                 >
-                  Vào danh sách khóa học
+                  Xem khóa học
                 </button>
               </div>
             </div>

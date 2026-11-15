@@ -1,14 +1,12 @@
 services:
   - type: web
-    name: mixiang-hsk
+    name: mixiangg-hsk
     runtime: node
     plan: free
-    region: singapore
-    buildCommand: npm install --include=dev && npm run build
-    startCommand: npx tsx server.ts
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
     envVars:
-      - key: NODE_VERSION
-        value: 22
       - key: NODE_ENV
         value: production
       - key: GEMINI_API_KEY

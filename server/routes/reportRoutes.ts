@@ -5,7 +5,7 @@ const router = Router();
 
 // Get learning progress analytics summary
 router.get('/summary', (req, res) => {
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
   const totalExams = profile.examHistory.length;
   const passedExams = profile.examHistory.filter((e) => e.passed).length;
   const avgExamScore = totalExams > 0
@@ -20,10 +20,14 @@ router.get('/summary', (req, res) => {
     email: profile.email,
     targetLevel: profile.targetLevel,
     streakDays: profile.streakDays,
+    xp: profile.xp,
     totalMinutes,
     completedLessonsCount: profile.completedLessonIds.length,
+    completedLessonIds: profile.completedLessonIds,
     masteredVocabCount: profile.masteredVocabIds.length,
+    masteredVocabIds: profile.masteredVocabIds,
     learningVocabCount: profile.learningVocabIds.length,
+    learningVocabIds: profile.learningVocabIds,
     totalExams,
     passedExams,
     avgExamScore,
@@ -36,26 +40,30 @@ router.get('/summary', (req, res) => {
 // Log study minutes
 router.post('/log-time', (req, res) => {
   const { minutes = 15 } = req.body;
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
   const today = new Date().toISOString().split('T')[0];
 
-  profile.studyLog[today] = (profile.studyLog[today] || 0) + Number(minutes);
-  profile.xp += Number(minutes) * 2;
+  const addedMinutes = Math.max(1, Number(minutes) || 15);
+  profile.studyLog[today] = (profile.studyLog[today] || 0) + addedMinutes;
+  profile.xp += addedMinutes * 2;
+
+  db.syncProfileToAppUser(profile);
 
   res.json({
     success: true,
     todayMinutes: profile.studyLog[today],
     totalXP: profile.xp,
+    studyLog: profile.studyLog,
   });
 });
 
 // Export study report as CSV file
 router.get('/export-csv', (req, res) => {
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
   const today = new Date().toISOString().split('T')[0];
 
   let csv = '\uFEFF'; // UTF-8 BOM
-  csv += 'BAO CAO KET QUA HOC TAP TIENG TRUNG HSK - HANYU MASTER\n';
+  csv += 'BAO CAO KET QUA HOC TAP TIENG TRUNG HSK - MIXIANGG HSK\n';
   csv += `Hoc vien: ${profile.name}\n`;
   csv += `Email: ${profile.email}\n`;
   csv += `Trinh do muc tieu: ${profile.targetLevel}\n`;
@@ -82,10 +90,9 @@ router.get('/export-csv', (req, res) => {
 
 // Export study report as printable HTML
 router.get('/export-html', (req, res) => {
-  const profile = db.getActiveProfile();
+  const profile = db.getActiveProfile(req);
   const today = new Date().toLocaleDateString('vi-VN');
   const totalExams = profile.examHistory.length;
-  const passedExams = profile.examHistory.filter((e) => e.passed).length;
   const avgScore = totalExams > 0 ? Math.round(profile.examHistory.reduce((a, b) => a + b.totalScore, 0) / totalExams) : 0;
   const totalMins = Object.values(profile.studyLog).reduce((a, b) => a + b, 0);
 
