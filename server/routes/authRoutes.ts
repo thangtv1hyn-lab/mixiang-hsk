@@ -7,8 +7,8 @@ import {
   hashPassword,
   verifyPassword,
   extractSessionToken,
-} from '../dataStore.ts';
-import { AuthUser, AppUser, StudentProfile } from '../../src/types/hsk.ts';
+} from '../dataStore.js';
+import { AuthUser, AppUser, StudentProfile } from '../../src/types/hsk.js';
 
 const router = Router();
 

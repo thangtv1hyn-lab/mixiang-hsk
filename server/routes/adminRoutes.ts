@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { db, hashPassword, sanitizeAppUser } from '../dataStore.ts';
-import { AppUser, UserRole, UserStatus } from '../../src/types/hsk.ts';
+import { db, hashPassword, sanitizeAppUser } from '../dataStore.js';
+import { AppUser, UserRole, UserStatus } from '../../src/types/hsk.js';
 
 const router = Router();
 

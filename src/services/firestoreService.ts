@@ -48,7 +48,10 @@ const VALID_FORUM_CATEGORIES = [
   'Hỏi đáp chung',
 ] as const;
 const MAX_IMAGE_CHARS = 180000;
-const BATCH_CHUNK_SIZE = 400; // Firestore hard limit is 500 ops per writeBatch
+// Keep each writeBatch <= 10 docs so total Firestore Security Rules expressions per batch
+// stay well under Firestore's 1,000-expressions-per-request limit (even for 3,000+ vocab cards).
+const BATCH_CHUNK_SIZE = 8;
+const MAX_CONCURRENT_BATCHES = 5;
 
 /**
  * Recursively strips `undefined` values from objects/arrays because Firestore rejects `undefined`.
@@ -117,21 +120,33 @@ export interface BatchWriteOp {
 }
 
 /**
- * Splits large write/delete sets (e.g., 3,000+ vocabulary cards) into safe 400-op Firestore batches.
+ * Splits large write/delete sets (e.g., 3,000+ vocabulary cards) into safe 10-op Firestore batches
+ * executed with bounded concurrency so every single request stays well under Firestore's
+ * 1,000 security-rule-expressions-per-request quota.
  */
 export async function commitChunkedBatches(ops: BatchWriteOp[]): Promise<void> {
   if (ops.length === 0) return;
+
+  const chunks: BatchWriteOp[][] = [];
   for (let i = 0; i < ops.length; i += BATCH_CHUNK_SIZE) {
-    const chunk = ops.slice(i, i + BATCH_CHUNK_SIZE);
-    const batch = writeBatch(db);
-    for (const op of chunk) {
-      if (op.type === 'set' && op.data) {
-        batch.set(op.ref, stripUndefined(op.data));
-      } else if (op.type === 'delete') {
-        batch.delete(op.ref);
-      }
-    }
-    await batch.commit();
+    chunks.push(ops.slice(i, i + BATCH_CHUNK_SIZE));
+  }
+
+  for (let i = 0; i < chunks.length; i += MAX_CONCURRENT_BATCHES) {
+    const wave = chunks.slice(i, i + MAX_CONCURRENT_BATCHES);
+    await Promise.all(
+      wave.map(async (chunk) => {
+        const batch = writeBatch(db);
+        for (const op of chunk) {
+          if (op.type === 'set' && op.data) {
+            batch.set(op.ref, stripUndefined(op.data));
+          } else if (op.type === 'delete') {
+            batch.delete(op.ref);
+          }
+        }
+        await batch.commit();
+      })
+    );
   }
 }
 
@@ -1369,6 +1384,7 @@ export async function seedInitialDataToFirestoreIfEmpty(
 
   const seededCollections: string[] = [];
   const adminUid = auth.currentUser.uid;
+  let currentStep = 'seed/check';
 
   try {
     const [coursesSnap, decksSnap, examsSnap, forumSnap, siteSnap] = await Promise.all([
@@ -1379,87 +1395,88 @@ export async function seedInitialDataToFirestoreIfEmpty(
       getDoc(doc(db, 'siteConfig', 'main')),
     ]);
 
-    const ops: BatchWriteOp[] = [];
-
     if (coursesSnap.empty && payload.courses.length > 0) {
+      currentStep = 'seed/courses';
+      const courseOps: BatchWriteOp[] = [];
       payload.courses.forEach((course, idx) => {
         const safeCourseId = sanitizeDocId(course.id, `c-${idx}`);
-        ops.push({
+        courseOps.push({
           type: 'set',
           ref: doc(db, 'courses', safeCourseId),
           data: toCourseDoc({ ...course, id: safeCourseId }, idx),
         });
         (course.lessons || []).forEach((lesson) => {
           const safeLessonId = sanitizeDocId(lesson.id, 'l');
-          ops.push({
+          courseOps.push({
             type: 'set',
             ref: doc(db, 'courses', safeCourseId, 'lessons', safeLessonId),
             data: toLessonDoc(safeCourseId, { ...lesson, id: safeLessonId }),
           });
         });
       });
+      await commitChunkedBatches(courseOps);
       seededCollections.push('courses');
     }
 
     if (decksSnap.empty && payload.vocabDecks.length > 0) {
+      currentStep = 'seed/vocabDecks';
+      const deckOps: BatchWriteOp[] = [];
       payload.vocabDecks.forEach((deck, dIdx) => {
         const safeDeckId = sanitizeDocId(deck.id, `deck-${dIdx}`);
-        ops.push({
+        deckOps.push({
           type: 'set',
           ref: doc(db, 'vocabDecks', safeDeckId),
           data: toVocabDeckDoc({ ...deck, id: safeDeckId }),
         });
         (deck.cards || []).forEach((card, cIdx) => {
           const safeCardId = sanitizeDocId(card.id, `v-${dIdx}-${cIdx}`);
-          ops.push({
+          deckOps.push({
             type: 'set',
             ref: doc(db, 'vocabDecks', safeDeckId, 'cards', safeCardId),
             data: toVocabCardDoc(safeDeckId, { ...card, id: safeCardId }, cIdx),
           });
         });
       });
+      await commitChunkedBatches(deckOps);
       seededCollections.push('vocabDecks');
     }
 
     if (examsSnap.empty && payload.exams.length > 0) {
-      payload.exams.forEach((exam, idx) => {
+      currentStep = 'seed/exams';
+      const examOps: BatchWriteOp[] = payload.exams.map((exam, idx) => {
         const safeId = sanitizeDocId(exam.id, `exam-${idx}`);
-        ops.push({
+        return {
           type: 'set',
           ref: doc(db, 'exams', safeId),
           data: toExamDoc({ ...exam, id: safeId }),
-        });
+        };
       });
+      await commitChunkedBatches(examOps);
       seededCollections.push('exams');
     }
 
     if (forumSnap.empty && payload.forumPosts.length > 0) {
-      payload.forumPosts.forEach((post, idx) => {
+      currentStep = 'seed/forumPosts';
+      const forumOps: BatchWriteOp[] = payload.forumPosts.map((post, idx) => {
         const safeId = sanitizeDocId(post.id, `fp-${idx}`);
-        ops.push({
+        return {
           type: 'set',
           ref: doc(db, 'forumPosts', safeId),
           data: toForumPostDoc({ ...post, id: safeId }, adminUid),
-        });
+        };
       });
+      await commitChunkedBatches(forumOps);
       seededCollections.push('forumPosts');
     }
 
     if (!siteSnap.exists()) {
-      ops.push({
-        type: 'set',
-        ref: doc(db, 'siteConfig', 'main'),
-        data: toSiteConfigDoc(payload.siteUIConfig),
-      });
+      currentStep = 'seed/siteConfig';
+      await setDoc(doc(db, 'siteConfig', 'main'), toSiteConfigDoc(payload.siteUIConfig));
       seededCollections.push('siteConfig');
-    }
-
-    if (ops.length > 0) {
-      await commitChunkedBatches(ops);
     }
 
     return { seededCollections };
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'seed');
+    handleFirestoreError(error, OperationType.WRITE, currentStep);
   }
 }

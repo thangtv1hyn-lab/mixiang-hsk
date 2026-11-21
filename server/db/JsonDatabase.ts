@@ -1,16 +1,27 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const DATA_DIR = path.resolve(__dirname, '..', 'data');
+const IS_SERVERLESS = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
+);
+
+export const DATA_DIR = IS_SERVERLESS
+  ? path.join(os.tmpdir(), 'mixiangg-hsk-data')
+  : path.resolve(__dirname, '..', 'data');
 export const LEGACY_DB_FILE = path.resolve(DATA_DIR, 'db.json');
 
 export function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.warn('[JsonDatabase] Unable to create data directory (continuing in-memory):', err);
   }
 }
 

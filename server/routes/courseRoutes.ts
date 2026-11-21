@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { db } from '../dataStore.ts';
-import { Course, Lesson } from '../../src/types/hsk.ts';
+import { db } from '../dataStore.js';
+import { Course, Lesson } from '../../src/types/hsk.js';
 
 const router = Router();
 

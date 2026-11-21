@@ -1,5 +1,5 @@
-import { Course, Exam, ForumPost, StudentProfile, VocabItem, AppUser, VocabDeck } from '../types/hsk';
-import { CARTOON_AVATAR_PRESETS, DEFAULT_CARTOON_AVATAR } from '../utils/cartoonAvatars';
+import { Course, Exam, ForumPost, StudentProfile, VocabItem, AppUser, VocabDeck } from '../types/hsk.js';
+import { CARTOON_AVATAR_PRESETS, DEFAULT_CARTOON_AVATAR } from '../utils/cartoonAvatars.js';
 
 export const INITIAL_VOCABULARY: VocabItem[] = [
   // HSK 1

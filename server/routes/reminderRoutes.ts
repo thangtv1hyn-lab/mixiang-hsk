@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../dataStore.ts';
+import { db } from '../dataStore.js';
 
 const router = Router();
 

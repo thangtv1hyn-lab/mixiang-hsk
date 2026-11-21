@@ -26,7 +26,7 @@ service cloud.firestore {
     }
 
     function isBootstrappedAdmin() {
-      return isVerifiedUser() && request.auth.token.email == 'thangtv1.hyn@gmail.com';
+      return isVerifiedUser() && request.auth.token.email.lower() == 'thangtv1.hyn@gmail.com';
     }
 
     function isAdmin() {
@@ -43,7 +43,7 @@ service cloud.firestore {
     }
 
     function isValidId(val) {
-      return val is string && val.size() >= 1 && val.size() <= 128 && val.matches('^[a-zA-Z0-9_\\-]+$');
+      return val is string && val.size() >= 1 && val.size() <= 128 && val.matches('^[a-zA-Z0-9_-]+$');
     }
 
     function isValidString(val, minLen, maxLen) {
@@ -64,10 +64,6 @@ service cloud.firestore {
 
     function isOptionalList(data, field, maxLen) {
       return !(field in data) || (data[field] is list && data[field].size() <= maxLen);
-    }
-
-    function isOptionalMap(data, field) {
-      return !(field in data) || data[field] is map;
     }
 
     function isValidHSKLevel(level) {
@@ -198,36 +194,46 @@ service cloud.firestore {
         isOptionalString(data, 'updatedAt', 64);
     }
 
-    function isValidUserAccount(data) {
+    function isValidUserCore(data) {
       return data.keys().hasAll(['id', 'name', 'email', 'role', 'status', 'level', 'provider', 'joinedDate']) &&
         data.keys().hasOnly(['id', 'uid', 'name', 'email', 'avatar', 'role', 'status', 'level', 'targetLevel', 'provider', 'joinedDate', 'streakDays', 'lastActiveDate', 'xp', 'reminderTime', 'reminderEnabled', 'dailyGoalMinutes', 'masteredVocabIds', 'learningVocabIds', 'completedLessonIds', 'examHistory', 'studyLog', 'completedLessons', 'examsTaken', 'avgScore', 'note', 'updatedAt']) &&
         isValidId(data.id) &&
-        isOptionalString(data, 'uid', 128) &&
-        isValidString(data.name, 1, 120) &&
+        (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
         isValidEmail(data.email) &&
-        isOptionalString(data, 'avatar', 180000) &&
+        (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 180000)) &&
         data.role in ['student', 'teacher', 'admin'] &&
         data.status in ['active', 'suspended'] &&
-        isValidHSKLevel(data.level) &&
+        data.provider in ['google', 'email'];
+    }
+
+    function isValidUserProfileMeta(data) {
+      return isValidHSKLevel(data.level) &&
         (!('targetLevel' in data) || isValidHSKLevel(data.targetLevel)) &&
-        data.provider in ['google', 'email'] &&
-        isValidString(data.joinedDate, 1, 64) &&
-        isOptionalNumber(data, 'streakDays', 0, 10000) &&
-        isOptionalString(data, 'lastActiveDate', 64) &&
-        isOptionalNumber(data, 'xp', 0, 10000000) &&
-        isOptionalString(data, 'reminderTime', 16) &&
-        isOptionalBool(data, 'reminderEnabled') &&
-        isOptionalNumber(data, 'dailyGoalMinutes', 1, 720) &&
-        isOptionalList(data, 'masteredVocabIds', 5000) &&
-        isOptionalList(data, 'learningVocabIds', 5000) &&
-        isOptionalList(data, 'completedLessonIds', 500) &&
-        isOptionalList(data, 'examHistory', 200) &&
-        isOptionalMap(data, 'studyLog') &&
-        isOptionalNumber(data, 'completedLessons', 0, 5000) &&
-        isOptionalNumber(data, 'examsTaken', 0, 5000) &&
-        isOptionalNumber(data, 'avgScore', 0, 1000) &&
-        isOptionalString(data, 'note', 500) &&
-        isOptionalString(data, 'updatedAt', 64);
+        data.joinedDate is string && data.joinedDate.size() >= 1 && data.joinedDate.size() <= 64 &&
+        (!('streakDays' in data) || ((data.streakDays is int || data.streakDays is float) && data.streakDays >= 0 && data.streakDays <= 10000)) &&
+        (!('lastActiveDate' in data) || (data.lastActiveDate is string && data.lastActiveDate.size() <= 64)) &&
+        (!('xp' in data) || ((data.xp is int || data.xp is float) && data.xp >= 0 && data.xp <= 10000000)) &&
+        (!('reminderTime' in data) || (data.reminderTime is string && data.reminderTime.size() <= 16)) &&
+        (!('reminderEnabled' in data) || data.reminderEnabled is bool) &&
+        (!('dailyGoalMinutes' in data) || ((data.dailyGoalMinutes is int || data.dailyGoalMinutes is float) && data.dailyGoalMinutes >= 1 && data.dailyGoalMinutes <= 720));
+    }
+
+    function isValidUserProgress(data) {
+      return (!('masteredVocabIds' in data) || (data.masteredVocabIds is list && data.masteredVocabIds.size() <= 5000)) &&
+        (!('learningVocabIds' in data) || (data.learningVocabIds is list && data.learningVocabIds.size() <= 5000)) &&
+        (!('completedLessonIds' in data) || (data.completedLessonIds is list && data.completedLessonIds.size() <= 500)) &&
+        (!('examHistory' in data) || (data.examHistory is list && data.examHistory.size() <= 200)) &&
+        (!('studyLog' in data) || data.studyLog is map) &&
+        (!('completedLessons' in data) || ((data.completedLessons is int || data.completedLessons is float) && data.completedLessons >= 0 && data.completedLessons <= 5000)) &&
+        (!('examsTaken' in data) || ((data.examsTaken is int || data.examsTaken is float) && data.examsTaken >= 0 && data.examsTaken <= 5000)) &&
+        (!('avgScore' in data) || ((data.avgScore is int || data.avgScore is float) && data.avgScore >= 0 && data.avgScore <= 1000)) &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 500)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidUserAccount(data) {
+      return isValidUserCore(data) && isValidUserProfileMeta(data) && isValidUserProgress(data);
     }
 
     function isValidAdminMarker(data) {
@@ -236,6 +242,69 @@ service cloud.firestore {
         isValidString(data.uid, 1, 128) &&
         isValidEmail(data.email) &&
         isOptionalString(data, 'grantedAt', 64);
+    }
+
+    function isValidSiteBrandAndTheme(data) {
+      return data.primaryColor is string && data.primaryColor.size() >= 1 && data.primaryColor.size() <= 40 &&
+        data.canvasColor is string && data.canvasColor.size() >= 1 && data.canvasColor.size() <= 40 &&
+        data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 120 &&
+        (!('fontScale' in data) || data.fontScale in ['13.5px', '14px', '15px']) &&
+        (!('headerLogoUrl' in data) || (data.headerLogoUrl is string && data.headerLogoUrl.size() <= 180000)) &&
+        (!('brandHighlight' in data) || (data.brandHighlight is string && data.brandHighlight.size() <= 120)) &&
+        (!('brandSubtitle' in data) || (data.brandSubtitle is string && data.brandSubtitle.size() <= 200));
+    }
+
+    function isValidSiteHero(data) {
+      return (!('heroBadge' in data) || (data.heroBadge is string && data.heroBadge.size() <= 200)) &&
+        (!('heroTitleLine1' in data) || (data.heroTitleLine1 is string && data.heroTitleLine1.size() <= 200)) &&
+        (!('heroTitleHighlight' in data) || (data.heroTitleHighlight is string && data.heroTitleHighlight.size() <= 200)) &&
+        (!('heroTitleLine3' in data) || (data.heroTitleLine3 is string && data.heroTitleLine3.size() <= 200)) &&
+        (!('heroDescription' in data) || (data.heroDescription is string && data.heroDescription.size() <= 1000)) &&
+        (!('heroCtaPrimary' in data) || (data.heroCtaPrimary is string && data.heroCtaPrimary.size() <= 120)) &&
+        (!('heroCtaSecondary' in data) || (data.heroCtaSecondary is string && data.heroCtaSecondary.size() <= 120)) &&
+        (!('stat1Value' in data) || (data.stat1Value is string && data.stat1Value.size() <= 60)) &&
+        (!('stat1Label' in data) || (data.stat1Label is string && data.stat1Label.size() <= 120)) &&
+        (!('stat2Value' in data) || (data.stat2Value is string && data.stat2Value.size() <= 60)) &&
+        (!('stat2Label' in data) || (data.stat2Label is string && data.stat2Label.size() <= 120)) &&
+        (!('stat3Value' in data) || (data.stat3Value is string && data.stat3Value.size() <= 60)) &&
+        (!('stat3Label' in data) || (data.stat3Label is string && data.stat3Label.size() <= 120));
+    }
+
+    function isValidSitePostersAndAdmission(data) {
+      return (!('posterSectionBadge' in data) || (data.posterSectionBadge is string && data.posterSectionBadge.size() <= 200)) &&
+        (!('posterSectionTitle' in data) || (data.posterSectionTitle is string && data.posterSectionTitle.size() <= 200)) &&
+        (!('posterSectionSubtitle' in data) || (data.posterSectionSubtitle is string && data.posterSectionSubtitle.size() <= 500)) &&
+        (!('poster1Url' in data) || (data.poster1Url is string && data.poster1Url.size() <= 180000)) &&
+        (!('poster1Caption' in data) || (data.poster1Caption is string && data.poster1Caption.size() <= 300)) &&
+        (!('poster2Url' in data) || (data.poster2Url is string && data.poster2Url.size() <= 180000)) &&
+        (!('poster2Caption' in data) || (data.poster2Caption is string && data.poster2Caption.size() <= 300)) &&
+        (!('admissionBadge' in data) || (data.admissionBadge is string && data.admissionBadge.size() <= 200)) &&
+        (!('admissionTitle' in data) || (data.admissionTitle is string && data.admissionTitle.size() <= 250)) &&
+        (!('admissionDescription' in data) || (data.admissionDescription is string && data.admissionDescription.size() <= 1000)) &&
+        (!('admissionCta' in data) || (data.admissionCta is string && data.admissionCta.size() <= 120));
+    }
+
+    function isValidSiteMomentsAndFlags(data) {
+      return (!('momentsSectionBadge' in data) || (data.momentsSectionBadge is string && data.momentsSectionBadge.size() <= 200)) &&
+        (!('momentsSectionTitle' in data) || (data.momentsSectionTitle is string && data.momentsSectionTitle.size() <= 250)) &&
+        (!('momentsSectionSubtitle' in data) || (data.momentsSectionSubtitle is string && data.momentsSectionSubtitle.size() <= 500)) &&
+        (!('classroomMoments' in data) || (data.classroomMoments is list && data.classroomMoments.size() <= 30)) &&
+        (!('showCoursesSection' in data) || data.showCoursesSection is bool) &&
+        (!('showPostersSection' in data) || data.showPostersSection is bool) &&
+        (!('showAdmissionBanner' in data) || data.showAdmissionBanner is bool) &&
+        (!('showMomentsSection' in data) || data.showMomentsSection is bool);
+    }
+
+    function isValidSiteFooter(data) {
+      return (!('footerLogoUrl' in data) || (data.footerLogoUrl is string && data.footerLogoUrl.size() <= 180000)) &&
+        (!('footerTitle' in data) || (data.footerTitle is string && data.footerTitle.size() <= 200)) &&
+        (!('footerSubtitle' in data) || (data.footerSubtitle is string && data.footerSubtitle.size() <= 300)) &&
+        (!('hotline' in data) || (data.hotline is string && data.hotline.size() <= 80)) &&
+        (!('footerCtaText' in data) || (data.footerCtaText is string && data.footerCtaText.size() <= 120)) &&
+        (!('facebook' in data) || (data.facebook is string && data.facebook.size() <= 300)) &&
+        (!('copyrightText' in data) || (data.copyrightText is string && data.copyrightText.size() <= 250)) &&
+        (!('motto' in data) || (data.motto is string && data.motto.size() <= 300)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
     }
 
     function isValidSiteUIConfig(data) {
@@ -254,54 +323,11 @@ service cloud.firestore {
           'footerLogoUrl', 'footerTitle', 'footerSubtitle', 'hotline',
           'footerCtaText', 'facebook', 'copyrightText', 'motto', 'updatedAt'
         ]) &&
-        isValidString(data.primaryColor, 1, 40) &&
-        isValidString(data.canvasColor, 1, 40) &&
-        (!('fontScale' in data) || data.fontScale in ['13.5px', '14px', '15px']) &&
-        isOptionalString(data, 'headerLogoUrl', 180000) &&
-        isValidString(data.brandName, 1, 120) &&
-        isOptionalString(data, 'brandHighlight', 120) &&
-        isOptionalString(data, 'brandSubtitle', 200) &&
-        isOptionalString(data, 'heroBadge', 200) &&
-        isOptionalString(data, 'heroTitleLine1', 200) &&
-        isOptionalString(data, 'heroTitleHighlight', 200) &&
-        isOptionalString(data, 'heroTitleLine3', 200) &&
-        isOptionalString(data, 'heroDescription', 1000) &&
-        isOptionalString(data, 'heroCtaPrimary', 120) &&
-        isOptionalString(data, 'heroCtaSecondary', 120) &&
-        isOptionalString(data, 'stat1Value', 60) &&
-        isOptionalString(data, 'stat1Label', 120) &&
-        isOptionalString(data, 'stat2Value', 60) &&
-        isOptionalString(data, 'stat2Label', 120) &&
-        isOptionalString(data, 'stat3Value', 60) &&
-        isOptionalString(data, 'stat3Label', 120) &&
-        isOptionalString(data, 'posterSectionBadge', 200) &&
-        isOptionalString(data, 'posterSectionTitle', 200) &&
-        isOptionalString(data, 'posterSectionSubtitle', 500) &&
-        isOptionalString(data, 'poster1Url', 180000) &&
-        isOptionalString(data, 'poster1Caption', 300) &&
-        isOptionalString(data, 'poster2Url', 180000) &&
-        isOptionalString(data, 'poster2Caption', 300) &&
-        isOptionalString(data, 'admissionBadge', 200) &&
-        isOptionalString(data, 'admissionTitle', 250) &&
-        isOptionalString(data, 'admissionDescription', 1000) &&
-        isOptionalString(data, 'admissionCta', 120) &&
-        isOptionalString(data, 'momentsSectionBadge', 200) &&
-        isOptionalString(data, 'momentsSectionTitle', 250) &&
-        isOptionalString(data, 'momentsSectionSubtitle', 500) &&
-        isOptionalList(data, 'classroomMoments', 30) &&
-        isOptionalBool(data, 'showCoursesSection') &&
-        isOptionalBool(data, 'showPostersSection') &&
-        isOptionalBool(data, 'showAdmissionBanner') &&
-        isOptionalBool(data, 'showMomentsSection') &&
-        isOptionalString(data, 'footerLogoUrl', 180000) &&
-        isOptionalString(data, 'footerTitle', 200) &&
-        isOptionalString(data, 'footerSubtitle', 300) &&
-        isOptionalString(data, 'hotline', 80) &&
-        isOptionalString(data, 'footerCtaText', 120) &&
-        isOptionalString(data, 'facebook', 300) &&
-        isOptionalString(data, 'copyrightText', 250) &&
-        isOptionalString(data, 'motto', 300) &&
-        isOptionalString(data, 'updatedAt', 64);
+        isValidSiteBrandAndTheme(data) &&
+        isValidSiteHero(data) &&
+        isValidSitePostersAndAdmission(data) &&
+        isValidSiteMomentsAndFlags(data) &&
+        isValidSiteFooter(data);
     }
 
     // =========================================================================

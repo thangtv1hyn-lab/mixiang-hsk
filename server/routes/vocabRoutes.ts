@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { db } from '../dataStore.ts';
-import { VocabItem, VocabDeck, HSKLevel } from '../../src/types/hsk.ts';
-import { generateWithFreeGemini } from '../geminiClient.ts';
+import { db } from '../dataStore.js';
+import { VocabItem, VocabDeck, HSKLevel } from '../../src/types/hsk.js';
+import { generateWithFreeGemini } from '../geminiClient.js';
 
 const router = Router();
 

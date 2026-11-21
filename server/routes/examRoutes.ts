@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
-import { db } from '../dataStore.ts';
-import { Exam, ExamResult } from '../../src/types/hsk.ts';
+import { db } from '../dataStore.js';
+import { Exam, ExamResult } from '../../src/types/hsk.js';
 
 const router = Router();
 

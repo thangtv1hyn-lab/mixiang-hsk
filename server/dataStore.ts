@@ -8,7 +8,7 @@ import {
   INITIAL_VOCABULARY,
   INITIAL_VOCAB_DECKS,
   INITIAL_APP_USERS,
-} from '../src/data/initialData.ts';
+} from '../src/data/initialData.js';
 import {
   Course,
   Exam,
@@ -18,8 +18,8 @@ import {
   AuthUser,
   AppUser,
   VocabDeck,
-} from '../src/types/hsk.ts';
-import { JsonCollection, deepClone, readLegacyDatabase } from './db/JsonDatabase.ts';
+} from '../src/types/hsk.js';
+import { JsonCollection, deepClone, readLegacyDatabase } from './db/JsonDatabase.js';
 
 export interface AuthSession {
   token: string;
