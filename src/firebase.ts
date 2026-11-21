@@ -1,9 +1,15 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+  inMemoryPersistence,
+  setPersistence,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -18,6 +24,50 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 // CRITICAL: Always pass firebaseConfig.firestoreDatabaseId for the provisioned Enterprise Firestore DB
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+/**
+ * Secondary Firebase Auth instance (in-memory only) used exclusively when an Admin
+ * provisions a new student/teacher account so the Admin's primary session stays intact.
+ */
+function getSecondaryAuth() {
+  const secondaryName = 'AdminUserProvisioner';
+  const existing = getApps().find((a) => a.name === secondaryName);
+  const secondaryApp = existing || initializeApp(firebaseConfig, secondaryName);
+  return getAuth(secondaryApp);
+}
+
+function mapFirebaseAuthError(err: any, fallback: string): string {
+  const code = err?.code || '';
+  if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
+    return 'Bạn chưa bật phương thức đăng nhập Email/Mật khẩu trong Firebase Console → Authentication → Sign-in method → Email/Password (Enable → Save).';
+  }
+  if (code === 'auth/email-already-in-use') {
+    return 'Email này đã được đăng ký tài khoản trên hệ thống. Vui lòng dùng email khác hoặc đặt lại mật khẩu.';
+  }
+  if (code === 'auth/invalid-email') {
+    return 'Địa chỉ email không đúng định dạng.';
+  }
+  if (code === 'auth/weak-password') {
+    return 'Mật khẩu quá yếu. Vui lòng nhập tối thiểu 6 ký tự.';
+  }
+  if (
+    code === 'auth/invalid-credential' ||
+    code === 'auth/wrong-password' ||
+    code === 'auth/user-not-found'
+  ) {
+    return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+  }
+  if (code === 'auth/user-disabled') {
+    return 'Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+  }
+  if (code === 'auth/too-many-requests') {
+    return 'Thao tác quá nhiều lần liên tiếp. Vui lòng đợi vài phút rồi thử lại.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Lỗi kết nối mạng tới máy chủ xác thực. Vui lòng kiểm tra mạng và thử lại.';
+  }
+  return err?.message || fallback;
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -139,10 +189,79 @@ export async function signInWithGooglePopup(): Promise<GoogleSignInResult> {
         `Tên miền hiện tại (${window.location.hostname}) chưa được thêm vào Authorized Domains trong Firebase Console → Authentication → Settings.`
       );
     }
-    if (code === 'auth/network-request-failed') {
-      throw new Error('Lỗi kết nối mạng tới máy chủ Google. Vui lòng kiểm tra mạng và thử lại.');
+    throw new Error(mapFirebaseAuthError(err, 'Không thể đăng nhập bằng Google lúc này. Vui lòng thử lại.'));
+  }
+}
+
+export async function createFirebaseAccountAsAdmin(
+  email: string,
+  password: string,
+  displayName?: string
+): Promise<{ uid: string; email: string }> {
+  const secondaryAuth = getSecondaryAuth();
+  try {
+    await setPersistence(secondaryAuth, inMemoryPersistence);
+    const normalizedEmail = email.trim().toLowerCase();
+    const credential = await createUserWithEmailAndPassword(secondaryAuth, normalizedEmail, password);
+    if (displayName && displayName.trim()) {
+      await updateProfile(credential.user, { displayName: displayName.trim() }).catch(() => {});
     }
-    throw new Error(err?.message || 'Không thể đăng nhập bằng Google lúc này. Vui lòng thử lại.');
+    return {
+      uid: credential.user.uid,
+      email: normalizedEmail,
+    };
+  } catch (err: any) {
+    throw new Error(mapFirebaseAuthError(err, 'Không thể tạo tài khoản mới trên Firebase Authentication.'));
+  } finally {
+    await signOut(secondaryAuth).catch(() => {});
+  }
+}
+
+export async function signUpWithEmailPassword(
+  email: string,
+  password: string,
+  displayName: string
+): Promise<{ uid: string; email: string; name: string }> {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    const cleanName = displayName.trim() || normalizedEmail.split('@')[0];
+    await updateProfile(credential.user, { displayName: cleanName }).catch(() => {});
+    return {
+      uid: credential.user.uid,
+      email: normalizedEmail,
+      name: cleanName,
+    };
+  } catch (err: any) {
+    throw new Error(mapFirebaseAuthError(err, 'Đăng ký tài khoản không thành công.'));
+  }
+}
+
+export async function signInWithEmailPassword(
+  email: string,
+  password: string
+): Promise<{ uid: string; email: string; name: string; avatar: string }> {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    const user = credential.user;
+    return {
+      uid: user.uid,
+      email: user.email || normalizedEmail,
+      name: user.displayName || normalizedEmail.split('@')[0],
+      avatar: user.photoURL || '',
+    };
+  } catch (err: any) {
+    throw new Error(mapFirebaseAuthError(err, 'Đăng nhập không thành công.'));
+  }
+}
+
+export async function sendFirebasePasswordReset(email: string): Promise<void> {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    await sendPasswordResetEmail(auth, normalizedEmail);
+  } catch (err: any) {
+    throw new Error(mapFirebaseAuthError(err, 'Không thể gửi email đặt lại mật khẩu.'));
   }
 }
 

@@ -429,10 +429,11 @@ service cloud.firestore {
           isAdmin() ||
           (
             isOwner(userId) &&
-            isVerifiedUser() &&
+            isSignedIn() &&
+            request.auth.token.email != null &&
             incoming().role == 'student' &&
             incoming().status == 'active' &&
-            incoming().email == request.auth.token.email
+            incoming().email.lower() == request.auth.token.email.lower()
           )
         );
       allow update: if isValidUserAccount(incoming()) &&

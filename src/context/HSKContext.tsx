@@ -27,7 +27,16 @@ import {
   INITIAL_APP_USERS,
 } from '../data/initialData';
 import { DEFAULT_CARTOON_AVATAR, resolveCartoonAvatar } from '../utils/cartoonAvatars';
-import { auth, signInWithGooglePopup, signOutFirebase } from '../firebase';
+import {
+  auth,
+  BOOTSTRAPPED_ADMIN_EMAIL,
+  signInWithGooglePopup,
+  signOutFirebase,
+  createFirebaseAccountAsAdmin,
+  signUpWithEmailPassword,
+  signInWithEmailPassword,
+  sendFirebasePasswordReset,
+} from '../firebase';
 import { safeParseJson } from '../utils/safeFetchJson';
 import {
   fetchAllCoursesFromFirestore,
@@ -678,6 +687,15 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const cloudAccount = await fetchUserAccountFromFirestore(fbUser.uid);
         if (cloudAccount) {
+          if (cloudAccount.appUser.status === 'suspended') {
+            await signOutFirebase();
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setUserRole('student');
+            localStorage.removeItem(STORAGE_KEY_PREFIX + 'auth');
+            localStorage.removeItem(STORAGE_KEY_PREFIX + 'user');
+            return;
+          }
           const resolvedAvatar = resolvePersistentAvatar(
             cloudAccount.studentProfile.avatar || fbUser.photoURL || undefined,
             cloudAccount.studentProfile.email || fbUser.email || undefined
@@ -688,24 +706,24 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             uid: fbUser.uid,
             avatar: resolvedAvatar,
           };
+          const restoredAuthUser: AuthUser = {
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            name: restoredProfile.name || fbUser.displayName || 'Học viên HSK',
+            email: restoredProfile.email || fbUser.email || '',
+            avatar: resolvedAvatar,
+            provider: cloudAccount.appUser.provider || 'email',
+            role: restoredProfile.role || 'student',
+            status: restoredProfile.status || 'active',
+            targetLevel: restoredProfile.targetLevel || 'HSK 1',
+            joinedAt: cloudAccount.appUser.joinedDate || new Date().toISOString().split('T')[0],
+          };
+          setIsAuthenticated(true);
           setStudentProfile(restoredProfile);
-          setCurrentUser((prev) => {
-            if (!prev) return prev;
-            const merged: AuthUser = {
-              ...prev,
-              id: fbUser.uid,
-              uid: fbUser.uid,
-              name: restoredProfile.name || prev.name,
-              email: restoredProfile.email || prev.email,
-              avatar: resolvedAvatar,
-              role: restoredProfile.role || prev.role,
-              status: restoredProfile.status || prev.status,
-              targetLevel: restoredProfile.targetLevel || prev.targetLevel,
-            };
-            safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(merged));
-            return merged;
-          });
-          setUserRole(restoredProfile.role || 'student');
+          setCurrentUser(restoredAuthUser);
+          setUserRole(restoredAuthUser.role || 'student');
+          safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+          safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(restoredAuthUser));
         }
 
         const isAdminUser = await isCurrentFirebaseUserAdmin();
@@ -1362,38 +1380,60 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Self-service User Registration & Password Login
+  // Self-service User Registration & Password Login (Real Firebase Authentication + Cloud Firestore)
   const registerAccount = async (data: { name: string; email: string; password: string; level: HSKLevel }) => {
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      const cleanName = data.name.trim();
+      const cleanEmail = data.email.trim().toLowerCase();
+      const created = await signUpWithEmailPassword(cleanEmail, data.password, cleanName);
 
-      const resData = await res.json();
-      if (!res.ok) {
-        return { success: false, message: resData.error || 'Đăng ký không thành công' };
-      }
+      const resolvedAvatar = resolvePersistentAvatar(undefined, created.email);
+      const today = new Date().toISOString().split('T')[0];
 
-      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
       const authedUser: AuthUser = {
-        ...resData.user,
+        id: created.uid,
+        uid: created.uid,
+        name: created.name,
+        email: created.email,
         avatar: resolvedAvatar,
+        provider: 'email',
+        role: 'student',
+        status: 'active',
+        targetLevel: data.level,
+        joinedAt: today,
       };
+
+      const newProfile: StudentProfile = {
+        ...INITIAL_STUDENT_PROFILE,
+        id: created.uid,
+        uid: created.uid,
+        name: created.name,
+        email: created.email,
+        avatar: resolvedAvatar,
+        targetLevel: data.level,
+        streakDays: 1,
+        lastActiveDate: today,
+        xp: 0,
+        role: 'student',
+        status: 'active',
+        masteredVocabIds: [],
+        learningVocabIds: [],
+        completedLessonIds: [],
+        examHistory: [],
+        studyLog: {},
+      };
+
+      await syncOwnUserAccountToFirestore(newProfile, authedUser);
+
       setIsAuthenticated(true);
       setCurrentUser(authedUser);
-      setUserRole(authedUser.role || 'student');
-      if (resData.profile) {
-        setStudentProfile({
-          ...resData.profile,
-          avatar: resolvedAvatar,
-        });
-      }
+      setUserRole('student');
+      setStudentProfile(newProfile);
 
       setAppUsers((prev) => {
         const matchingAppUser: AppUser = {
           id: authedUser.id,
+          uid: authedUser.uid,
           name: authedUser.name,
           email: authedUser.email,
           avatar: resolvedAvatar,
@@ -1401,135 +1441,160 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           status: 'active',
           level: data.level,
           provider: 'email',
-          joinedDate: new Date().toISOString().split('T')[0],
+          joinedDate: today,
           streak: 1,
           completedLessons: 0,
           examsTaken: 0,
           avgScore: 0,
         };
-        return [matchingAppUser, ...prev.filter((u) => u.email !== authedUser.email)];
+        return [matchingAppUser, ...prev.filter((u) => u.email.toLowerCase() !== authedUser.email.toLowerCase())];
       });
 
       safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
       safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
-      if (resData.token) {
-        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
-      }
       setIsGoogleAuthModalOpen(false);
-      return { success: true, message: resData.message };
+      return { success: true, message: 'Đăng ký tài khoản thành công!' };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+      return { success: false, message: err?.message || 'Đăng ký không thành công' };
     }
   };
 
   const loginWithEmail = async (data: { email: string; password: string }) => {
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      const signedIn = await signInWithEmailPassword(data.email, data.password);
 
-      const resData = await res.json();
-      if (!res.ok) {
-        return { success: false, message: resData.error || 'Đăng nhập không thành công' };
+      let cloudAccount: { appUser: AppUser; studentProfile: StudentProfile } | null = null;
+      try {
+        cloudAccount = await fetchUserAccountFromFirestore(signedIn.uid);
+      } catch (cloudErr) {
+        console.warn('Cloud Firestore user lookup notice:', cloudErr);
       }
 
-      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
+      if (cloudAccount?.appUser.status === 'suspended') {
+        await signOutFirebase();
+        return {
+          success: false,
+          message: 'Tài khoản này đang bị tạm khóa. Vui lòng liên hệ quản trị viên.',
+        };
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const isOwnerAdmin = signedIn.email.toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL.toLowerCase();
+      const effectiveRole: UserRole = isOwnerAdmin
+        ? 'admin'
+        : cloudAccount?.appUser.role || 'student';
+      const resolvedAvatar = resolvePersistentAvatar(
+        cloudAccount?.studentProfile.avatar || signedIn.avatar || undefined,
+        signedIn.email
+      );
+
       const authedUser: AuthUser = {
-        ...resData.user,
+        id: signedIn.uid,
+        uid: signedIn.uid,
+        name: cloudAccount?.appUser.name || signedIn.name,
+        email: signedIn.email,
         avatar: resolvedAvatar,
+        provider: cloudAccount?.appUser.provider || 'email',
+        role: effectiveRole,
+        status: cloudAccount?.appUser.status || 'active',
+        targetLevel: cloudAccount?.studentProfile.targetLevel || 'HSK 1',
+        joinedAt: cloudAccount?.appUser.joinedDate || today,
       };
-      setIsAuthenticated(true);
-      setCurrentUser(authedUser);
-      setUserRole(authedUser.role || 'student');
-      if (resData.profile) {
-        setStudentProfile({
-          ...resData.profile,
-          avatar: resolvedAvatar,
+
+      const profile: StudentProfile = cloudAccount
+        ? {
+            ...cloudAccount.studentProfile,
+            id: signedIn.uid,
+            uid: signedIn.uid,
+            role: effectiveRole,
+            avatar: resolvedAvatar,
+          }
+        : {
+            ...INITIAL_STUDENT_PROFILE,
+            id: signedIn.uid,
+            uid: signedIn.uid,
+            name: authedUser.name,
+            email: authedUser.email,
+            avatar: resolvedAvatar,
+            role: effectiveRole,
+            status: 'active',
+            targetLevel: 'HSK 1',
+            lastActiveDate: today,
+            masteredVocabIds: [],
+            learningVocabIds: [],
+            completedLessonIds: [],
+            examHistory: [],
+            studyLog: {},
+          };
+
+      if (!cloudAccount) {
+        syncOwnUserAccountToFirestore(profile, authedUser).catch((err) => {
+          console.warn('Cloud Firestore initial email-user sync notice:', err);
         });
       }
 
+      setIsAuthenticated(true);
+      setCurrentUser(authedUser);
+      setUserRole(effectiveRole);
+      setStudentProfile(profile);
+
       safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
       safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
-      if (resData.token) {
-        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
-      }
-
-      // If cached avatar was restored after server restart, silently resync to backend
-      if (resolvedAvatar !== resData.user?.avatar && authedUser.email) {
-        fetch('/api/auth/profile', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(resData.token ? { Authorization: `Bearer ${resData.token}` } : {}),
-            'x-user-email': authedUser.email,
-          },
-          body: JSON.stringify({ email: authedUser.email, avatar: resolvedAvatar }),
-        }).catch(() => {});
-      }
-
       setIsGoogleAuthModalOpen(false);
-      return { success: true, message: resData.message };
+      return { success: true, message: 'Đăng nhập thành công!' };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+      return { success: false, message: err?.message || 'Đăng nhập không thành công' };
     }
   };
 
   const resetPasswordWithEmail = async (data: { email: string; newPassword: string }) => {
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        return { success: false, message: resData.error || 'Đặt lại mật khẩu không thành công' };
-      }
-
-      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
-      const authedUser: AuthUser = {
-        ...resData.user,
-        avatar: resolvedAvatar,
+      await sendFirebasePasswordReset(data.email);
+      return {
+        success: true,
+        message: `Đã gửi liên kết đặt lại mật khẩu tới ${data.email.trim()}. Vui lòng kiểm tra hộp thư (kể cả mục Spam).`,
       };
-      setIsAuthenticated(true);
-      setCurrentUser(authedUser);
-      setUserRole(authedUser.role || 'student');
-      if (resData.profile) {
-        setStudentProfile({
-          ...resData.profile,
-          avatar: resolvedAvatar,
-        });
-      }
-
-      safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-      safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
-      if (resData.token) {
-        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
-      }
-      setIsGoogleAuthModalOpen(false);
-      return { success: true, message: resData.message };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+      return { success: false, message: err?.message || 'Không thể gửi email đặt lại mật khẩu' };
     }
   };
 
-  // Admin User Management & Role Assignment (Cloud Firestore primary + Express API sync)
+  // Admin User Management & Role Assignment (Real Firebase Auth Provisioning + Cloud Firestore)
   const addUserAdmin = async (data: Partial<AppUser>) => {
     try {
-      const generatedId = data.id || `usr-${Date.now()}`;
-      const newUserRecord: AppUser = {
-        id: generatedId,
-        uid: data.uid || generatedId,
-        name: (data.name || 'Học viên HSK').trim(),
-        email: (data.email || '').trim().toLowerCase(),
-        avatar: data.avatar || resolveCartoonAvatar(undefined, data.email),
+      const cleanEmail = (data.email || '').trim().toLowerCase();
+      const cleanName = (data.name || 'Học viên HSK').trim();
+      const initialPassword = (data.password || '123456').trim();
+
+      if (!cleanEmail) {
+        return { success: false, message: 'Vui lòng nhập email đăng nhập.' };
+      }
+      if (initialPassword.length < 6) {
+        return { success: false, message: 'Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.' };
+      }
+
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+      if (!isAdminFirebase) {
+        return {
+          success: false,
+          message: 'Vui lòng đăng nhập bằng tài khoản Quản trị viên Google để tạo tài khoản mới.',
+        };
+      }
+
+      // 1. Provision real Firebase Authentication account using secondary in-memory auth (keeps Admin signed in!)
+      const created = await createFirebaseAccountAsAdmin(cleanEmail, initialPassword, cleanName);
+
+      // 2. Save authoritative user profile & role directly in Cloud Firestore under users/{uid} (+ admins/{uid} if admin/teacher)
+      const savedUser: AppUser = {
+        id: created.uid,
+        uid: created.uid,
+        name: cleanName,
+        email: created.email,
+        avatar: data.avatar || resolveCartoonAvatar(undefined, created.email),
         role: data.role || 'student',
         status: data.status || 'active',
         level: data.level || 'HSK 1',
-        provider: data.provider || 'email',
+        provider: 'email',
         joinedDate: data.joinedDate || new Date().toISOString().split('T')[0],
         streak: data.streak ?? 1,
         completedLessons: data.completedLessons ?? 0,
@@ -1538,31 +1603,18 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         note: data.note,
       };
 
-      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
-      let savedUser = newUserRecord;
+      await adminSaveUserToFirestore(savedUser.id, savedUser);
 
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ ...data, id: generatedId }),
-      }).catch(() => null);
-
-      if (res && res.ok) {
-        const resData = await res.json();
-        savedUser = { ...newUserRecord, ...resData, id: generatedId };
-      } else if (!isAdminFirebase) {
-        const resData = res ? await res.json().catch(() => ({})) : {};
-        return { success: false, message: resData.error || 'Thêm tài khoản thất bại' };
-      }
-
-      if (isAdminFirebase) {
-        await adminSaveUserToFirestore(savedUser.id, savedUser);
-      }
-
-      setAppUsers((prev) => [savedUser, ...prev.filter((u) => u.id !== savedUser.id)]);
-      return { success: true, message: 'Tạo tài khoản thành công' };
+      setAppUsers((prev) => [
+        savedUser,
+        ...prev.filter((u) => u.id !== savedUser.id && u.email.toLowerCase() !== savedUser.email.toLowerCase()),
+      ]);
+      return {
+        success: true,
+        message: 'Tạo tài khoản thành công! Học viên có thể đăng nhập ngay bằng email và mật khẩu vừa tạo.',
+      };
     } catch (err: any) {
-      return { success: false, message: err.message };
+      return { success: false, message: err?.message || 'Thêm tài khoản thất bại' };
     }
   };
 

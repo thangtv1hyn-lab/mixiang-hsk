@@ -138,19 +138,14 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     }
   };
 
-  // Handle Self-Service Password Reset
+  // Handle Official Firebase Password Reset Email
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!loginEmail.trim() || !resetNewPassword.trim()) {
-      setErrorMessage('Vui lòng nhập email tài khoản và mật khẩu mới.');
-      return;
-    }
-
-    if (resetNewPassword.trim().length < 6) {
-      setErrorMessage('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (!loginEmail.trim()) {
+      setErrorMessage('Vui lòng nhập email tài khoản cần đặt lại mật khẩu.');
       return;
     }
 
@@ -162,10 +157,12 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     setIsSubmitting(false);
 
     if (result.success) {
-      setSuccessMessage(result.message || 'Đặt mật khẩu mới thành công!');
-      triggerSuccessCelebration();
+      setSuccessMessage(
+        result.message ||
+          'Đã gửi liên kết đặt lại mật khẩu tới email của bạn. Vui lòng kiểm tra hộp thư (kể cả mục Spam).'
+      );
     } else {
-      setErrorMessage(result.message || 'Không thể đặt lại mật khẩu.');
+      setErrorMessage(result.message || 'Không thể gửi email đặt lại mật khẩu.');
     }
   };
 
@@ -558,43 +555,22 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
                 <div>
                   <label className="block text-[14px] font-black text-[#18181B] mb-1.5">
-                    Email tài khoản cần đặt mật khẩu
+                    Email tài khoản cần đặt lại mật khẩu
                   </label>
                   <div className="relative">
                     <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
-                      type="text"
+                      type="email"
                       required
-                      placeholder="Nhập email tài khoản..."
+                      placeholder="Nhập email đã đăng ký..."
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 text-[15px] font-semibold text-[#18181B] rounded-2xl border-2 border-[#E6DEC8] bg-[#FAF7F0] focus:bg-white focus:outline-none focus:border-red-700"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-[14px] font-black text-[#18181B] mb-1.5">
-                    Mật khẩu mới (tối thiểu 6 ký tự)
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Nhập mật khẩu mới bạn muốn dùng..."
-                      value={resetNewPassword}
-                      onChange={(e) => setResetNewPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 text-[15px] font-semibold text-[#18181B] rounded-2xl border-2 border-[#E6DEC8] bg-[#FAF7F0] focus:bg-white focus:outline-none focus:border-red-700"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-red-700 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
+                  <p className="text-[12.5px] text-slate-600 mt-2 leading-relaxed">
+                    Hệ thống sẽ gửi liên kết đặt lại mật khẩu chính thức từ Firebase về hộp thư email này.
+                  </p>
                 </div>
 
                 <button
@@ -603,10 +579,10 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                   className="w-full py-3.5 px-6 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[15px] flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
-                    <span>Đang lưu mật khẩu...</span>
+                    <span>Đang gửi email đặt lại...</span>
                   ) : (
                     <>
-                      <span>Lưu mật khẩu mới & Đăng nhập ngay</span>
+                      <span>Gửi email đặt lại mật khẩu</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}

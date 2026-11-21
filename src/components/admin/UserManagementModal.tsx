@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Shield, UserCheck, Lock, Mail, User, Save, GraduationCap } from 'lucide-react';
+import { X, UserPlus, Shield, Lock, Mail, User, Save, Send } from 'lucide-react';
 import { AppUser, UserRole, UserStatus, HSKLevel } from '../../types/hsk';
+import { sendFirebasePasswordReset } from '../../firebase';
 
 interface UserManagementModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [note, setNote] = useState('');
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [resetNotice, setResetNotice] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -47,14 +50,35 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setNote('');
     }
     setErrorMessage('');
+    setResetNotice('');
   }, [initialUser, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleSendResetEmail = async () => {
+    if (!email.trim()) return;
+    setIsSendingReset(true);
+    setErrorMessage('');
+    setResetNotice('');
+    try {
+      await sendFirebasePasswordReset(email.trim());
+      setResetNotice(`Đã gửi email đặt lại mật khẩu tới ${email.trim()}.`);
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Không thể gửi email đặt lại mật khẩu.');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
       setErrorMessage('Họ tên và email không được để trống.');
+      return;
+    }
+
+    if (!isEditing && password.trim().length < 6) {
+      setErrorMessage('Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.');
       return;
     }
 
@@ -70,7 +94,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       note: note.trim(),
     };
 
-    if (password.trim()) {
+    if (!isEditing && password.trim()) {
       payload.password = password.trim();
     }
 
@@ -149,21 +173,49 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              {isEditing ? 'Đặt lại mật khẩu mới (bỏ trống nếu giữ nguyên)' : 'Mật khẩu khởi tạo'}
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="password"
-                placeholder={isEditing ? 'Nhập mật khẩu mới nếu muốn đổi' : 'Mật khẩu mặc định: 123456'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-              />
+          {!isEditing ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Mật khẩu khởi tạo (tối thiểu 6 ký tự) <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  minLength={6}
+                  placeholder="Nhập mật khẩu ban đầu (VD: 123456)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Tài khoản sẽ được tạo trực tiếp trên Firebase Auth để học viên đăng nhập được ngay.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-700">Đặt lại mật khẩu cho tài khoản này</p>
+                <p className="text-[11px] text-slate-500">
+                  Gửi liên kết đổi mật khẩu chính thức tới email người dùng qua Firebase Auth.
+                </p>
+                {resetNotice && (
+                  <p className="text-[11px] font-semibold text-emerald-700 mt-1">{resetNotice}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={isSendingReset || !email.trim()}
+                onClick={handleSendResetEmail}
+                className="shrink-0 px-3 py-2 rounded-lg bg-white border border-slate-200 hover:border-purple-400 text-xs font-bold text-purple-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{isSendingReset ? 'Đang gửi...' : 'Gửi email'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Phân quyền Vai trò */}
           <div className="bg-purple-50/60 p-3.5 rounded-2xl border border-purple-100 space-y-2.5">
