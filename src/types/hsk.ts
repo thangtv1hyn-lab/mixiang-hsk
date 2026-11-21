@@ -135,6 +135,7 @@ export interface ForumReply {
 
 export interface ForumPost {
   id: string;
+  authorUid?: string;
   authorName: string;
   authorAvatar: string;
   role: 'student' | 'teacher' | 'admin';
@@ -156,6 +157,7 @@ export type UserStatus = 'active' | 'suspended';
 
 export interface AppUser {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   avatar?: string;
@@ -188,6 +190,7 @@ export interface VocabDeck {
 
 export interface StudentProfile {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   avatar: string;
@@ -209,6 +212,7 @@ export interface StudentProfile {
 
 export interface AuthUser {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   avatar: string;

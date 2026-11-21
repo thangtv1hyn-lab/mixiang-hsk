@@ -1,0 +1,454 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // PILLAR 1: GLOBAL DEFAULT DENY-ALL CATCH-ALL
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // HELPER FUNCTIONS (AUTH, ROLES, TYPE & STRING VALIDATORS)
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'thangtv1.hyn@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(val) {
+      return val is string && val.size() >= 1 && val.size() <= 128 && val.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalNumber(data, field, minVal, maxVal) {
+      return !(field in data) || ((data[field] is int || data[field] is float) && data[field] >= minVal && data[field] <= maxVal);
+    }
+
+    function isOptionalBool(data, field) {
+      return !(field in data) || data[field] is bool;
+    }
+
+    function isOptionalList(data, field, maxLen) {
+      return !(field in data) || (data[field] is list && data[field].size() <= maxLen);
+    }
+
+    function isOptionalMap(data, field) {
+      return !(field in data) || data[field] is map;
+    }
+
+    function isValidHSKLevel(level) {
+      return level in ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5'];
+    }
+
+    function isValidEmail(val) {
+      return val is string && val.size() >= 3 && val.size() <= 200 && val.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATORS (STATELESS — NO existing() OR diff() INSIDE)
+    // =========================================================================
+    function isValidColorScheme(cs) {
+      return cs is map &&
+        cs.keys().hasAll(['bg', 'border', 'text', 'badge']) &&
+        cs.keys().hasOnly(['bg', 'border', 'text', 'badge']) &&
+        isValidString(cs.bg, 1, 100) &&
+        isValidString(cs.border, 1, 100) &&
+        isValidString(cs.text, 1, 100) &&
+        isValidString(cs.badge, 1, 100);
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['id', 'level', 'title', 'vietnameseTitle', 'description', 'targetVocabCount', 'grammarPointsCount', 'colorScheme']) &&
+        data.keys().hasOnly(['id', 'level', 'title', 'vietnameseTitle', 'description', 'coverImage', 'targetVocabCount', 'grammarPointsCount', 'colorScheme', 'orderIndex', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidHSKLevel(data.level) &&
+        isValidString(data.title, 1, 200) &&
+        isValidString(data.vietnameseTitle, 1, 250) &&
+        isValidString(data.description, 0, 2000) &&
+        isOptionalString(data, 'coverImage', 180000) &&
+        (data.targetVocabCount is int || data.targetVocabCount is float) && data.targetVocabCount >= 0 && data.targetVocabCount <= 50000 &&
+        (data.grammarPointsCount is int || data.grammarPointsCount is float) && data.grammarPointsCount >= 0 && data.grammarPointsCount <= 5000 &&
+        isValidColorScheme(data.colorScheme) &&
+        isOptionalNumber(data, 'orderIndex', 0, 10000) &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidLesson(data) {
+      return data.keys().hasAll(['id', 'courseId', 'level', 'lessonNumber', 'title', 'vietnameseTitle', 'durationMinutes', 'description', 'vocabulary', 'grammar', 'dialogue', 'practiceQuestions']) &&
+        data.keys().hasOnly(['id', 'courseId', 'level', 'lessonNumber', 'title', 'vietnameseTitle', 'durationMinutes', 'description', 'vocabulary', 'grammar', 'dialogue', 'practiceQuestions', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.courseId) &&
+        isValidHSKLevel(data.level) &&
+        (data.lessonNumber is int || data.lessonNumber is float) && data.lessonNumber >= 0 && data.lessonNumber <= 500 &&
+        isValidString(data.title, 1, 250) &&
+        isValidString(data.vietnameseTitle, 1, 250) &&
+        (data.durationMinutes is int || data.durationMinutes is float) && data.durationMinutes >= 0 && data.durationMinutes <= 600 &&
+        isValidString(data.description, 0, 2000) &&
+        data.vocabulary is list && data.vocabulary.size() <= 200 &&
+        data.grammar is list && data.grammar.size() <= 100 &&
+        data.dialogue is list && data.dialogue.size() <= 200 &&
+        data.practiceQuestions is list && data.practiceQuestions.size() <= 200 &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidVocabDeck(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'level', 'category', 'createdAt', 'createdBy']) &&
+        data.keys().hasOnly(['id', 'title', 'vietnameseTitle', 'description', 'level', 'category', 'color', 'createdAt', 'createdBy', 'cardCount', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidString(data.title, 1, 250) &&
+        isOptionalString(data, 'vietnameseTitle', 250) &&
+        isValidString(data.description, 0, 2000) &&
+        isValidHSKLevel(data.level) &&
+        isValidString(data.category, 1, 150) &&
+        isOptionalString(data, 'color', 40) &&
+        isValidString(data.createdAt, 1, 64) &&
+        data.createdBy in ['admin', 'ai', 'system'] &&
+        isOptionalNumber(data, 'cardCount', 0, 50000) &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidVocabCard(data) {
+      return data.keys().hasAll(['id', 'deckId', 'word', 'pinyin', 'meaning', 'level']) &&
+        data.keys().hasOnly(['id', 'deckId', 'word', 'pinyin', 'sinoVietnamese', 'meaning', 'level', 'category', 'radical', 'strokeCount', 'exampleSentence', 'examplePinyin', 'exampleMeaning', 'imageUrl', 'orderIndex', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.deckId) &&
+        isValidString(data.word, 1, 100) &&
+        isValidString(data.pinyin, 1, 200) &&
+        isOptionalString(data, 'sinoVietnamese', 200) &&
+        isValidString(data.meaning, 1, 400) &&
+        isValidHSKLevel(data.level) &&
+        isOptionalString(data, 'category', 150) &&
+        isOptionalString(data, 'radical', 100) &&
+        isOptionalNumber(data, 'strokeCount', 0, 100) &&
+        isOptionalString(data, 'exampleSentence', 600) &&
+        isOptionalString(data, 'examplePinyin', 600) &&
+        isOptionalString(data, 'exampleMeaning', 600) &&
+        isOptionalString(data, 'imageUrl', 180000) &&
+        isOptionalNumber(data, 'orderIndex', 0, 50000) &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidExam(data) {
+      return data.keys().hasAll(['id', 'level', 'title', 'subtitle', 'timeLimitMinutes', 'passScore', 'totalPoints', 'questions']) &&
+        data.keys().hasOnly(['id', 'level', 'title', 'subtitle', 'timeLimitMinutes', 'passScore', 'totalPoints', 'questions', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidHSKLevel(data.level) &&
+        isValidString(data.title, 1, 250) &&
+        isValidString(data.subtitle, 0, 300) &&
+        (data.timeLimitMinutes is int || data.timeLimitMinutes is float) && data.timeLimitMinutes >= 1 && data.timeLimitMinutes <= 300 &&
+        (data.passScore is int || data.passScore is float) && data.passScore >= 0 && data.passScore <= 1000 &&
+        (data.totalPoints is int || data.totalPoints is float) && data.totalPoints >= 1 && data.totalPoints <= 1000 &&
+        data.questions is list && data.questions.size() <= 200 &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidForumPost(data) {
+      return data.keys().hasAll(['id', 'authorUid', 'authorName', 'role', 'title', 'content', 'level', 'category', 'tags', 'likes', 'repliesCount', 'createdAt', 'replies']) &&
+        data.keys().hasOnly(['id', 'authorUid', 'authorName', 'authorAvatar', 'role', 'title', 'content', 'level', 'category', 'tags', 'likes', 'repliesCount', 'createdAt', 'isPinned', 'isSolved', 'replies', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidString(data.authorUid, 1, 128) &&
+        isValidString(data.authorName, 1, 120) &&
+        isOptionalString(data, 'authorAvatar', 150000) &&
+        data.role in ['student', 'teacher', 'admin'] &&
+        isValidString(data.title, 1, 250) &&
+        isValidString(data.content, 1, 5000) &&
+        data.level in ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'Toàn bộ'] &&
+        data.category in ['Ngữ pháp', 'Từ vựng', 'Kinh nghiệm thi', 'Chữa bài', 'Hỏi đáp chung'] &&
+        data.tags is list && data.tags.size() <= 20 &&
+        (data.likes is int || data.likes is float) && data.likes >= 0 && data.likes <= 1000000 &&
+        (data.repliesCount is int || data.repliesCount is float) && data.repliesCount >= 0 && data.repliesCount <= 1000 &&
+        isValidString(data.createdAt, 1, 64) &&
+        isOptionalBool(data, 'isPinned') &&
+        isOptionalBool(data, 'isSolved') &&
+        data.replies is list && data.replies.size() <= 200 &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidUserAccount(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'status', 'level', 'provider', 'joinedDate']) &&
+        data.keys().hasOnly(['id', 'uid', 'name', 'email', 'avatar', 'role', 'status', 'level', 'targetLevel', 'provider', 'joinedDate', 'streakDays', 'lastActiveDate', 'xp', 'reminderTime', 'reminderEnabled', 'dailyGoalMinutes', 'masteredVocabIds', 'learningVocabIds', 'completedLessonIds', 'examHistory', 'studyLog', 'completedLessons', 'examsTaken', 'avgScore', 'note', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isOptionalString(data, 'uid', 128) &&
+        isValidString(data.name, 1, 120) &&
+        isValidEmail(data.email) &&
+        isOptionalString(data, 'avatar', 180000) &&
+        data.role in ['student', 'teacher', 'admin'] &&
+        data.status in ['active', 'suspended'] &&
+        isValidHSKLevel(data.level) &&
+        (!('targetLevel' in data) || isValidHSKLevel(data.targetLevel)) &&
+        data.provider in ['google', 'email'] &&
+        isValidString(data.joinedDate, 1, 64) &&
+        isOptionalNumber(data, 'streakDays', 0, 10000) &&
+        isOptionalString(data, 'lastActiveDate', 64) &&
+        isOptionalNumber(data, 'xp', 0, 10000000) &&
+        isOptionalString(data, 'reminderTime', 16) &&
+        isOptionalBool(data, 'reminderEnabled') &&
+        isOptionalNumber(data, 'dailyGoalMinutes', 1, 720) &&
+        isOptionalList(data, 'masteredVocabIds', 5000) &&
+        isOptionalList(data, 'learningVocabIds', 5000) &&
+        isOptionalList(data, 'completedLessonIds', 500) &&
+        isOptionalList(data, 'examHistory', 200) &&
+        isOptionalMap(data, 'studyLog') &&
+        isOptionalNumber(data, 'completedLessons', 0, 5000) &&
+        isOptionalNumber(data, 'examsTaken', 0, 5000) &&
+        isOptionalNumber(data, 'avgScore', 0, 1000) &&
+        isOptionalString(data, 'note', 500) &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    function isValidAdminMarker(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+        data.keys().hasOnly(['uid', 'email', 'grantedAt']) &&
+        isValidString(data.uid, 1, 128) &&
+        isValidEmail(data.email) &&
+        isOptionalString(data, 'grantedAt', 64);
+    }
+
+    function isValidSiteUIConfig(data) {
+      return data.keys().hasAll(['primaryColor', 'canvasColor', 'brandName']) &&
+        data.keys().hasOnly([
+          'primaryColor', 'canvasColor', 'fontScale', 'headerLogoUrl', 'brandName',
+          'brandHighlight', 'brandSubtitle', 'heroBadge', 'heroTitleLine1',
+          'heroTitleHighlight', 'heroTitleLine3', 'heroDescription', 'heroCtaPrimary',
+          'heroCtaSecondary', 'stat1Value', 'stat1Label', 'stat2Value', 'stat2Label',
+          'stat3Value', 'stat3Label', 'posterSectionBadge', 'posterSectionTitle',
+          'posterSectionSubtitle', 'poster1Url', 'poster1Caption', 'poster2Url',
+          'poster2Caption', 'admissionBadge', 'admissionTitle', 'admissionDescription',
+          'admissionCta', 'momentsSectionBadge', 'momentsSectionTitle',
+          'momentsSectionSubtitle', 'classroomMoments', 'showCoursesSection',
+          'showPostersSection', 'showAdmissionBanner', 'showMomentsSection',
+          'footerLogoUrl', 'footerTitle', 'footerSubtitle', 'hotline',
+          'footerCtaText', 'facebook', 'copyrightText', 'motto', 'updatedAt'
+        ]) &&
+        isValidString(data.primaryColor, 1, 40) &&
+        isValidString(data.canvasColor, 1, 40) &&
+        (!('fontScale' in data) || data.fontScale in ['13.5px', '14px', '15px']) &&
+        isOptionalString(data, 'headerLogoUrl', 180000) &&
+        isValidString(data.brandName, 1, 120) &&
+        isOptionalString(data, 'brandHighlight', 120) &&
+        isOptionalString(data, 'brandSubtitle', 200) &&
+        isOptionalString(data, 'heroBadge', 200) &&
+        isOptionalString(data, 'heroTitleLine1', 200) &&
+        isOptionalString(data, 'heroTitleHighlight', 200) &&
+        isOptionalString(data, 'heroTitleLine3', 200) &&
+        isOptionalString(data, 'heroDescription', 1000) &&
+        isOptionalString(data, 'heroCtaPrimary', 120) &&
+        isOptionalString(data, 'heroCtaSecondary', 120) &&
+        isOptionalString(data, 'stat1Value', 60) &&
+        isOptionalString(data, 'stat1Label', 120) &&
+        isOptionalString(data, 'stat2Value', 60) &&
+        isOptionalString(data, 'stat2Label', 120) &&
+        isOptionalString(data, 'stat3Value', 60) &&
+        isOptionalString(data, 'stat3Label', 120) &&
+        isOptionalString(data, 'posterSectionBadge', 200) &&
+        isOptionalString(data, 'posterSectionTitle', 200) &&
+        isOptionalString(data, 'posterSectionSubtitle', 500) &&
+        isOptionalString(data, 'poster1Url', 180000) &&
+        isOptionalString(data, 'poster1Caption', 300) &&
+        isOptionalString(data, 'poster2Url', 180000) &&
+        isOptionalString(data, 'poster2Caption', 300) &&
+        isOptionalString(data, 'admissionBadge', 200) &&
+        isOptionalString(data, 'admissionTitle', 250) &&
+        isOptionalString(data, 'admissionDescription', 1000) &&
+        isOptionalString(data, 'admissionCta', 120) &&
+        isOptionalString(data, 'momentsSectionBadge', 200) &&
+        isOptionalString(data, 'momentsSectionTitle', 250) &&
+        isOptionalString(data, 'momentsSectionSubtitle', 500) &&
+        isOptionalList(data, 'classroomMoments', 30) &&
+        isOptionalBool(data, 'showCoursesSection') &&
+        isOptionalBool(data, 'showPostersSection') &&
+        isOptionalBool(data, 'showAdmissionBanner') &&
+        isOptionalBool(data, 'showMomentsSection') &&
+        isOptionalString(data, 'footerLogoUrl', 180000) &&
+        isOptionalString(data, 'footerTitle', 200) &&
+        isOptionalString(data, 'footerSubtitle', 300) &&
+        isOptionalString(data, 'hotline', 80) &&
+        isOptionalString(data, 'footerCtaText', 120) &&
+        isOptionalString(data, 'facebook', 300) &&
+        isOptionalString(data, 'copyrightText', 250) &&
+        isOptionalString(data, 'motto', 300) &&
+        isOptionalString(data, 'updatedAt', 64);
+    }
+
+    // =========================================================================
+    // CONNECTION PROBE (HEALTH CHECK)
+    // =========================================================================
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+    }
+
+    // =========================================================================
+    // COURSES & LESSONS (PUBLIC CATALOG — ADMIN WRITE)
+    // =========================================================================
+    match /courses/{courseId} {
+      allow get, list: if true;
+      allow create: if isAdmin() && isValidCourse(incoming()) && incoming().id == courseId;
+      allow update: if isAdmin() && isValidCourse(incoming()) && incoming().id == existing().id && incoming().id == courseId;
+      allow delete: if isAdmin();
+
+      match /lessons/{lessonId} {
+        allow get, list: if true;
+        allow create: if isAdmin() && isValidLesson(incoming()) && incoming().id == lessonId && incoming().courseId == courseId;
+        allow update: if isAdmin() && isValidLesson(incoming()) && incoming().id == existing().id && incoming().id == lessonId && incoming().courseId == courseId;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // =========================================================================
+    // VOCABULARY DECKS & CARDS (SCALABLE TO 3,000+ CARDS — ADMIN WRITE)
+    // =========================================================================
+    match /vocabDecks/{deckId} {
+      allow get, list: if true;
+      allow create: if isAdmin() && isValidVocabDeck(incoming()) && incoming().id == deckId;
+      allow update: if isAdmin() && isValidVocabDeck(incoming()) && incoming().id == existing().id && incoming().id == deckId;
+      allow delete: if isAdmin();
+
+      match /cards/{cardId} {
+        allow get, list: if true;
+        allow create: if isAdmin() && isValidVocabCard(incoming()) && incoming().id == cardId && incoming().deckId == deckId;
+        allow update: if isAdmin() && isValidVocabCard(incoming()) && incoming().id == existing().id && incoming().id == cardId && incoming().deckId == deckId;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // =========================================================================
+    // EXAMS (PUBLIC CATALOG — ADMIN WRITE)
+    // =========================================================================
+    match /exams/{examId} {
+      allow get, list: if true;
+      allow create: if isAdmin() && isValidExam(incoming()) && incoming().id == examId;
+      allow update: if isAdmin() && isValidExam(incoming()) && incoming().id == existing().id && incoming().id == examId;
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // FORUM POSTS (COMMUNITY Q&A — NO PII)
+    // =========================================================================
+    match /forumPosts/{postId} {
+      allow get, list: if true;
+      allow create: if isValidForumPost(incoming()) &&
+        incoming().id == postId &&
+        (
+          isAdmin() ||
+          (isSignedIn() && incoming().authorUid == request.auth.uid && incoming().role == 'student' && (!('isPinned' in incoming()) || incoming().isPinned == false))
+        );
+      allow update: if isValidForumPost(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().authorUid == existing().authorUid &&
+        (
+          isAdmin() ||
+          (
+            isSignedIn() &&
+            existing().authorUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'tags', 'level', 'category', 'isSolved', 'replies', 'repliesCount', 'updatedAt'])
+          ) ||
+          (
+            isSignedIn() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'updatedAt']) &&
+            incoming().likes == existing().likes + 1
+          ) ||
+          (
+            isSignedIn() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['replies', 'repliesCount', 'updatedAt']) &&
+            incoming().replies.size() == existing().replies.size() + 1 &&
+            incoming().repliesCount == existing().repliesCount + 1
+          )
+        );
+      allow delete: if isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid);
+    }
+
+    // =========================================================================
+    // USERS (STRICT PII ISOLATION — OWNER OR ADMIN ONLY)
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidUserAccount(incoming()) &&
+        incoming().id == userId &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            isVerifiedUser() &&
+            incoming().role == 'student' &&
+            incoming().status == 'active' &&
+            incoming().email == request.auth.token.email
+          )
+        );
+      allow update: if isValidUserAccount(incoming()) &&
+        incoming().id == existing().id &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().role == existing().role &&
+            incoming().status == existing().status &&
+            incoming().email == existing().email &&
+            incoming().provider == existing().provider &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'uid', 'name', 'avatar', 'level', 'targetLevel',
+              'streakDays', 'lastActiveDate', 'xp', 'reminderTime',
+              'reminderEnabled', 'dailyGoalMinutes', 'masteredVocabIds',
+              'learningVocabIds', 'completedLessonIds', 'examHistory',
+              'studyLog', 'completedLessons', 'examsTaken', 'avgScore',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // ADMIN ROLE MARKERS (BOOTSTRAPPED ADMIN ONLY)
+    // =========================================================================
+    match /admins/{uid} {
+      allow get: if isOwner(uid) || isBootstrappedAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isBootstrappedAdmin() && isValidAdminMarker(incoming()) && incoming().uid == uid;
+      allow delete: if isBootstrappedAdmin() && uid != request.auth.uid;
+    }
+
+    // =========================================================================
+    // SITE UI CONFIGURATION (PUBLIC READ — ADMIN WRITE)
+    // =========================================================================
+    match /siteConfig/{configId} {
+      allow get, list: if true;
+      allow create, update: if isAdmin() && isValidSiteUIConfig(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}

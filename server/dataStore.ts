@@ -114,10 +114,15 @@ export class HSKDataStore {
   private readonly studentsCol = new JsonCollection<StudentProfile>('students', () => [INITIAL_STUDENT_PROFILE]);
   private readonly appUsersCol = new JsonCollection<AppUser>('appUsers', () =>
     INITIAL_APP_USERS.map((u) => {
-      const rawPassword = u.password || '123456';
+      if (u.provider === 'google' && !u.password) {
+        return { ...u, password: '' };
+      }
+      const rawPassword = u.password || '';
       return {
         ...u,
-        password: rawPassword.startsWith(PASSWORD_HASH_PREFIX)
+        password: !rawPassword
+          ? ''
+          : rawPassword.startsWith(PASSWORD_HASH_PREFIX)
           ? rawPassword
           : hashPassword(rawPassword),
       };
@@ -181,8 +186,9 @@ export class HSKDataStore {
 
     let usersUpdated = false;
     for (const u of this.appUsers) {
-      if (!u.password) {
-        u.password = hashPassword('123456');
+      if (u.provider === 'google' && u.password && verifyPassword('123456', u.password)) {
+        // Remove legacy insecure default password from Google-authenticated accounts
+        u.password = '';
         usersUpdated = true;
       } else if (u.password && !u.password.startsWith(PASSWORD_HASH_PREFIX)) {
         u.password = hashPassword(u.password);

@@ -1,4 +1,7 @@
-import { Router, type Response } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Router, type Request, type Response } from 'express';
 import {
   db,
   hashPassword,
@@ -9,20 +12,90 @@ import { AuthUser, AppUser, StudentProfile } from '../../src/types/hsk.ts';
 
 const router = Router();
 
-const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-function setSessionCookie(res: Response, token: string): void {
-  res.setHeader(
-    'Set-Cookie',
-    `mixiang_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}`
-  );
+const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const OWNER_ADMIN_EMAIL = 'thangtv1.hyn@gmail.com';
+
+function loadFirebaseWebConfig(): { apiKey?: string; projectId?: string } {
+  try {
+    const configPath = path.resolve(__dirname, '..', '..', 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    }
+  } catch (err) {
+    console.warn('Unable to read firebase-applet-config.json:', err);
+  }
+  return {
+    apiKey: process.env.FIREBASE_WEB_API_KEY,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+  };
 }
 
-function clearSessionCookie(res: Response): void {
-  res.setHeader(
-    'Set-Cookie',
-    'mixiang_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
-  );
+async function verifyFirebaseGoogleIdToken(idToken: string): Promise<{
+  email: string;
+  name: string;
+  avatar: string;
+}> {
+  const cfg = loadFirebaseWebConfig();
+  if (!cfg.apiKey) {
+    throw new Error('Máy chủ chưa cấu hình Firebase Authentication để xác thực tài khoản Google.');
+  }
+
+  const verifyUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(
+    cfg.apiKey
+  )}`;
+
+  const res = await fetch(verifyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    throw new Error('Phiên xác thực Google không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
+  }
+
+  const data: any = await res.json();
+  const userRecord = Array.isArray(data?.users) ? data.users[0] : null;
+  if (!userRecord || !userRecord.email) {
+    throw new Error('Không thể xác minh thông tin tài khoản Google.');
+  }
+
+  const isGoogleProvider = Array.isArray(userRecord.providerUserInfo)
+    ? userRecord.providerUserInfo.some((p: any) => p?.providerId === 'google.com')
+    : false;
+
+  if (!userRecord.emailVerified && !isGoogleProvider) {
+    throw new Error('Tài khoản Google chưa được xác minh email.');
+  }
+
+  return {
+    email: String(userRecord.email).trim().toLowerCase(),
+    name: String(userRecord.displayName || userRecord.email.split('@')[0]).trim(),
+    avatar: typeof userRecord.photoUrl === 'string' ? userRecord.photoUrl.trim() : '',
+  };
+}
+
+function isSecureRequest(req: Request): boolean {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+  return req.secure || forwardedProto.includes('https');
+}
+
+function setSessionCookie(req: Request, res: Response, token: string): void {
+  const cookieAttrs = isSecureRequest(req)
+    ? `Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=${SESSION_MAX_AGE_SECONDS}`
+    : `Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}`;
+  res.setHeader('Set-Cookie', `mixiang_session=${encodeURIComponent(token)}; ${cookieAttrs}`);
+}
+
+function clearSessionCookie(req: Request, res: Response): void {
+  const cookieAttrs = isSecureRequest(req)
+    ? 'Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=0'
+    : 'Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+  res.setHeader('Set-Cookie', `mixiang_session=; ${cookieAttrs}`);
 }
 
 const DEFAULT_CARTOON_AVATAR_URL = '/assets/aistudio/icon2_d1d361e7.png';
@@ -124,7 +197,7 @@ router.post('/register', (req, res) => {
 
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
 
     res.status(201).json({
       success: true,
@@ -162,20 +235,16 @@ router.post('/login', (req, res) => {
       return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
     }
 
-    // If account had no password set yet, initialize it with the provided password (if >= 6 chars) or default 123456
     if (!appUser.password) {
-      const cleanPwd = String(password).trim();
-      if (cleanPwd.length >= 6) {
-        appUser.password = hashPassword(cleanPwd);
-      } else {
-        appUser.password = hashPassword('123456');
-      }
+      return res.status(401).json({
+        error:
+          'Tài khoản này sử dụng đăng nhập Google. Vui lòng bấm nút "Đăng nhập bằng tài khoản Google".',
+      });
     }
 
     if (!verifyPassword(String(password), appUser.password)) {
       return res.status(401).json({
-        error:
-          'Mật khẩu không chính xác. (Gợi ý: Mật khẩu mặc định là 123456, hoặc bấm "Quên / Đặt lại mật khẩu" bên dưới)',
+        error: 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.',
       });
     }
 
@@ -199,7 +268,7 @@ router.post('/login', (req, res) => {
     }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
 
     res.json({
       success: true,
@@ -242,6 +311,13 @@ router.post('/reset-password', (req, res) => {
       return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
     }
 
+    if (appUser.role === 'admin') {
+      return res.status(403).json({
+        error:
+          'Tài khoản quản trị viên không hỗ trợ đặt lại mật khẩu công khai. Vui lòng đăng nhập bằng tài khoản Google chính chủ của bạn.',
+      });
+    }
+
     appUser.password = hashPassword(cleanPassword);
 
     const normalizedEmail = appUser.email.toLowerCase();
@@ -259,7 +335,7 @@ router.post('/reset-password', (req, res) => {
     }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
 
     res.json({
       success: true,
@@ -273,34 +349,41 @@ router.post('/reset-password', (req, res) => {
   }
 });
 
-// Register or Login with Google account
-router.post('/google', (req, res) => {
+// Register or Login with VERIFIED Google Account (Firebase ID Token required)
+router.post('/google', async (req, res) => {
   try {
-    const { email, name, avatar } = req.body;
+    const { idToken } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email là bắt buộc' });
+    if (!idToken || typeof idToken !== 'string' || idToken.trim().length < 20) {
+      return res.status(401).json({
+        error: 'Thiếu mã xác thực Google hợp lệ. Vui lòng bấm "Đăng nhập với tài khoản Google".',
+      });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (!isValidEmail(normalizedEmail)) {
-      return res.status(400).json({ error: 'Địa chỉ email Google không hợp lệ' });
+    let verified: { email: string; name: string; avatar: string };
+    try {
+      verified = await verifyFirebaseGoogleIdToken(idToken.trim());
+    } catch (verifyErr: any) {
+      return res.status(401).json({
+        error: verifyErr?.message || 'Xác thực tài khoản Google thất bại. Vui lòng thử lại.',
+      });
     }
 
+    const normalizedEmail = verified.email;
     let appUser = db.appUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
 
     if (!appUser) {
-      const assignedRole = normalizedEmail === 'thangtv1.hyn@gmail.com' ? 'admin' : 'student';
+      const assignedRole = normalizedEmail === OWNER_ADMIN_EMAIL ? 'admin' : 'student';
 
       appUser = {
         id: `usr-${Date.now()}`,
-        name: name ? String(name).trim() : normalizedEmail.split('@')[0],
+        name: verified.name || normalizedEmail.split('@')[0],
         email: normalizedEmail,
-        password: hashPassword('123456'),
-        avatar: normalizeAvatarUrl(avatar),
+        password: '',
+        avatar: normalizeAvatarUrl(verified.avatar),
         role: assignedRole,
         status: 'active',
-        level: 'HSK 3',
+        level: 'HSK 1',
         provider: 'google',
         joinedDate: new Date().toISOString().split('T')[0],
         streak: 1,
@@ -309,16 +392,16 @@ router.post('/google', (req, res) => {
         avgScore: 0,
       };
       db.appUsers.unshift(appUser);
-    } else if (!appUser.password) {
-      appUser.password = hashPassword('123456');
     }
 
     if (appUser.status === 'suspended') {
       db.revokeUserSessions(appUser.email);
-      return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
+      return res.status(403).json({
+        error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.',
+      });
     }
 
-    const authUser = buildAuthUser(appUser, avatar);
+    const authUser = buildAuthUser(appUser, verified.avatar);
     const existingAuthIdx = db.users.findIndex((u) => u.email.toLowerCase() === normalizedEmail);
     if (existingAuthIdx !== -1) {
       db.users.splice(existingAuthIdx, 1);
@@ -332,11 +415,11 @@ router.post('/google', (req, res) => {
     }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
-    setSessionCookie(res, session.token);
+    setSessionCookie(req, res, session.token);
 
     res.json({
       success: true,
-      message: 'Đăng nhập Google thành công',
+      message: `Đăng nhập Google thành công (${authUser.email})`,
       token: session.token,
       user: authUser,
       profile,
@@ -366,7 +449,7 @@ router.get('/me', (req, res) => {
 
   if (!appUser || appUser.status === 'suspended') {
     db.revokeSession(token);
-    clearSessionCookie(res);
+    clearSessionCookie(req, res);
     return res.status(401).json({
       authenticated: false,
       error: appUser?.status === 'suspended' ? 'Tài khoản đã bị khóa' : 'Tài khoản không còn tồn tại',
@@ -389,29 +472,22 @@ router.get('/me', (req, res) => {
   });
 });
 
-// Update profile / password for current user
+// Update profile / password for current authenticated user
 router.put('/profile', (req, res) => {
   try {
     const token = extractSessionToken(req);
     const session = db.getSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Vui lòng đăng nhập để cập nhật thông tin tài khoản.' });
+    }
+
     const { email, name, avatar, targetLevel, level, password, currentPassword } = req.body;
+    const sessionEmail = session.email.trim().toLowerCase();
+    const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : sessionEmail;
 
-    const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-    const sessionEmail = session?.email ? session.email.trim().toLowerCase() : '';
-    const headerEmail =
-      typeof req.headers['x-user-email'] === 'string'
-        ? req.headers['x-user-email'].trim().toLowerCase()
-        : '';
-
-    const candidateEmails = [requestedEmail, sessionEmail, headerEmail].filter(Boolean);
-    if (candidateEmails.length === 0) {
-      return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
-    }
-
-    let appUser = db.appUsers.find((u) => u.email.toLowerCase() === candidateEmails[0]);
-    if (!appUser && candidateEmails.length > 1) {
-      appUser = db.appUsers.find((u) => candidateEmails.includes(u.email.toLowerCase()));
-    }
+    // Non-admins can only update their own authenticated account
+    const lookupEmail = session.role === 'admin' && requestedEmail ? requestedEmail : sessionEmail;
+    const appUser = db.appUsers.find((u) => u.email.toLowerCase() === lookupEmail);
 
     if (!appUser) {
       return res.status(404).json({ error: 'Không tìm thấy thông tin tài khoản' });
@@ -480,7 +556,7 @@ router.put('/profile', (req, res) => {
 router.post('/logout', (req, res) => {
   const token = extractSessionToken(req);
   const revoked = db.revokeSession(token);
-  clearSessionCookie(res);
+  clearSessionCookie(req, res);
   res.json({
     success: true,
     authenticated: false,

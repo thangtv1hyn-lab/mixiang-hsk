@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   Course,
   Exam,
@@ -26,12 +27,43 @@ import {
   INITIAL_APP_USERS,
 } from '../data/initialData';
 import { DEFAULT_CARTOON_AVATAR, resolveCartoonAvatar } from '../utils/cartoonAvatars';
+import { auth, signInWithGooglePopup, signOutFirebase } from '../firebase';
+import { safeParseJson } from '../utils/safeFetchJson';
+import {
+  fetchAllCoursesFromFirestore,
+  saveCourseToFirestore,
+  deleteCourseFromFirestore,
+  saveLessonToFirestore,
+  deleteLessonFromFirestore,
+  fetchAllVocabDecksFromFirestore,
+  saveVocabDeckToFirestore,
+  deleteVocabDeckFromFirestore,
+  saveVocabCardToFirestore,
+  deleteVocabCardFromFirestore,
+  fetchAllExamsFromFirestore,
+  saveExamToFirestore,
+  deleteExamFromFirestore,
+  fetchAllForumPostsFromFirestore,
+  createForumPostInFirestore,
+  likeForumPostInFirestore,
+  addForumReplyInFirestore,
+  toggleForumPostFlagInFirestore,
+  fetchSiteConfigFromFirestore,
+  saveSiteConfigToFirestore,
+  fetchUserAccountFromFirestore,
+  syncOwnUserAccountToFirestore,
+  fetchAllUsersFromFirestore,
+  adminSaveUserToFirestore,
+  adminDeleteUserFromFirestore,
+  isCurrentFirebaseUserAdmin,
+  seedInitialDataToFirestoreIfEmpty,
+} from '../services/firestoreService';
 
 interface HSKContextType {
   // Authentication & Self-Registration
   isAuthenticated: boolean;
   currentUser: AuthUser | null;
-  loginWithGoogle: (customData?: Partial<AuthUser>) => Promise<{ success: boolean; message?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; message?: string }>;
   registerAccount: (data: { name: string; email: string; password: string; level: HSKLevel }) => Promise<{ success: boolean; message?: string }>;
   loginWithEmail: (data: { email: string; password: string }) => Promise<{ success: boolean; message?: string }>;
   resetPasswordWithEmail: (data: { email: string; newPassword: string }) => Promise<{ success: boolean; message?: string }>;
@@ -445,6 +477,48 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const firestoreLoadedRef = useRef({
+    courses: false,
+    decks: false,
+    exams: false,
+    forum: false,
+    siteConfig: false,
+    users: false,
+  });
+  const seededOnceRef = useRef(false);
+
+  const persistAdminFirestore = (task: () => Promise<unknown>, label: string) => {
+    if (!auth.currentUser) return;
+    isCurrentFirebaseUserAdmin()
+      .then((isAdminUser) => {
+        if (!isAdminUser) return;
+        return task();
+      })
+      .catch((err) => {
+        console.error(`Cloud Firestore sync error (${label}):`, err);
+      });
+  };
+
+  const persistOwnProfileFirestore = (nextProfile: StudentProfile, userOverride?: AuthUser | null) => {
+    if (!auth.currentUser) return;
+    const effectiveUser: AuthUser = userOverride ||
+      currentUser || {
+        id: auth.currentUser.uid,
+        uid: auth.currentUser.uid,
+        name: nextProfile.name || auth.currentUser.displayName || 'Học viên HSK',
+        email: auth.currentUser.email || nextProfile.email,
+        avatar: nextProfile.avatar,
+        provider: 'google',
+        role: nextProfile.role || userRole,
+        status: nextProfile.status || 'active',
+        targetLevel: nextProfile.targetLevel,
+        joinedAt: new Date().toISOString().split('T')[0],
+      };
+    syncOwnUserAccountToFirestore(nextProfile, effectiveUser).catch((err) => {
+      console.error('Cloud Firestore profile sync error:', err);
+    });
+  };
+
   const updateSiteUIConfig = (partial: Partial<SiteUIConfig>) => {
     setSiteUIConfig((prev) => {
       const next = { ...prev, ...partial };
@@ -453,6 +527,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {
         // ignore storage quota errors
       }
+      persistAdminFirestore(() => saveSiteConfigToFirestore(next), 'siteConfig');
       return next;
     });
   };
@@ -464,6 +539,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // ignore
     }
+    persistAdminFirestore(() => saveSiteConfigToFirestore(DEFAULT_SITE_UI_CONFIG), 'siteConfig:reset');
   };
 
   // Apply dynamic UI theme tokens to root document
@@ -528,7 +604,166 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetItem(STORAGE_KEY_PREFIX + 'app_users', JSON.stringify(appUsers));
   }, [appUsers]);
 
-  // Initial synchronization with Backend API
+  // 1. Primary Cloud Firestore load for public catalogs (courses, lessons, 3,000+ vocab cards, exams, forum, site UI)
+  useEffect(() => {
+    let active = true;
+    const loadPublicCatalogFromFirestore = async () => {
+      const [cRes, dRes, eRes, fRes, sRes] = await Promise.allSettled([
+        fetchAllCoursesFromFirestore(),
+        fetchAllVocabDecksFromFirestore(),
+        fetchAllExamsFromFirestore(),
+        fetchAllForumPostsFromFirestore(),
+        fetchSiteConfigFromFirestore(),
+      ]);
+
+      if (!active) return;
+
+      if (cRes.status === 'fulfilled' && cRes.value.length > 0) {
+        firestoreLoadedRef.current.courses = true;
+        setCourses(cRes.value);
+      }
+
+      if (dRes.status === 'fulfilled' && dRes.value.length > 0) {
+        firestoreLoadedRef.current.decks = true;
+        setVocabDecks(dRes.value);
+        // Flatten deck cards into global vocabularies pool so dictionary/games stay in sync across 3,000+ cards
+        const deckCards = dRes.value.flatMap((d) => d.cards || []);
+        if (deckCards.length > 0) {
+          setVocabularies((prev) => {
+            const seen = new Set(deckCards.map((c) => c.id));
+            const extras = prev.filter((v) => !seen.has(v.id));
+            return [...deckCards, ...extras];
+          });
+        }
+      }
+
+      if (eRes.status === 'fulfilled' && eRes.value.length > 0) {
+        firestoreLoadedRef.current.exams = true;
+        setExams(eRes.value);
+      }
+
+      if (fRes.status === 'fulfilled' && fRes.value.length > 0) {
+        firestoreLoadedRef.current.forum = true;
+        setForumPosts(fRes.value);
+      }
+
+      if (sRes.status === 'fulfilled' && sRes.value) {
+        firestoreLoadedRef.current.siteConfig = true;
+        const remoteConfig = sRes.value;
+        setSiteUIConfig((prev) => ({
+          ...DEFAULT_SITE_UI_CONFIG,
+          ...prev,
+          ...remoteConfig,
+          classroomMoments:
+            Array.isArray(remoteConfig.classroomMoments) && remoteConfig.classroomMoments.length > 0
+              ? remoteConfig.classroomMoments
+              : prev.classroomMoments.length > 0
+              ? prev.classroomMoments
+              : DEFAULT_CLASSROOM_MOMENTS,
+        }));
+      }
+    };
+
+    void loadPublicCatalogFromFirestore();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // 2. Firebase Auth state listener: syncs private `/users/{uid}` progress + Admin `/users` list + automatic initial cloud seed
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) return;
+
+      try {
+        const cloudAccount = await fetchUserAccountFromFirestore(fbUser.uid);
+        if (cloudAccount) {
+          const resolvedAvatar = resolvePersistentAvatar(
+            cloudAccount.studentProfile.avatar || fbUser.photoURL || undefined,
+            cloudAccount.studentProfile.email || fbUser.email || undefined
+          );
+          const restoredProfile: StudentProfile = {
+            ...cloudAccount.studentProfile,
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            avatar: resolvedAvatar,
+          };
+          setStudentProfile(restoredProfile);
+          setCurrentUser((prev) => {
+            if (!prev) return prev;
+            const merged: AuthUser = {
+              ...prev,
+              id: fbUser.uid,
+              uid: fbUser.uid,
+              name: restoredProfile.name || prev.name,
+              email: restoredProfile.email || prev.email,
+              avatar: resolvedAvatar,
+              role: restoredProfile.role || prev.role,
+              status: restoredProfile.status || prev.status,
+              targetLevel: restoredProfile.targetLevel || prev.targetLevel,
+            };
+            safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(merged));
+            return merged;
+          });
+          setUserRole(restoredProfile.role || 'student');
+        }
+
+        const isAdminUser = await isCurrentFirebaseUserAdmin();
+        if (isAdminUser) {
+          // One-time bootstrap: upload initial HSK/Boya dataset to Cloud Firestore if collections are empty
+          if (!seededOnceRef.current) {
+            seededOnceRef.current = true;
+            try {
+              const seedRes = await seedInitialDataToFirestoreIfEmpty({
+                courses: INITIAL_COURSES,
+                vocabDecks: INITIAL_VOCAB_DECKS,
+                exams: INITIAL_EXAMS,
+                forumPosts: INITIAL_FORUM_POSTS,
+                siteUIConfig: DEFAULT_SITE_UI_CONFIG,
+              });
+              if (seedRes.seededCollections.length > 0) {
+                console.info(
+                  'Cloud Firestore initialized collections:',
+                  seedRes.seededCollections.join(', ')
+                );
+              }
+            } catch (seedErr) {
+              console.warn('Cloud Firestore auto-seed skipped:', seedErr);
+            }
+          }
+
+          // Load authoritative student/user directory from Cloud Firestore for Admin Dashboard
+          try {
+            const cloudUsers = await fetchAllUsersFromFirestore();
+            if (cloudUsers.length > 0) {
+              firestoreLoadedRef.current.users = true;
+              setAppUsers((prev) => {
+                const byEmail = new Map<string, AppUser>();
+                for (const u of prev) {
+                  byEmail.set(u.email.toLowerCase(), u);
+                }
+                for (const cu of cloudUsers) {
+                  byEmail.set(cu.email.toLowerCase(), {
+                    ...cu,
+                    avatar: resolveCartoonAvatar(cu.avatar, cu.email),
+                  });
+                }
+                return Array.from(byEmail.values());
+              });
+            }
+          } catch (userListErr) {
+            console.warn('Cloud Firestore users list notice:', userListErr);
+          }
+        }
+      } catch (err) {
+        console.warn('Firebase Auth Firestore sync notice:', err);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 3. Secondary synchronization with Express Backend API (never overwrites Cloud Firestore data)
   useEffect(() => {
     const syncWithBackend = async () => {
       try {
@@ -553,31 +788,31 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const [cRes, eRes, vRes, dRes, fRes, uRes, rRes, meRes] = await Promise.allSettled(requests);
 
-        if (cRes.status === 'fulfilled' && cRes.value.ok) {
+        if (!firestoreLoadedRef.current.courses && cRes.status === 'fulfilled' && cRes.value.ok) {
           const cData = await cRes.value.json();
           if (Array.isArray(cData) && cData.length > 0) setCourses(cData);
         }
-        if (eRes.status === 'fulfilled' && eRes.value.ok) {
+        if (!firestoreLoadedRef.current.exams && eRes.status === 'fulfilled' && eRes.value.ok) {
           const eData = await eRes.value.json();
           if (Array.isArray(eData) && eData.length > 0) setExams(eData);
         }
-        if (vRes.status === 'fulfilled' && vRes.value.ok) {
+        if (!firestoreLoadedRef.current.decks && vRes.status === 'fulfilled' && vRes.value.ok) {
           const vData = await vRes.value.json();
           if (vData.items && Array.isArray(vData.items) && vData.items.length > 0) {
             setVocabularies(vData.items);
           }
         }
-        if (dRes.status === 'fulfilled' && dRes.value.ok) {
+        if (!firestoreLoadedRef.current.decks && dRes.status === 'fulfilled' && dRes.value.ok) {
           const dData = await dRes.value.json();
           if (Array.isArray(dData) && dData.length > 0) {
             setVocabDecks(dData);
           }
         }
-        if (fRes.status === 'fulfilled' && fRes.value.ok) {
+        if (!firestoreLoadedRef.current.forum && fRes.status === 'fulfilled' && fRes.value.ok) {
           const fData = await fRes.value.json();
           if (Array.isArray(fData) && fData.length > 0) setForumPosts(fData);
         }
-        if (uRes.status === 'fulfilled' && uRes.value.ok) {
+        if (!firestoreLoadedRef.current.users && uRes.status === 'fulfilled' && uRes.value.ok) {
           const uData = await uRes.value.json();
           if (Array.isArray(uData) && uData.length > 0) {
             setAppUsers(
@@ -588,7 +823,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             );
           }
         }
-        if (rRes.status === 'fulfilled' && rRes.value.ok) {
+        if (!auth.currentUser && rRes.status === 'fulfilled' && rRes.value.ok) {
           const rData = await rRes.value.json();
           if (rData && rData.studentName) {
             setStudentProfile((prev) => ({
@@ -618,20 +853,21 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const resolvedAvatar = resolvePersistentAvatar(meData.user.avatar, meData.user.email);
               const normalizedUser: AuthUser = {
                 ...meData.user,
+                uid: auth.currentUser?.uid || meData.user.uid,
                 avatar: resolvedAvatar,
               };
               setIsAuthenticated(true);
               setCurrentUser(normalizedUser);
               setUserRole(normalizedUser.role || 'student');
               safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(normalizedUser));
-              if (meData.profile) {
+              if (!auth.currentUser && meData.profile) {
                 setStudentProfile({
                   ...meData.profile,
                   avatar: resolvedAvatar,
                 });
               }
             }
-          } else if (meRes.value.status === 401) {
+          } else if (meRes.value.status === 401 && !auth.currentUser) {
             setIsAuthenticated(false);
             setCurrentUser(null);
             setUserRole('student');
@@ -651,6 +887,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Course actions
   const addCourse = async (course: Course) => {
     setCourses((prev) => [course, ...prev]);
+    persistAdminFirestore(() => saveCourseToFirestore(course, 0), `addCourse:${course.id}`);
     try {
       const res = await fetch('/api/courses', {
         method: 'POST',
@@ -659,7 +896,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const saved = await res.json();
-        setCourses((prev) => prev.map((c) => (c.id === course.id ? saved : c)));
+        const merged = { ...saved, id: course.id };
+        setCourses((prev) => prev.map((c) => (c.id === course.id ? merged : c)));
       }
     } catch (e) {
       console.error('API create course error:', e);
@@ -668,6 +906,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateCourse = async (updatedCourse: Course) => {
     setCourses((prev) => prev.map((c) => (c.id === updatedCourse.id ? updatedCourse : c)));
+    persistAdminFirestore(
+      () => saveCourseToFirestore(updatedCourse),
+      `updateCourse:${updatedCourse.id}`
+    );
     try {
       await fetch(`/api/courses/${updatedCourse.id}`, {
         method: 'PUT',
@@ -681,6 +923,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteCourse = async (courseId: string) => {
     setCourses((prev) => prev.filter((c) => c.id !== courseId));
+    persistAdminFirestore(() => deleteCourseFromFirestore(courseId), `deleteCourse:${courseId}`);
     try {
       await fetch(`/api/courses/${courseId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
@@ -689,31 +932,37 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addLesson = async (courseId: string, lesson: Lesson) => {
+    const normalizedLesson: Lesson = { ...lesson, courseId };
     setCourses((prev) =>
       prev.map((course) => {
         if (course.id === courseId) {
           return {
             ...course,
-            lessons: [...course.lessons, lesson],
+            lessons: [...course.lessons, normalizedLesson],
           };
         }
         return course;
       })
     );
+    persistAdminFirestore(
+      () => saveLessonToFirestore(courseId, normalizedLesson),
+      `addLesson:${courseId}/${normalizedLesson.id}`
+    );
     try {
       const res = await fetch(`/api/courses/${courseId}/lessons`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(lesson),
+        body: JSON.stringify(normalizedLesson),
       });
       if (res.ok) {
         const savedLesson = await res.json();
+        const merged = { ...savedLesson, id: normalizedLesson.id, courseId };
         setCourses((prev) =>
           prev.map((course) =>
             course.id === courseId
               ? {
                   ...course,
-                  lessons: course.lessons.map((l) => (l.id === lesson.id ? savedLesson : l)),
+                  lessons: course.lessons.map((l) => (l.id === normalizedLesson.id ? merged : l)),
                 }
               : course
           )
@@ -725,22 +974,29 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateLesson = async (courseId: string, updatedLesson: Lesson) => {
+    const normalizedLesson: Lesson = { ...updatedLesson, courseId };
     setCourses((prev) =>
       prev.map((course) => {
         if (course.id === courseId) {
           return {
             ...course,
-            lessons: course.lessons.map((l) => (l.id === updatedLesson.id ? updatedLesson : l)),
+            lessons: course.lessons.map((l) =>
+              l.id === normalizedLesson.id ? normalizedLesson : l
+            ),
           };
         }
         return course;
       })
     );
+    persistAdminFirestore(
+      () => saveLessonToFirestore(courseId, normalizedLesson),
+      `updateLesson:${courseId}/${normalizedLesson.id}`
+    );
     try {
-      await fetch(`/api/courses/${courseId}/lessons/${updatedLesson.id}`, {
+      await fetch(`/api/courses/${courseId}/lessons/${normalizedLesson.id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify(updatedLesson),
+        body: JSON.stringify(normalizedLesson),
       });
     } catch (e) {
       console.error('API update lesson error:', e);
@@ -759,6 +1015,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return course;
       })
     );
+    persistAdminFirestore(
+      () => deleteLessonFromFirestore(courseId, lessonId),
+      `deleteLesson:${courseId}/${lessonId}`
+    );
     try {
       await fetch(`/api/courses/${courseId}/lessons/${lessonId}`, {
         method: 'DELETE',
@@ -772,11 +1032,14 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const completeLesson = async (lessonId: string) => {
     setStudentProfile((prev) => {
       if (prev.completedLessonIds.includes(lessonId)) return prev;
-      return {
+      const next: StudentProfile = {
         ...prev,
         completedLessonIds: [...prev.completedLessonIds, lessonId],
         xp: prev.xp + 50,
+        lastActiveDate: new Date().toISOString().split('T')[0],
       };
+      persistOwnProfileFirestore(next);
+      return next;
     });
     try {
       await fetch(`/api/courses/lessons/${lessonId}/complete`, {
@@ -792,6 +1055,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Exam actions
   const addExam = async (exam: Exam) => {
     setExams((prev) => [exam, ...prev]);
+    persistAdminFirestore(() => saveExamToFirestore(exam), `addExam:${exam.id}`);
     try {
       const res = await fetch('/api/exams', {
         method: 'POST',
@@ -800,7 +1064,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const saved = await res.json();
-        setExams((prev) => prev.map((e) => (e.id === exam.id ? saved : e)));
+        const merged = { ...saved, id: exam.id };
+        setExams((prev) => prev.map((e) => (e.id === exam.id ? merged : e)));
       }
     } catch (e) {
       console.error('API add exam error:', e);
@@ -809,6 +1074,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateExam = async (updatedExam: Exam) => {
     setExams((prev) => prev.map((e) => (e.id === updatedExam.id ? updatedExam : e)));
+    persistAdminFirestore(() => saveExamToFirestore(updatedExam), `updateExam:${updatedExam.id}`);
     try {
       await fetch(`/api/exams/${updatedExam.id}`, {
         method: 'PUT',
@@ -822,6 +1088,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteExam = async (examId: string) => {
     setExams((prev) => prev.filter((e) => e.id !== examId));
+    persistAdminFirestore(() => deleteExamFromFirestore(examId), `deleteExam:${examId}`);
     try {
       await fetch(`/api/exams/${examId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
@@ -835,15 +1102,18 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const today = new Date().toISOString().split('T')[0];
       const todayMinutes = (prev.studyLog[today] || 0) + Math.max(1, Math.round(result.timeSpentSeconds / 60));
 
-      return {
+      const next: StudentProfile = {
         ...prev,
         xp: prev.xp + (result.passed ? 150 : 50),
+        lastActiveDate: today,
         examHistory: [result, ...prev.examHistory],
         studyLog: {
           ...prev.studyLog,
           [today]: todayMinutes,
         },
       };
+      persistOwnProfileFirestore(next);
+      return next;
     });
 
     try {
@@ -865,14 +1135,17 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const markVocabMastered = async (vocabId: string) => {
     setStudentProfile((prev) => {
       const isMastered = prev.masteredVocabIds.includes(vocabId);
-      return {
+      const next: StudentProfile = {
         ...prev,
         masteredVocabIds: isMastered
           ? prev.masteredVocabIds
           : [...prev.masteredVocabIds, vocabId],
         learningVocabIds: prev.learningVocabIds.filter((id) => id !== vocabId),
         xp: isMastered ? prev.xp : prev.xp + 10,
+        lastActiveDate: new Date().toISOString().split('T')[0],
       };
+      persistOwnProfileFirestore(next);
+      return next;
     });
     try {
       await fetch(`/api/vocab/${vocabId}/master`, {
@@ -890,13 +1163,16 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const markVocabLearning = async (vocabId: string) => {
     setStudentProfile((prev) => {
-      return {
+      const next: StudentProfile = {
         ...prev,
         masteredVocabIds: prev.masteredVocabIds.filter((id) => id !== vocabId),
         learningVocabIds: prev.learningVocabIds.includes(vocabId)
           ? prev.learningVocabIds
           : [...prev.learningVocabIds, vocabId],
+        lastActiveDate: new Date().toISOString().split('T')[0],
       };
+      persistOwnProfileFirestore(next);
+      return next;
     });
     try {
       await fetch(`/api/vocab/${vocabId}/master`, {
@@ -914,6 +1190,27 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addCustomVocab = async (vocab: VocabItem) => {
     setVocabularies((prev) => [vocab, ...prev]);
+    const targetDeckId = activeDeckId || vocabDecks[0]?.id || 'deck-custom-vocab';
+    const existingDeck = vocabDecks.find((d) => d.id === targetDeckId);
+    if (existingDeck) {
+      persistAdminFirestore(
+        () => saveVocabCardToFirestore(targetDeckId, vocab, existingDeck.cards.length + 1, 0),
+        `addCustomVocab:${vocab.id}`
+      );
+    } else {
+      const customDeck: VocabDeck = {
+        id: 'deck-custom-vocab',
+        title: 'Từ vựng bổ sung',
+        description: 'Kho từ vựng tùy chỉnh',
+        level: vocab.level,
+        category: vocab.category || 'Tùy chỉnh',
+        createdAt: new Date().toISOString().split('T')[0],
+        createdBy: 'admin',
+        cardCount: 1,
+        cards: [vocab],
+      };
+      persistAdminFirestore(() => saveVocabDeckToFirestore(customDeck), `addCustomVocabDeck:${vocab.id}`);
+    }
     try {
       await fetch('/api/vocab', {
         method: 'POST',
@@ -934,6 +1231,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [...newOnes, ...prev];
       });
     }
+    persistAdminFirestore(() => saveVocabDeckToFirestore(deck), `addVocabDeck:${deck.id}`);
 
     try {
       const res = await fetch('/api/vocab/decks', {
@@ -943,7 +1241,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         const saved = await res.json();
-        setVocabDecks((prev) => prev.map((d) => (d.id === deck.id ? saved : d)));
+        const merged = { ...saved, id: deck.id };
+        setVocabDecks((prev) => prev.map((d) => (d.id === deck.id ? merged : d)));
       }
     } catch (e) {
       console.error('API add deck error:', e);
@@ -952,6 +1251,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateVocabDeck = async (updatedDeck: VocabDeck) => {
     setVocabDecks((prev) => prev.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
+    persistAdminFirestore(
+      () => saveVocabDeckToFirestore(updatedDeck),
+      `updateVocabDeck:${updatedDeck.id}`
+    );
     try {
       await fetch(`/api/vocab/decks/${updatedDeck.id}`, {
         method: 'PUT',
@@ -966,6 +1269,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteVocabDeck = async (deckId: string) => {
     setVocabDecks((prev) => prev.filter((d) => d.id !== deckId));
     if (activeDeckId === deckId) setActiveDeckId(null);
+    persistAdminFirestore(() => deleteVocabDeckFromFirestore(deckId), `deleteVocabDeck:${deckId}`);
     try {
       await fetch(`/api/vocab/decks/${deckId}`, { method: 'DELETE', headers: getAuthHeaders() });
     } catch (e) {
@@ -974,16 +1278,22 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addCardToDeck = async (deckId: string, card: VocabItem) => {
+    let nextCardCount: number | undefined;
     setVocabDecks((prev) =>
       prev.map((d) => {
         if (d.id === deckId) {
           const cards = [card, ...d.cards];
+          nextCardCount = cards.length;
           return { ...d, cards, cardCount: cards.length };
         }
         return d;
       })
     );
     setVocabularies((prev) => (prev.some((v) => v.word === card.word) ? prev : [card, ...prev]));
+    persistAdminFirestore(
+      () => saveVocabCardToFirestore(deckId, card, nextCardCount, 0),
+      `addCard:${deckId}/${card.id}`
+    );
 
     try {
       await fetch(`/api/vocab/decks/${deckId}/cards`, {
@@ -1009,6 +1319,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     setVocabularies((prev) => prev.map((v) => (v.id === updatedCard.id ? updatedCard : v)));
+    persistAdminFirestore(
+      () => saveVocabCardToFirestore(deckId, updatedCard),
+      `updateCard:${deckId}/${updatedCard.id}`
+    );
 
     try {
       await fetch(`/api/vocab/decks/${deckId}/cards/${updatedCard.id}`, {
@@ -1022,14 +1336,20 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCardFromDeck = async (deckId: string, cardId: string) => {
+    let nextCardCount: number | undefined;
     setVocabDecks((prev) =>
       prev.map((d) => {
         if (d.id === deckId) {
           const cards = d.cards.filter((c) => c.id !== cardId);
+          nextCardCount = cards.length;
           return { ...d, cards, cardCount: cards.length };
         }
         return d;
       })
+    );
+    persistAdminFirestore(
+      () => deleteVocabCardFromFirestore(deckId, cardId, nextCardCount),
+      `deleteCard:${deckId}/${cardId}`
     );
 
     try {
@@ -1196,19 +1516,50 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Admin User Management & Role Assignment
+  // Admin User Management & Role Assignment (Cloud Firestore primary + Express API sync)
   const addUserAdmin = async (data: Partial<AppUser>) => {
     try {
+      const generatedId = data.id || `usr-${Date.now()}`;
+      const newUserRecord: AppUser = {
+        id: generatedId,
+        uid: data.uid || generatedId,
+        name: (data.name || 'Học viên HSK').trim(),
+        email: (data.email || '').trim().toLowerCase(),
+        avatar: data.avatar || resolveCartoonAvatar(undefined, data.email),
+        role: data.role || 'student',
+        status: data.status || 'active',
+        level: data.level || 'HSK 1',
+        provider: data.provider || 'email',
+        joinedDate: data.joinedDate || new Date().toISOString().split('T')[0],
+        streak: data.streak ?? 1,
+        completedLessons: data.completedLessons ?? 0,
+        examsTaken: data.examsTaken ?? 0,
+        avgScore: data.avgScore ?? 0,
+        note: data.note,
+      };
+
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+      let savedUser = newUserRecord;
+
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
+        body: JSON.stringify({ ...data, id: generatedId }),
+      }).catch(() => null);
+
+      if (res && res.ok) {
+        const resData = await res.json();
+        savedUser = { ...newUserRecord, ...resData, id: generatedId };
+      } else if (!isAdminFirebase) {
+        const resData = res ? await res.json().catch(() => ({})) : {};
         return { success: false, message: resData.error || 'Thêm tài khoản thất bại' };
       }
-      setAppUsers((prev) => [resData, ...prev]);
+
+      if (isAdminFirebase) {
+        await adminSaveUserToFirestore(savedUser.id, savedUser);
+      }
+
+      setAppUsers((prev) => [savedUser, ...prev.filter((u) => u.id !== savedUser.id)]);
       return { success: true, message: 'Tạo tài khoản thành công' };
     } catch (err: any) {
       return { success: false, message: err.message };
@@ -1217,19 +1568,25 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUserRoleAdmin = async (userId: string, role: UserRole) => {
     try {
+      const existingUser = appUsers.find((u) => u.id === userId);
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+
+      if (isAdminFirebase && existingUser) {
+        await adminSaveUserToFirestore(userId, { ...existingUser, role });
+      }
+
       const res = await fetch(`/api/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ role }),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
+      }).catch(() => null);
+
+      if (!isAdminFirebase && (!res || !res.ok)) {
+        const resData = res ? await res.json().catch(() => ({})) : {};
         return { success: false, message: resData.error || 'Cập nhật quyền thất bại' };
       }
 
-      setAppUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role } : u))
-      );
+      setAppUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role } : u)));
 
       if (currentUser && currentUser.id === userId) {
         setUserRole(role);
@@ -1244,19 +1601,25 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUserStatusAdmin = async (userId: string, status: UserStatus) => {
     try {
+      const existingUser = appUsers.find((u) => u.id === userId);
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+
+      if (isAdminFirebase && existingUser) {
+        await adminSaveUserToFirestore(userId, { ...existingUser, status });
+      }
+
       const res = await fetch(`/api/admin/users/${userId}/status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status }),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
+      }).catch(() => null);
+
+      if (!isAdminFirebase && (!res || !res.ok)) {
+        const resData = res ? await res.json().catch(() => ({})) : {};
         return { success: false, message: resData.error || 'Cập nhật trạng thái thất bại' };
       }
 
-      setAppUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, status } : u))
-      );
+      setAppUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status } : u)));
 
       return { success: true, message: `Đã chuyển trạng thái: ${status}` };
     } catch (err: any) {
@@ -1266,19 +1629,26 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUserAdmin = async (userId: string, data: Partial<AppUser>) => {
     try {
+      const existingUser = appUsers.find((u) => u.id === userId);
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+
+      if (isAdminFirebase && existingUser) {
+        const mergedUser: AppUser = { ...existingUser, ...data, id: userId };
+        await adminSaveUserToFirestore(userId, mergedUser);
+      }
+
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
+      }).catch(() => null);
+
+      if (!isAdminFirebase && (!res || !res.ok)) {
+        const resData = res ? await res.json().catch(() => ({})) : {};
         return { success: false, message: resData.error || 'Cập nhật thất bại' };
       }
 
-      setAppUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, ...data } : u))
-      );
+      setAppUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...data } : u)));
 
       return { success: true, message: 'Cập nhật thông tin tài khoản thành công' };
     } catch (err: any) {
@@ -1288,12 +1658,19 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteUserAdmin = async (userId: string) => {
     try {
+      const isAdminFirebase = await isCurrentFirebaseUserAdmin();
+
+      if (isAdminFirebase) {
+        await adminDeleteUserFromFirestore(userId);
+      }
+
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
-      });
-      const resData = await res.json();
-      if (!res.ok) {
+      }).catch(() => null);
+
+      if (!isAdminFirebase && (!res || !res.ok)) {
+        const resData = res ? await res.json().catch(() => ({})) : {};
         return { success: false, message: resData.error || 'Xóa tài khoản thất bại' };
       }
 
@@ -1312,6 +1689,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newPost: ForumPost = {
       ...newPostData,
       id: tempId,
+      authorUid: auth.currentUser?.uid || currentUser?.uid || currentUser?.id,
+      authorName: newPostData.authorName || currentUser?.name || studentProfile.name,
+      authorAvatar: newPostData.authorAvatar || currentUser?.avatar || studentProfile.avatar,
+      role: newPostData.role || userRole,
       createdAt: new Date().toISOString(),
       likes: 1,
       repliesCount: 0,
@@ -1319,21 +1700,22 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setForumPosts((prev) => [newPost, ...prev]);
 
+    if (auth.currentUser) {
+      createForumPostInFirestore(newPost).catch((err) =>
+        console.error('Cloud Firestore createForumPost error:', err)
+      );
+    }
+
     try {
       const res = await fetch('/api/forum', {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          ...newPostData,
-          id: tempId,
-          authorName: newPostData.authorName || currentUser?.name || studentProfile.name,
-          authorAvatar: newPostData.authorAvatar || currentUser?.avatar || studentProfile.avatar,
-          role: newPostData.role || userRole,
-        }),
+        body: JSON.stringify(newPost),
       });
       if (res.ok) {
         const savedPost = await res.json();
-        setForumPosts((prev) => prev.map((p) => (p.id === tempId ? savedPost : p)));
+        const merged = { ...savedPost, id: tempId, authorUid: newPost.authorUid };
+        setForumPosts((prev) => prev.map((p) => (p.id === tempId ? merged : p)));
       }
     } catch (e) {
       console.error('API add forum post error:', e);
@@ -1379,6 +1761,12 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
+    if (auth.currentUser) {
+      addForumReplyInFirestore(postId, newReply, role === 'ai').catch((err) =>
+        console.error('Cloud Firestore addForumReply error:', err)
+      );
+    }
+
     try {
       await fetch(`/api/forum/${postId}/replies`, {
         method: 'POST',
@@ -1394,6 +1782,11 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setForumPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p))
     );
+    if (auth.currentUser) {
+      likeForumPostInFirestore(postId).catch((err) =>
+        console.error('Cloud Firestore likeForumPost error:', err)
+      );
+    }
     try {
       await fetch(`/api/forum/${postId}/like`, { method: 'POST', headers: getAuthHeaders() });
     } catch (e) {
@@ -1402,8 +1795,19 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const togglePinPost = async (postId: string) => {
+    let nextPinned = false;
     setForumPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, isPinned: !p.isPinned } : p))
+      prev.map((p) => {
+        if (p.id === postId) {
+          nextPinned = !p.isPinned;
+          return { ...p, isPinned: nextPinned };
+        }
+        return p;
+      })
+    );
+    persistAdminFirestore(
+      () => toggleForumPostFlagInFirestore(postId, 'isPinned', nextPinned),
+      `togglePinPost:${postId}`
     );
     try {
       await fetch(`/api/forum/${postId}/toggle-pin`, { method: 'POST', headers: getAuthHeaders() });
@@ -1413,9 +1817,21 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleSolvedPost = async (postId: string) => {
+    let nextSolved = false;
     setForumPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, isSolved: !p.isSolved } : p))
+      prev.map((p) => {
+        if (p.id === postId) {
+          nextSolved = !p.isSolved;
+          return { ...p, isSolved: nextSolved };
+        }
+        return p;
+      })
     );
+    if (auth.currentUser) {
+      toggleForumPostFlagInFirestore(postId, 'isSolved', nextSolved).catch((err) =>
+        console.error('Cloud Firestore toggleSolvedPost error:', err)
+      );
+    }
     try {
       await fetch(`/api/forum/${postId}/toggle-solved`, { method: 'POST', headers: getAuthHeaders() });
     } catch (e) {
@@ -1425,12 +1841,16 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Profile updates
   const updateReminderSettings = async (enabled: boolean, time: string, dailyGoal: number) => {
-    setStudentProfile((prev) => ({
-      ...prev,
-      reminderEnabled: enabled,
-      reminderTime: time,
-      dailyGoalMinutes: dailyGoal,
-    }));
+    setStudentProfile((prev) => {
+      const next: StudentProfile = {
+        ...prev,
+        reminderEnabled: enabled,
+        reminderTime: time,
+        dailyGoalMinutes: dailyGoal,
+      };
+      persistOwnProfileFirestore(next);
+      return next;
+    });
     try {
       await fetch('/api/reminders/settings', {
         method: 'POST',
@@ -1449,14 +1869,19 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const recordStudyMinutes = async (minutes: number) => {
     const today = new Date().toISOString().split('T')[0];
-    setStudentProfile((prev) => ({
-      ...prev,
-      xp: prev.xp + minutes * 2,
-      studyLog: {
-        ...prev.studyLog,
-        [today]: (prev.studyLog[today] || 0) + minutes,
-      },
-    }));
+    setStudentProfile((prev) => {
+      const next: StudentProfile = {
+        ...prev,
+        xp: prev.xp + minutes * 2,
+        lastActiveDate: today,
+        studyLog: {
+          ...prev.studyLog,
+          [today]: (prev.studyLog[today] || 0) + minutes,
+        },
+      };
+      persistOwnProfileFirestore(next);
+      return next;
+    });
     try {
       await fetch('/api/reports/log-time', {
         method: 'POST',
@@ -1471,55 +1896,91 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const loginWithGoogle = async (customData?: Partial<AuthUser>): Promise<{ success: boolean; message?: string }> => {
-    const userPayload = {
-      name: customData?.name || 'Thắng Trần',
-      email: customData?.email || 'thangtv1.hyn@gmail.com',
-      avatar: customData?.avatar || DEFAULT_CARTOON_AVATAR,
-    };
-
+  const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
     try {
+      const googleResult = await signInWithGooglePopup();
+
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userPayload),
+        body: JSON.stringify({ idToken: googleResult.idToken }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
+      const data = await safeParseJson<any>(
+        res,
+        'Không thể xác thực tài khoản Google với máy chủ. Vui lòng thử lại.'
+      );
+      if (!res.ok || !data.user) {
+        await signOutFirebase();
         return { success: false, message: data.error || 'Đăng nhập Google không thành công' };
       }
 
-      const rawAuthedUser: AuthUser = data.user || {
-        id: `g-user-${Date.now()}`,
-        ...userPayload,
-        provider: 'google',
-        joinedAt: new Date().toISOString(),
-      };
-      const resolvedAvatar = resolvePersistentAvatar(rawAuthedUser.avatar, rawAuthedUser.email);
+      const rawAuthedUser: AuthUser = data.user;
+      const resolvedAvatar = resolvePersistentAvatar(
+        rawAuthedUser.avatar || googleResult.avatar || DEFAULT_CARTOON_AVATAR,
+        rawAuthedUser.email
+      );
+
+      // Check Cloud Firestore for existing saved profile & learning progress (survives Render sleep/redeploy)
+      let cloudAccount: { appUser: AppUser; studentProfile: StudentProfile } | null = null;
+      try {
+        cloudAccount = await fetchUserAccountFromFirestore(googleResult.uid);
+      } catch (cloudErr) {
+        console.warn('Cloud Firestore user lookup notice:', cloudErr);
+      }
+
+      const effectiveRole: UserRole =
+        rawAuthedUser.role === 'admin'
+          ? 'admin'
+          : cloudAccount?.studentProfile.role || rawAuthedUser.role || 'student';
+
       const authedUser: AuthUser = {
         ...rawAuthedUser,
-        avatar: resolvedAvatar,
+        id: googleResult.uid,
+        uid: googleResult.uid,
+        name: cloudAccount?.studentProfile.name || rawAuthedUser.name,
+        avatar: cloudAccount?.studentProfile.avatar || resolvedAvatar,
+        role: effectiveRole,
+        status: cloudAccount?.studentProfile.status || rawAuthedUser.status || 'active',
+        targetLevel: cloudAccount?.studentProfile.targetLevel || rawAuthedUser.targetLevel || 'HSK 1',
       };
+
+      const baseProfile: StudentProfile = cloudAccount
+        ? {
+            ...cloudAccount.studentProfile,
+            id: googleResult.uid,
+            uid: googleResult.uid,
+            role: effectiveRole,
+            avatar: authedUser.avatar,
+          }
+        : data.profile
+        ? {
+            ...data.profile,
+            id: googleResult.uid,
+            uid: googleResult.uid,
+            role: effectiveRole,
+            avatar: authedUser.avatar,
+          }
+        : {
+            ...INITIAL_STUDENT_PROFILE,
+            id: googleResult.uid,
+            uid: googleResult.uid,
+            name: authedUser.name,
+            email: authedUser.email,
+            avatar: authedUser.avatar,
+            role: effectiveRole,
+            targetLevel: authedUser.targetLevel || 'HSK 1',
+          };
 
       setIsAuthenticated(true);
       setCurrentUser(authedUser);
-      if (authedUser.role) {
-        setUserRole(authedUser.role);
-      }
-      if (data.profile) {
-        setStudentProfile({
-          ...data.profile,
-          avatar: resolvedAvatar,
-        });
-      } else {
-        setStudentProfile((prev) => ({
-          ...prev,
-          name: authedUser.name,
-          email: authedUser.email,
-          avatar: resolvedAvatar,
-        }));
-      }
+      setUserRole(effectiveRole);
+      setStudentProfile(baseProfile);
+
+      // Ensure user profile is persisted in Cloud Firestore immediately on sign-in
+      syncOwnUserAccountToFirestore(baseProfile, authedUser).catch((err) => {
+        console.error('Cloud Firestore sign-in profile sync error:', err);
+      });
 
       safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
       safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
@@ -1527,12 +1988,12 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         safeSetItem(STORAGE_KEY_PREFIX + 'token', data.token);
       }
 
-      if (resolvedAvatar !== rawAuthedUser.avatar && authedUser.email) {
+      if (resolvedAvatar !== rawAuthedUser.avatar && authedUser.email && data.token) {
         fetch('/api/auth/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
+            Authorization: `Bearer ${data.token}`,
             'x-user-email': authedUser.email,
           },
           body: JSON.stringify({ email: authedUser.email, avatar: resolvedAvatar }),
@@ -1542,7 +2003,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: data.message };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Lỗi mạng khi kết nối máy chủ' };
+      return {
+        success: false,
+        message: err?.message || 'Lỗi khi kết nối đăng nhập Google. Vui lòng thử lại.',
+      };
     }
   };
 
@@ -1555,6 +2019,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: 'Bạn chưa đăng nhập' };
       }
 
+      const hasFirebaseSession = Boolean(auth.currentUser);
       const res = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: getAuthHeaders(),
@@ -1562,10 +2027,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email: targetEmail,
           ...data,
         }),
-      });
+      }).catch(() => null);
 
-      const resData = await res.json();
-      if (!res.ok) {
+      const resData = res ? await res.json().catch(() => ({})) : {};
+      if ((!res || !res.ok) && !hasFirebaseSession) {
         return { success: false, message: resData.error || 'Cập nhật thất bại' };
       }
 
@@ -1578,41 +2043,51 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveCachedAvatar(targetEmail, savedAvatar);
       }
 
-      if (resData.user) {
-        const updatedUser: AuthUser = {
-          ...resData.user,
-          avatar: savedAvatar,
-        };
-        setCurrentUser(updatedUser);
-        if (updatedUser.role) {
-          setUserRole(updatedUser.role);
+      const nextUser: AuthUser | null = currentUser
+        ? {
+            ...currentUser,
+            ...(resData.user || {}),
+            id: auth.currentUser?.uid || currentUser.id,
+            uid: auth.currentUser?.uid || currentUser.uid,
+            name: data.name || resData.user?.name || currentUser.name,
+            avatar: savedAvatar,
+            targetLevel: (data.targetLevel || data.level || currentUser.targetLevel) as HSKLevel,
+          }
+        : null;
+
+      if (nextUser) {
+        setCurrentUser(nextUser);
+        if (nextUser.role) {
+          setUserRole(nextUser.role);
         }
-        safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
-      } else if (currentUser) {
-        const updatedUser: AuthUser = {
-          ...currentUser,
-          name: data.name || currentUser.name,
-          avatar: savedAvatar,
-          targetLevel: (data.targetLevel || data.level || currentUser.targetLevel) as HSKLevel,
-        };
-        setCurrentUser(updatedUser);
-        safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
+        safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(nextUser));
       }
 
-      if (resData.profile) {
-        const updatedProfile: StudentProfile = {
-          ...resData.profile,
+      const nextProfile: StudentProfile = {
+        ...studentProfile,
+        ...(resData.profile || {}),
+        id: auth.currentUser?.uid || studentProfile.id,
+        uid: auth.currentUser?.uid || studentProfile.uid,
+        name: data.name || studentProfile.name,
+        avatar: savedAvatar,
+        targetLevel: (data.targetLevel || data.level || studentProfile.targetLevel) as HSKLevel,
+      };
+      setStudentProfile(nextProfile);
+      safeSetItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(nextProfile));
+
+      if (hasFirebaseSession) {
+        await syncOwnUserAccountToFirestore(nextProfile, nextUser || {
+          id: auth.currentUser!.uid,
+          uid: auth.currentUser!.uid,
+          name: nextProfile.name,
+          email: targetEmail,
           avatar: savedAvatar,
-        };
-        setStudentProfile(updatedProfile);
-        safeSetItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(updatedProfile));
-      } else {
-        setStudentProfile((prev) => ({
-          ...prev,
-          name: data.name || prev.name,
-          avatar: savedAvatar,
-          targetLevel: (data.targetLevel || data.level || prev.targetLevel) as HSKLevel,
-        }));
+          provider: 'google',
+          role: nextProfile.role,
+          status: nextProfile.status,
+          targetLevel: nextProfile.targetLevel,
+          joinedAt: new Date().toISOString().split('T')[0],
+        });
       }
 
       setAppUsers((prev) =>
@@ -1652,7 +2127,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'token');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'profile');
     try {
-      await fetch('/api/auth/logout', { method: 'POST', headers });
+      await Promise.allSettled([
+        signOutFirebase(),
+        fetch('/api/auth/logout', { method: 'POST', headers }),
+      ]);
     } catch (e) {
       console.error(e);
     }

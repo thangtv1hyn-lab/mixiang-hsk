@@ -1,0 +1,269 @@
+{
+  "entities": {
+    "Course": {
+      "title": "Course",
+      "description": "HSK 1-5 or Boya Chinese course metadata (lessons stored in subcollection to stay well under 1MB).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "vietnameseTitle": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "coverImage": { "type": "string", "maxLength": 180000 },
+        "targetVocabCount": { "type": "number" },
+        "grammarPointsCount": { "type": "number" },
+        "colorScheme": { "type": "object" },
+        "orderIndex": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "level", "title", "vietnameseTitle", "description", "targetVocabCount", "grammarPointsCount", "colorScheme"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Single lesson document stored under /courses/{courseId}/lessons/{lessonId} containing vocab, grammar, dialogue, and practice questions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "courseId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "lessonNumber": { "type": "number" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "vietnameseTitle": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "durationMinutes": { "type": "number" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "vocabulary": { "type": "array" },
+        "grammar": { "type": "array" },
+        "dialogue": { "type": "array" },
+        "practiceQuestions": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "courseId", "level", "lessonNumber", "title", "vietnameseTitle", "durationMinutes", "description", "vocabulary", "grammar", "dialogue", "practiceQuestions"]
+    },
+    "VocabDeck": {
+      "title": "VocabDeck",
+      "description": "Vocabulary flashcard deck metadata (individual cards stored in subcollection to support 3,000+ cards with compressed images).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "vietnameseTitle": { "type": "string", "maxLength": 250 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "category": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "color": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "createdBy": { "type": "string", "enum": ["admin", "ai", "system"] },
+        "cardCount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "title", "description", "level", "category", "createdAt", "createdBy"]
+    },
+    "VocabCard": {
+      "title": "VocabCard",
+      "description": "Individual vocabulary card stored under /vocabDecks/{deckId}/cards/{cardId} supporting compressed WebP illustrations up to ~150KB.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "deckId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "word": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "pinyin": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "sinoVietnamese": { "type": "string", "maxLength": 200 },
+        "meaning": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "category": { "type": "string", "maxLength": 150 },
+        "radical": { "type": "string", "maxLength": 100 },
+        "strokeCount": { "type": "number" },
+        "exampleSentence": { "type": "string", "maxLength": 600 },
+        "examplePinyin": { "type": "string", "maxLength": 600 },
+        "exampleMeaning": { "type": "string", "maxLength": 600 },
+        "imageUrl": { "type": "string", "maxLength": 180000 },
+        "orderIndex": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "deckId", "word", "pinyin", "meaning", "level"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "HSK mock exam document containing listening, reading, writing, and speaking questions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "subtitle": { "type": "string", "maxLength": 300 },
+        "timeLimitMinutes": { "type": "number" },
+        "passScore": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "questions": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "level", "title", "subtitle", "timeLimitMinutes", "passScore", "totalPoints", "questions"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "Community learning Q&A post with bounded replies list (no PII stored).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "authorAvatar": { "type": "string", "maxLength": 120000 },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "content": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5", "Toàn bộ"] },
+        "category": { "type": "string", "enum": ["Ngữ pháp", "Từ vựng", "Kinh nghiệm thi", "Chữa bài", "Hỏi đáp chung"] },
+        "tags": { "type": "array" },
+        "likes": { "type": "number" },
+        "repliesCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "isPinned": { "type": "boolean" },
+        "isSolved": { "type": "boolean" },
+        "replies": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "authorUid", "authorName", "role", "title", "content", "level", "category", "tags", "likes", "repliesCount", "createdAt", "replies"]
+    },
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Private user account, profile, and HSK learning progress strictly isolated to owner or admin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "minLength": 3, "maxLength": 200 },
+        "avatar": { "type": "string", "maxLength": 150000 },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "level": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "targetLevel": { "type": "string", "enum": ["HSK 1", "HSK 2", "HSK 3", "HSK 4", "HSK 5"] },
+        "provider": { "type": "string", "enum": ["google", "email"] },
+        "joinedDate": { "type": "string", "maxLength": 64 },
+        "streakDays": { "type": "number" },
+        "lastActiveDate": { "type": "string", "maxLength": 64 },
+        "xp": { "type": "number" },
+        "reminderTime": { "type": "string", "maxLength": 16 },
+        "reminderEnabled": { "type": "boolean" },
+        "dailyGoalMinutes": { "type": "number" },
+        "masteredVocabIds": { "type": "array" },
+        "learningVocabIds": { "type": "array" },
+        "completedLessonIds": { "type": "array" },
+        "examHistory": { "type": "array" },
+        "studyLog": { "type": "object" },
+        "completedLessons": { "type": "number" },
+        "examsTaken": { "type": "number" },
+        "avgScore": { "type": "number" },
+        "note": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["id", "name", "email", "role", "status", "level", "provider", "joinedDate"]
+    },
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Trusted admin role assignment record keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "grantedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email"]
+    },
+    "SiteUIConfig": {
+      "title": "SiteUIConfig",
+      "description": "Customizable branding, homepage banners, posters, classroom moments, and footer info.",
+      "type": "object",
+      "properties": {
+        "primaryColor": { "type": "string", "maxLength": 40 },
+        "canvasColor": { "type": "string", "maxLength": 40 },
+        "fontScale": { "type": "string", "enum": ["13.5px", "14px", "15px"] },
+        "headerLogoUrl": { "type": "string", "maxLength": 180000 },
+        "brandName": { "type": "string", "maxLength": 120 },
+        "brandHighlight": { "type": "string", "maxLength": 120 },
+        "brandSubtitle": { "type": "string", "maxLength": 200 },
+        "heroBadge": { "type": "string", "maxLength": 200 },
+        "heroTitleLine1": { "type": "string", "maxLength": 200 },
+        "heroTitleHighlight": { "type": "string", "maxLength": 200 },
+        "heroTitleLine3": { "type": "string", "maxLength": 200 },
+        "heroDescription": { "type": "string", "maxLength": 1000 },
+        "heroCtaPrimary": { "type": "string", "maxLength": 120 },
+        "heroCtaSecondary": { "type": "string", "maxLength": 120 },
+        "stat1Value": { "type": "string", "maxLength": 60 },
+        "stat1Label": { "type": "string", "maxLength": 120 },
+        "stat2Value": { "type": "string", "maxLength": 60 },
+        "stat2Label": { "type": "string", "maxLength": 120 },
+        "stat3Value": { "type": "string", "maxLength": 60 },
+        "stat3Label": { "type": "string", "maxLength": 120 },
+        "posterSectionBadge": { "type": "string", "maxLength": 200 },
+        "posterSectionTitle": { "type": "string", "maxLength": 200 },
+        "posterSectionSubtitle": { "type": "string", "maxLength": 500 },
+        "poster1Url": { "type": "string", "maxLength": 180000 },
+        "poster1Caption": { "type": "string", "maxLength": 300 },
+        "poster2Url": { "type": "string", "maxLength": 180000 },
+        "poster2Caption": { "type": "string", "maxLength": 300 },
+        "admissionBadge": { "type": "string", "maxLength": 200 },
+        "admissionTitle": { "type": "string", "maxLength": 250 },
+        "admissionDescription": { "type": "string", "maxLength": 1000 },
+        "admissionCta": { "type": "string", "maxLength": 120 },
+        "momentsSectionBadge": { "type": "string", "maxLength": 200 },
+        "momentsSectionTitle": { "type": "string", "maxLength": 250 },
+        "momentsSectionSubtitle": { "type": "string", "maxLength": 500 },
+        "classroomMoments": { "type": "array" },
+        "showCoursesSection": { "type": "boolean" },
+        "showPostersSection": { "type": "boolean" },
+        "showAdmissionBanner": { "type": "boolean" },
+        "showMomentsSection": { "type": "boolean" },
+        "footerLogoUrl": { "type": "string", "maxLength": 180000 },
+        "footerTitle": { "type": "string", "maxLength": 200 },
+        "footerSubtitle": { "type": "string", "maxLength": 300 },
+        "hotline": { "type": "string", "maxLength": 80 },
+        "footerCtaText": { "type": "string", "maxLength": 120 },
+        "facebook": { "type": "string", "maxLength": 300 },
+        "copyrightText": { "type": "string", "maxLength": 250 },
+        "motto": { "type": "string", "maxLength": 300 },
+        "updatedAt": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "required": ["primaryColor", "canvasColor", "brandName"]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Public HSK/Boya course metadata; admin-writable."
+    },
+    "/courses/{courseId}/lessons/{lessonId}": {
+      "schema": { "$ref": "#/entities/Lesson" },
+      "description": "Normalized lessons belonging to a parent course; admin-writable."
+    },
+    "/vocabDecks/{deckId}": {
+      "schema": { "$ref": "#/entities/VocabDeck" },
+      "description": "Public vocabulary flashcard deck metadata; admin-writable."
+    },
+    "/vocabDecks/{deckId}/cards/{cardId}": {
+      "schema": { "$ref": "#/entities/VocabCard" },
+      "description": "Individual vocabulary cards (scalable to 3,000+ cards with compressed WebP images); admin-writable."
+    },
+    "/exams/{examId}": {
+      "schema": { "$ref": "#/entities/Exam" },
+      "description": "Public HSK mock exams; admin-writable."
+    },
+    "/forumPosts/{postId}": {
+      "schema": { "$ref": "#/entities/ForumPost" },
+      "description": "Community Q&A posts (no PII); public read, verified user create/reply/like, author or admin delete."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private user account, profile, and HSK learning progress; strictly isolated to owner or admin."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminMarker" },
+      "description": "Trusted admin role assignment documents; owner/admin read, admin-only write."
+    },
+    "/siteConfig/{configId}": {
+      "schema": { "$ref": "#/entities/SiteUIConfig" },
+      "description": "Site theme, banners, and branding config; public read, admin-only write."
+    }
+  }
+}

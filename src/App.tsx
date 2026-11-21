@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { HSKProvider, useHSK } from './context/HSKContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LeftSidebar } from './components/LeftSidebar';
 import { RightSidebar } from './components/RightSidebar';
 import { IndexHomeView } from './components/IndexHomeView';
@@ -578,8 +579,10 @@ function MainAppContent() {
 
 export default function App() {
   return (
-    <HSKProvider>
-      <MainAppContent />
-    </HSKProvider>
+    <ErrorBoundary>
+      <HSKProvider>
+        <MainAppContent />
+      </HSKProvider>
+    </ErrorBoundary>
   );
 }
