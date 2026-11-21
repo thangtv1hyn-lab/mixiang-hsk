@@ -22,6 +22,7 @@ import {
   DialogueLine,
 } from '../../types/hsk';
 import { speakChinese } from '../../utils/audioSpeech';
+import { safeParseJson } from '../../utils/safeFetchJson';
 
 interface LessonEditorModalProps {
   isOpen: boolean;
@@ -100,6 +101,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
   // AI Assistant state
   const [isAiDrafting, setIsAiDrafting] = useState(false);
   const [aiPromptTopic, setAiPromptTopic] = useState('Đi ăn nhà hàng và gọi món');
+  const [aiDraftStatus, setAiDraftStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (initialLesson) {
@@ -371,67 +373,113 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
 
   // AI Auto-Drafting Assistant
   const handleAiDraftLesson = async () => {
+    if (!aiPromptTopic.trim()) {
+      setAiDraftStatus({ type: 'error', text: 'Vui lòng nhập chủ đề bài học trước khi tạo.' });
+      return;
+    }
     setIsAiDrafting(true);
+    setAiDraftStatus(null);
     try {
       const res = await fetch('/api/gemini/admin-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'lesson',
-          topic: aiPromptTopic,
+          topic: aiPromptTopic.trim(),
           level: course.level,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.title) setTitle(data.title);
-        if (data.description) setDescription(data.description);
-        if (Array.isArray(data.vocabulary) && data.vocabulary.length > 0) {
-          const formattedVocab: VocabItem[] = data.vocabulary.map((v: any, idx: number) => ({
-            id: `v-ai-${Date.now()}-${idx}`,
-            word: v.word || '',
-            pinyin: v.pinyin || '',
-            sinoVietnamese: v.sino || '',
-            meaning: v.meaning || '',
-            level: course.level,
-            exampleSentence: v.example || '',
-            examplePinyin: v.examplePinyin || '',
-            exampleMeaning: v.exampleMeaning || '',
-          }));
-          setVocabulary((prev) => [...prev, ...formattedVocab]);
-        }
-        if (Array.isArray(data.grammar) && data.grammar.length > 0) {
-          const formattedGrammar: GrammarPoint[] = data.grammar.map((g: any, idx: number) => ({
-            id: `g-ai-${Date.now()}-${idx}`,
-            title: g.title || '',
-            structure: g.structure || '',
-            explanation: g.explanation || '',
-            examples: (g.examples || []).map((ex: any) =>
-              typeof ex === 'string'
-                ? { hanzi: ex, pinyin: '', translation: '' }
-                : {
-                    hanzi: ex.hanzi || '',
-                    pinyin: ex.pinyin || '',
-                    translation: ex.translation || '',
-                  }
-            ),
-          }));
-          setGrammar((prev) => [...prev, ...formattedGrammar]);
-        }
-        if (Array.isArray(data.dialogue) && data.dialogue.length > 0) {
-          const formattedDialogue: DialogueLine[] = data.dialogue.map((d: any, idx: number) => ({
-            id: `dl-ai-${Date.now()}-${idx}`,
-            speaker: d.speaker || 'A',
-            chinese: d.chinese || '',
-            pinyin: d.pinyin || '',
-            vietnamese: d.vietnamese || '',
-          }));
-          setDialogue((prev) => [...prev, ...formattedDialogue]);
-        }
+      const data = await safeParseJson<any>(
+        res,
+        'AI chưa tạo được bài học lúc này. Vui lòng thử lại.'
+      );
+      if (!res.ok) {
+        throw new Error(data.error || 'AI chưa tạo được bài học lúc này. Vui lòng thử lại.');
       }
-    } catch (err) {
+
+      if (data.title) setTitle(data.title);
+      if (data.vietnameseTitle) setVietnameseTitle(data.vietnameseTitle);
+      else if (data.title) setVietnameseTitle(data.title);
+      if (data.durationMinutes) setDurationMinutes(Number(data.durationMinutes) || 35);
+      if (data.description) setDescription(data.description);
+
+      let addedVocab = 0;
+      let addedGrammar = 0;
+      let addedDialogue = 0;
+      let addedPractice = 0;
+
+      if (Array.isArray(data.vocabulary) && data.vocabulary.length > 0) {
+        const formattedVocab: VocabItem[] = data.vocabulary.map((v: any, idx: number) => ({
+          id: `v-ai-${Date.now()}-${idx}`,
+          word: v.word || '',
+          pinyin: v.pinyin || '',
+          sinoVietnamese: v.sino || v.sinoVietnamese || '',
+          meaning: v.meaning || '',
+          level: course.level,
+          exampleSentence: v.example || v.exampleSentence || '',
+          examplePinyin: v.examplePinyin || '',
+          exampleMeaning: v.exampleMeaning || '',
+        }));
+        addedVocab = formattedVocab.length;
+        setVocabulary((prev) => [...prev, ...formattedVocab]);
+      }
+      if (Array.isArray(data.grammar) && data.grammar.length > 0) {
+        const formattedGrammar: GrammarPoint[] = data.grammar.map((g: any, idx: number) => ({
+          id: `g-ai-${Date.now()}-${idx}`,
+          title: g.title || '',
+          structure: g.structure || '',
+          explanation: g.explanation || '',
+          examples: (g.examples || []).map((ex: any) =>
+            typeof ex === 'string'
+              ? { hanzi: ex, pinyin: '', translation: '' }
+              : {
+                  hanzi: ex.hanzi || '',
+                  pinyin: ex.pinyin || '',
+                  translation: ex.translation || '',
+                }
+          ),
+        }));
+        addedGrammar = formattedGrammar.length;
+        setGrammar((prev) => [...prev, ...formattedGrammar]);
+      }
+      if (Array.isArray(data.dialogue) && data.dialogue.length > 0) {
+        const formattedDialogue: DialogueLine[] = data.dialogue.map((d: any, idx: number) => ({
+          id: `dl-ai-${Date.now()}-${idx}`,
+          speaker: d.speaker || 'A',
+          chinese: d.chinese || '',
+          pinyin: d.pinyin || '',
+          vietnamese: d.vietnamese || '',
+        }));
+        addedDialogue = formattedDialogue.length;
+        setDialogue((prev) => [...prev, ...formattedDialogue]);
+      }
+      if (Array.isArray(data.practiceQuestions) && data.practiceQuestions.length > 0) {
+        const formattedPractice: PracticeQuestion[] = data.practiceQuestions.map(
+          (q: any, idx: number) => ({
+            id: `pq-ai-${Date.now()}-${idx}`,
+            type: q.type || 'single_choice',
+            question: q.question || '',
+            pinyin: q.pinyin || '',
+            options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['A. Đúng', 'B. Sai'],
+            correctAnswer: Number(q.correctAnswer) || 0,
+            explanation: q.explanation || '',
+          })
+        );
+        addedPractice = formattedPractice.length;
+        setPracticeQuestions((prev) => [...prev, ...formattedPractice]);
+      }
+
+      setAiDraftStatus({
+        type: 'success',
+        text: `AI đã soạn xong: +${addedVocab} từ vựng, +${addedGrammar} ngữ pháp, +${addedDialogue} câu thoại, +${addedPractice} bài tập!`,
+      });
+    } catch (err: any) {
       console.error('AI draft error:', err);
+      setAiDraftStatus({
+        type: 'error',
+        text: err?.message || 'Lỗi kết nối AI soạn bài. Vui lòng thử lại.',
+      });
     } finally {
       setIsAiDrafting(false);
     }
@@ -467,8 +515,8 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-1.5 sm:p-3 animate-in fade-in duration-200">
       <div className="bg-[#FDFBF6] rounded-3xl w-[98vw] max-w-[1720px] h-[95vh] max-h-[95vh] flex flex-col shadow-2xl overflow-hidden border-2 border-[#E8DFCE]">
-        {/* Modal Top Bar (Red - Black Brand Gradient) */}
-        <div className="px-6 py-5 bg-gradient-to-r from-red-600 via-red-700 to-[#18181B] text-white flex items-center justify-between gap-4 shrink-0">
+        {/* Modal Top Bar (Primary Pastel Red Gradient) */}
+        <div className="px-6 py-5 bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-14 h-14 rounded-2xl bg-white/15 text-amber-300 flex items-center justify-center border border-white/25 shrink-0">
               <BookOpen className="w-7 h-7" />
@@ -520,6 +568,17 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
             <Sparkles className="w-5 h-5" />
             <span>{isAiDrafting ? 'Đang tạo nội dung...' : 'AI Điền Mẫu Bài Học'}</span>
           </button>
+          {aiDraftStatus && (
+            <div
+              className={`w-full text-[13.5px] font-bold px-3.5 py-2 rounded-xl border ${
+                aiDraftStatus.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}
+            >
+              {aiDraftStatus.text}
+            </div>
+          )}
         </div>
 
         {/* Section Navigation Tabs */}

@@ -1,4 +1,5 @@
 import { Course, Exam, ForumPost, StudentProfile, VocabItem, AppUser, VocabDeck } from '../types/hsk';
+import { CARTOON_AVATAR_PRESETS, DEFAULT_CARTOON_AVATAR } from '../utils/cartoonAvatars';
 
 export const INITIAL_VOCABULARY: VocabItem[] = [
   // HSK 1
@@ -441,6 +442,7 @@ export const INITIAL_COURSES: Course[] = [
     title: 'Khóa học HSK 1: Nhập môn & Giao tiếp cơ bản',
     vietnameseTitle: 'HSK 1 - Nhập môn Tiếng Trung Phát Âm & Giao Tiếp Đời Sống',
     description: 'Nắm vững 150 từ vựng căn bản, bảng chữ cái ngữ âm Pinyin, các nét Hán tự căn bản và những câu chào hỏi, mua sắm đơn giản.',
+    coverImage: '/assets/aistudio/hsk1_2aed1171.png',
     targetVocabCount: 150,
     grammarPointsCount: 45,
     colorScheme: {
@@ -582,6 +584,7 @@ export const INITIAL_COURSES: Course[] = [
     title: 'Khóa học HSK 2: Cuộc sống & Mua sắm',
     vietnameseTitle: 'HSK 2 - Giao tiếp hàng ngày, mua sắm và sinh hoạt',
     description: 'Nâng vốn từ lên 300 từ, tự tin trao đổi về thời gian, địa điểm, phương tiện đi lại, mua sắm mặc cả và gọi món ăn Trung Hoa.',
+    coverImage: '/assets/aistudio/hsk2_40c3fcef.png',
     targetVocabCount: 300,
     grammarPointsCount: 75,
     colorScheme: {
@@ -648,6 +651,7 @@ export const INITIAL_COURSES: Course[] = [
     title: 'Khóa học HSK 3: Tự chủ & Làm việc',
     vietnameseTitle: 'HSK 3 - Nâng cao ngữ pháp, làm việc và du lịch độc lập',
     description: 'Chinh phục 600 từ vựng, diễn đạt suy nghĩ, cảm xúc cá nhân, thảo luận công việc, phỏng vấn và viết đoạn văn mạch lạc.',
+    coverImage: '/assets/aistudio/hsk3_4d56bb96.png',
     targetVocabCount: 600,
     grammarPointsCount: 120,
     colorScheme: {
@@ -713,6 +717,7 @@ export const INITIAL_COURSES: Course[] = [
     title: 'Khóa học HSK 4: Trung cấp & Thảo luận Xã hội',
     vietnameseTitle: 'HSK 4 - Đọc hiểu báo chí, đàm phán và thuyết trình chuyên nghiệp',
     description: 'Chinh phục 1200 từ vựng, thông thạo cấu trúc câu chữ 把, chữ 被, hiểu văn bản xã hội và giao lưu lưu loát với người bản xứ.',
+    coverImage: '/assets/aistudio/hsk4_d9e3fc6a.png',
     targetVocabCount: 1200,
     grammarPointsCount: 180,
     colorScheme: {
@@ -777,6 +782,7 @@ export const INITIAL_COURSES: Course[] = [
     title: 'Khóa học HSK 5: Cao cấp & Đọc hiểu Học thuật',
     vietnameseTitle: 'HSK 5 - Văn hóa Trung Hoa sâu sắc, xem tin tức và nghiên cứu',
     description: 'Nắm vững 2500 từ vựng học thuật, đọc hiểu tiểu luận, báo chí, xem phim không cần phụ đề và viết bài nghị luận chặt chẽ.',
+    coverImage: '/assets/aistudio/hsk5_f308a036.png',
     targetVocabCount: 2500,
     grammarPointsCount: 260,
     colorScheme: {
@@ -1096,7 +1102,7 @@ export const INITIAL_STUDENT_PROFILE: StudentProfile = {
   id: 'usr-student-01',
   name: 'Đặng Tuấn Kiệt',
   email: 'tuankiet.dang@gmail.com',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  avatar: DEFAULT_CARTOON_AVATAR,
   targetLevel: 'HSK 3',
   streakDays: 14,
   lastActiveDate: new Date().toISOString().split('T')[0],
@@ -1204,7 +1210,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-admin-1',
     name: 'Thắng Trần (Quản trị viên)',
     email: 'thangtv1.hyn@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[0].url,
     role: 'admin',
     status: 'active',
     level: 'HSK 5',
@@ -1220,7 +1226,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-teach-1',
     name: 'Cô Lý Mỹ Linh (Lão Sư)',
     email: 'mylinh.laoshi@hskmaster.edu.vn',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[1].url,
     role: 'teacher',
     status: 'active',
     level: 'HSK 5',
@@ -1236,7 +1242,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-teach-2',
     name: 'Thầy Trương Chí Cường',
     email: 'chicuong.truong@hskmaster.edu.vn',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[2].url,
     role: 'teacher',
     status: 'active',
     level: 'HSK 4',
@@ -1252,7 +1258,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-std-1',
     name: 'Đặng Tuấn Kiệt',
     email: 'tuankiet.dang@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[6].url,
     role: 'student',
     status: 'active',
     level: 'HSK 3',
@@ -1267,7 +1273,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-std-2',
     name: 'Nguyễn Thúy Hằng',
     email: 'thuyhang.nguyen@yahoo.com',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[7].url,
     role: 'student',
     status: 'active',
     level: 'HSK 4',
@@ -1282,7 +1288,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-std-3',
     name: 'Trần Văn Nam',
     email: 'nam.tran89@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[4].url,
     role: 'student',
     status: 'suspended',
     level: 'HSK 3',
@@ -1298,7 +1304,7 @@ export const INITIAL_APP_USERS: AppUser[] = [
     id: 'usr-std-4',
     name: 'Lê Phương Thảo',
     email: 'phuongthao.le@gmail.com',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
+    avatar: CARTOON_AVATAR_PRESETS[5].url,
     role: 'student',
     status: 'active',
     level: 'HSK 2',

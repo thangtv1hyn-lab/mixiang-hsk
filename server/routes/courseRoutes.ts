@@ -32,6 +32,7 @@ router.post('/', (req, res) => {
       title,
       vietnameseTitle,
       description,
+      coverImage,
       targetVocabCount,
       grammarPointsCount,
       colorScheme,
@@ -47,6 +48,7 @@ router.post('/', (req, res) => {
       title: String(title).trim(),
       vietnameseTitle: vietnameseTitle || title,
       description: description || `Khóa học chuẩn ${level}`,
+      coverImage: coverImage || undefined,
       targetVocabCount: Number(targetVocabCount) || 300,
       grammarPointsCount: Number(grammarPointsCount) || 50,
       colorScheme: colorScheme || {

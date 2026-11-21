@@ -16,6 +16,7 @@ import {
 import confetti from 'canvas-confetti';
 import { useHSK } from '../context/HSKContext';
 import { HSKLevel } from '../types/hsk';
+import { DEFAULT_CARTOON_AVATAR } from '../utils/cartoonAvatars';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -181,8 +182,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     const result = await loginWithGoogle({
       name: googleName.trim() || 'Học viên HSK',
       email: googleEmail.trim() || 'user@gmail.com',
-      avatar:
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: DEFAULT_CARTOON_AVATAR,
     });
     setIsSubmitting(false);
 
@@ -444,7 +444,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                     <input
                       type="text"
                       required
-                      placeholder="Ví dụ: thangtv1.hyn@gmail.com"
+                      placeholder="Username"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 text-[15px] font-semibold text-[#18181B] rounded-2xl border-2 border-[#E6DEC8] bg-[#FAF7F0] focus:bg-white focus:outline-none focus:border-red-700"
@@ -473,7 +473,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="Nhập mật khẩu (mặc định: 123456)"
+                      placeholder="Pass"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       className="w-full pl-12 pr-12 py-3 text-[15px] font-semibold text-[#18181B] rounded-2xl border-2 border-[#E6DEC8] bg-[#FAF7F0] focus:bg-white focus:outline-none focus:border-red-700"
@@ -593,9 +593,9 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             <div className="bg-white border border-[#E6DEC8] rounded-3xl p-6 space-y-5 shadow-2xs">
               <div className="flex items-center gap-4">
                 <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+                  src={DEFAULT_CARTOON_AVATAR}
                   alt="Google Account"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-red-600 shrink-0"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-red-600 shrink-0 bg-[#FFF5F3]"
                 />
                 <div className="flex-1 text-left min-w-0">
                   <span className="font-black text-[18px] text-[#18181B] block truncate">

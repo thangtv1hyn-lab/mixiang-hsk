@@ -36,6 +36,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     isAuthenticated,
     isMobileCompanionOpen,
     setIsMobileCompanionOpen,
+    siteUIConfig,
   } = useHSK();
 
   const primaryNav = [
@@ -87,18 +88,18 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           >
             <div className="w-14 h-14 rounded-2xl bg-white border-2 border-red-600 p-1 shadow-xs overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <img
-                src="/assets/aistudio/logo_2cd38f9f.jpg"
-                alt="MiXiangg HSK"
-                className="w-full h-full object-contain mix-blend-multiply"
+                src={siteUIConfig.headerLogoUrl || '/assets/aistudio/logo_2cd38f9f.jpg'}
+                alt={siteUIConfig.brandName || 'MiXiangg HSK'}
+                className="w-full h-full object-contain"
               />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
                 <div className="font-black text-[17px] leading-tight tracking-tight text-[#18181B] group-hover:text-red-600 transition-colors truncate">
-                  MIXIANGG
+                  {siteUIConfig.brandName || 'MIXIANGG'}
                 </div>
                 <div className="font-serif font-bold text-[12px] text-red-600 tracking-wide">
-                  HSK · 汉语学习
+                  {siteUIConfig.brandHighlight || 'HSK'} · 汉语学习
                 </div>
               </div>
             )}

@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { generateWithFreeGemini } from './server/geminiClient.ts';
 
 dotenv.config();
 
@@ -13,20 +13,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
-
-// Helper to create Gemini client with telemetry header
-function getGenAIClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY || '';
-  if (!apiKey) return null;
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
-}
 
 import authRoutes from './server/routes/authRoutes.ts';
 import courseRoutes from './server/routes/courseRoutes.ts';
@@ -56,19 +42,50 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reminders', reminderRoutes);
 
-// AI Tutor Chat Endpoint
+// Helper to sanitize AI-generated SVG illustrations so they are strictly safe
+function sanitizeSvgMarkup(rawSvg: string): string {
+  const match = rawSvg.match(/<svg[\s\S]*?<\/svg>/i);
+  if (!match) return '';
+  let svg = match[0];
+
+  // Strip dangerous tags and event attributes
+  svg = svg
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|xlink:href)\s*=\s*("javascript:[^"]*"|'javascript:[^']*')/gi, '');
+
+  // Ensure standard xmlns, viewBox, width, and height for reliable Canvas rasterization
+  if (!/xmlns=/i.test(svg)) {
+    svg = svg.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  if (!/viewBox=/i.test(svg)) {
+    svg = svg.replace(/<svg/i, '<svg viewBox="0 0 400 300"');
+  }
+  if (!/\bwidth=/i.test(svg)) {
+    svg = svg.replace(/<svg/i, '<svg width="400"');
+  }
+  if (!/\bheight=/i.test(svg)) {
+    svg = svg.replace(/<svg/i, '<svg height="300"');
+  }
+  return svg.trim();
+}
+
+// AI Tutor Chat Endpoint (Free Gemini API)
 app.post('/api/gemini/tutor-chat', async (req, res) => {
   try {
     const { message, history = [], hskLevel = 'HSK 1-3' } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập nội dung câu hỏi.' });
     }
 
-    const ai = getGenAIClient();
-    if (!ai) {
-      return res.json({
-        reply: `Chào bạn! Tôi là Lão Sư AI tiếng Trung (${hskLevel}). Bạn đang hỏi về: "${message}". Hãy chú ý ghi nhớ chữ Hán, thanh điệu Pinyin và đặt câu ví dụ thường xuyên nhé! 加油 (Jiāyóu - Cố lên)!`,
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: 'Hệ thống chưa được cấu hình GEMINI_API_KEY để kết nối Lão Sư AI.',
       });
     }
 
@@ -78,53 +95,122 @@ Quy tắc trả lời:
 1. Giải thích rõ ràng bằng tiếng Việt, kèm chữ Hán (chữ giản thể), phiên âm Pinyin có dấu thanh điệu, và dịch nghĩa.
 2. Nếu học viên hỏi về ngữ pháp: Nêu công thức cấu trúc, so sánh cách dùng, lưu ý lỗi sai người Việt hay gặp, đưa ra 2-3 câu ví dụ thực tế.
 3. Nếu học viên nhờ sửa câu/đoạn văn: Phân tích câu gốc, chỉ rõ chỗ sai (ngữ pháp, thanh điệu, từ ngữ), cung cấp câu sửa đúng tự nhiên và giải thích vì sao sửa như vậy.
-4. Giữ giọng điệu ấm áp, khích lệ (thêm câu động viên như "加油! (Cố lên!)"). Trình bày đẹp mắt, dùng gạch đầu dòng rõ ràng.`;
+4. Giữ giọng điệu ấm áp, khích lệ (thêm câu động viên như "加油! (Cố lên!)"). Trình bày gọn gàng, dùng gạch đầu dòng rõ ràng.`;
 
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-
-    for (const h of history.slice(-6)) {
-      if (h && h.text) {
-        contents.push({
-          role: h.role === 'user' ? 'user' : 'model',
-          parts: [{ text: String(h.text) }],
+    // Normalize history so Gemini always receives valid alternating turns starting with 'user'
+    const normalizedContents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+    for (const h of Array.isArray(history) ? history.slice(-8) : []) {
+      const textVal = typeof h?.text === 'string' ? h.text : h?.parts?.[0]?.text;
+      if (!textVal || !String(textVal).trim()) continue;
+      const role: 'user' | 'model' = h.role === 'user' ? 'user' : 'model';
+      if (normalizedContents.length === 0 && role === 'model') {
+        continue;
+      }
+      const prev = normalizedContents[normalizedContents.length - 1];
+      if (prev && prev.role === role) {
+        prev.parts[0].text += `\n${String(textVal).trim()}`;
+      } else {
+        normalizedContents.push({
+          role,
+          parts: [{ text: String(textVal).trim() }],
         });
       }
     }
 
-    contents.push({
-      role: 'user',
-      parts: [{ text: String(message) }],
-    });
-
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
-        contents: contents as any,
-        config: {
-          systemInstruction,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
-      });
-
-      return res.json({
-        reply: response.text || 'Xin lỗi, tôi chưa thể trả lời câu hỏi này lúc này.',
-      });
-    } catch (aiErr: any) {
-      console.warn('Tutor Chat AI fallback:', aiErr?.message);
-      return res.json({
-        reply: `Chào bạn! Với câu hỏi "${message}" ở trình độ ${hskLevel}, Lão Sư gợi ý bạn lưu ý cấu trúc Chủ ngữ + Trạng ngữ thời gian/địa điểm + Động từ + Tân ngữ trong tiếng Trung nhé. Ví dụ: 我每天都在家学习汉语 (Wǒ měitiān dōu zài jiā xuéxí Hànyǔ). 加油!`,
+    const userText = String(message).trim();
+    const lastTurn = normalizedContents[normalizedContents.length - 1];
+    if (lastTurn && lastTurn.role === 'user') {
+      lastTurn.parts[0].text = `${lastTurn.parts[0].text}\n${userText}`;
+    } else {
+      normalizedContents.push({
+        role: 'user',
+        parts: [{ text: userText }],
       });
     }
+
+    const { text: replyText, model } = await generateWithFreeGemini({
+      contents: normalizedContents,
+      systemInstruction,
+      preferFast: true,
+      timeoutMs: 18000,
+    });
+
+    return res.json({
+      reply: replyText,
+      model,
+      aiPowered: true,
+    });
   } catch (error: any) {
-    console.error('Tutor Chat error:', error);
-    res.status(500).json({
-      error: 'Không thể xử lý yêu cầu AI lúc này',
-      details: error.message,
+    console.error('Tutor Chat error:', error?.message || error);
+    return res.status(502).json({
+      error: 'Không thể kết nối Lão Sư AI lúc này. Vui lòng bấm gửi lại sau vài giây.',
+      details: error?.message,
     });
   }
 });
 
-// AI Pronunciation & Tone Evaluation Endpoint
+// AI Vocabulary Illustration Generator (100% Free Gemini API - Flat Vector SVG)
+app.post('/api/gemini/vocab-image', async (req, res) => {
+  try {
+    const { word, pinyin = '', meaning = '', exampleSentence = '' } = req.body;
+    if (!word || !String(word).trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập Chữ Hán trước khi tạo ảnh minh họa AI.' });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: 'Hệ thống chưa cấu hình GEMINI_API_KEY cho tính năng tạo ảnh AI.',
+      });
+    }
+
+    const prompt = `Bạn là họa sĩ minh họa giáo dục (Flat Vector Illustration Designer).
+Hãy vẽ một bức tranh minh họa trực quan, sinh động, dễ thương theo phong cách flat-vector / chibi hiện đại bằng mã SVG thuần để giúp học viên ghi nhớ từ vựng tiếng Trung sau:
+- Từ vựng: ${word}
+- Pinyin: ${pinyin}
+- Nghĩa tiếng Việt: ${meaning}
+- Ngữ cảnh ví dụ: ${exampleSentence}
+
+Yêu cầu kỹ thuật BẮT BUỘC:
+1. Trả về DUY NHẤT mã SVG hoàn chỉnh bắt đầu bằng <svg viewBox="0 0 400 300" width="400" height="300" xmlns="http://www.w3.org/2000/svg"> và kết thúc bằng </svg>. Không kèm markdown \`\`\`, không giải thích.
+2. Vẽ bối cảnh nền ấm áp (gradient nhẹ, mây/bàn/cảnh vật phù hợp ngữ nghĩa) và vật thể/nhân vật chính ở trung tâm rõ nét, nhiều chi tiết hình khối đẹp mắt (dùng linearGradient, circle, rect bo góc, path cong mượt).
+3. Bảng màu hài hòa, tươi sáng (đỏ son #C85A43, kem #F7F4EC, vàng ấm #F59E0B, xanh ngọc #10B981, xanh dương #3B82F6...).
+4. KHÔNG viết nhiều chữ dài lên tranh (chỉ được phép hiển thị tối đa 1 nhãn ký tự nhỏ nếu thật sự cần thiết như biển hiệu/từ "${word}").
+5. Tuyệt đối KHÔNG dùng <script>, <image>, <foreignObject> hay link ảnh ngoài.`;
+
+    const { text: rawText, model } = await generateWithFreeGemini({
+      contents: prompt,
+      preferFast: true,
+      timeoutMs: 20000,
+    });
+
+    const cleanSvg = sanitizeSvgMarkup(rawText);
+
+    if (!cleanSvg || cleanSvg.length < 80) {
+      return res.status(502).json({
+        error: 'AI chưa tạo được tranh minh họa hợp lệ. Vui lòng bấm tạo lại.',
+      });
+    }
+
+    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(
+      cleanSvg.replace(/\s+/g, ' ').replace(/>\s+</g, '><')
+    )}`;
+
+    return res.json({
+      svg: cleanSvg,
+      dataUrl,
+      model,
+      aiPowered: true,
+    });
+  } catch (error: any) {
+    console.error('AI Vocab Image error:', error?.message || error);
+    return res.status(502).json({
+      error: 'Không thể tạo ảnh minh họa AI lúc này. Vui lòng thử lại.',
+      details: error?.message,
+    });
+  }
+});
+
+// AI Pronunciation & Tone Evaluation Endpoint (Free Gemini API)
 app.post('/api/gemini/evaluate-pronunciation', async (req, res) => {
   try {
     const { targetWord, pinyin, meaning, recognizedText } = req.body;
@@ -147,8 +233,7 @@ app.post('/api/gemini/evaluate-pronunciation', async (req, res) => {
       };
     };
 
-    const ai = getGenAIClient();
-    if (!ai) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.json(fallbackEvaluation());
     }
 
@@ -167,16 +252,14 @@ Hãy đánh giá và trả về kết quả JSON với cấu trúc:
 }`;
 
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
+      const { text: raw } = await generateWithFreeGemini({
         contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
+        responseMimeType: 'application/json',
+        preferFast: true,
+        timeoutMs: 12000,
       });
 
-      const text = (response.text || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
+      const text = (raw || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(text);
       return res.json(parsed);
     } catch (aiErr: any) {
@@ -194,103 +277,133 @@ Hãy đánh giá và trả về kết quả JSON với cấu trúc:
   }
 });
 
-// AI Auto Lesson/Quiz Generator for Admin
+// AI Auto Course / Lesson / Quiz Generator for Admin (Free Gemini API)
 app.post('/api/gemini/admin-generate', async (req, res) => {
   try {
-    const { type = 'lesson', topic = 'Giao tiếp hàng ngày', level = 'HSK 2' } = req.body;
+    const {
+      type = 'lesson',
+      topic = 'Giao tiếp hàng ngày',
+      level = 'HSK 2',
+      curriculum = 'HSK',
+      lessonCount = 3,
+    } = req.body;
 
-    const buildFallbackContent = () => {
-      if (type === 'lesson') {
-        return {
-          title: `Bài học ${level}: ${topic}`,
-          description: `Bài học chuẩn ${level} giúp học viên nắm vững từ vựng, ngữ pháp và hội thoại chủ đề "${topic}".`,
-          vocabulary: [
-            {
-              word: '准备',
-              pinyin: 'zhǔnbèi',
-              sino: 'Chuẩn bị',
-              meaning: 'Chuẩn bị, sẵn sàng',
-              example: '我已经准备好参加明天的汉语考试了。',
-              examplePinyin: 'Wǒ yǐjīng zhǔnbèi hǎo cānjiā míngtiān de Hànyǔ kǎoshì le.',
-              exampleMeaning: 'Tôi đã chuẩn bị sẵn sàng tham gia kỳ thi tiếng Trung ngày mai.',
-            },
-            {
-              word: '交流',
-              pinyin: 'jiāoliú',
-              sino: 'Giao lưu',
-              meaning: 'Giao lưu, trao đổi',
-              example: '我们经常用汉语交流学习经验。',
-              examplePinyin: 'Wǒmen jīngcháng yòng Hànyǔ jiāoliú xuéxí jīngyàn.',
-              exampleMeaning: 'Chúng tôi thường xuyên dùng tiếng Trung trao đổi kinh nghiệm học tập.',
-            },
-          ],
-          grammar: [
-            {
-              title: 'Cấu trúc nhấn mạnh với 已经……了 (Đã... rồi)',
-              structure: 'Chủ ngữ + 已经 + Động từ / Tính từ + 了',
-              explanation: 'Biểu thị hành động hoặc trạng thái đã hoàn thành hoặc thay đổi tính đến thời điểm nói.',
-              examples: [
-                '他已经去北京留学了。(Anh ấy đã đi Bắc Kinh du học rồi.)',
-                '天已经黑了，我们回家吧。(Trời đã tối rồi, chúng ta về nhà thôi.)',
-              ],
-            },
-          ],
-          dialogue: [
-            {
-              speaker: 'A',
-              chinese: `你好！今天我们一起复习关于“${topic}”的生词吧。`,
-              pinyin: `Nǐ hǎo! Jīntiān wǒmen yìqǐ fùxí guānyú "${topic}" de shēngcí ba.`,
-              vietnamese: `Chào bạn! Hôm nay chúng ta cùng ôn tập từ mới về chủ đề "${topic}" nhé.`,
-            },
-            {
-              speaker: 'B',
-              chinese: '太好了！我已经准备好了。',
-              pinyin: 'Tài hǎo le! Wǒ yǐjīng zhǔnbèi hǎo le.',
-              vietnamese: 'Tuyệt quá! Mình đã chuẩn bị sẵn sàng rồi.',
-            },
-          ],
-        };
-      }
-
-      return {
-        questions: [
-          {
-            question: 'Chọn từ điền vào chỗ trống: "他每天都____复习汉语。"',
-            pinyin: 'Tā měitiān dōu ____ fùxí Hànyǔ.',
-            translation: 'Anh ấy mỗi ngày đều chăm chỉ ôn tập tiếng Trung.',
-            options: ['A. 认真 (rènzhēn)', 'B. 忽然 (hūrán)', 'C. 顺便 (shùnbiàn)', 'D. 尽管 (jǐnguǎn)'],
-            correctAnswer: 0,
-            explanation: '"认真" (chăm chỉ, nghiêm túc) đứng trước động từ làm trạng ngữ chỉ thái độ học tập.',
-          },
-        ],
-      };
-    };
-
-    const ai = getGenAIClient();
-    if (!ai) {
-      return res.json(buildFallbackContent());
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: 'Hệ thống chưa được cấu hình GEMINI_API_KEY để sử dụng tính năng soạn nội dung AI.',
+      });
     }
 
     let prompt = '';
-    if (type === 'lesson') {
-      prompt = `Tạo một bài học tiếng Trung chuẩn HSK cấp độ ${level} về chủ đề: "${topic}".
-Trả về JSON gồm:
+    if (type === 'course') {
+      const safeLessonCount = Math.max(2, Math.min(5, Number(lessonCount) || 3));
+      const curriculumText =
+        curriculum === 'BOYA'
+          ? 'Giáo trình Boya (博雅汉语)'
+          : curriculum === 'COMM'
+          ? 'Tiếng Trung Giao Tiếp Thực Chiến'
+          : `Giáo trình Chuẩn ${level}`;
+
+      prompt = `Bạn là Giám đốc học thuật tiếng Trung của trung tâm MiXiangg HSK. Hãy thiết kế trọn bộ một khóa học tiếng Trung hoàn chỉnh.
+- Cấp độ: ${level}
+- Hệ giáo trình: ${curriculumText}
+- Chủ đề / Định hướng khóa học: "${topic}"
+- Số lượng bài học cần tạo: ĐÚNG ${safeLessonCount} bài học liên hoàn, tăng dần độ khó.
+
+Trả về DUY NHẤT JSON hợp lệ (không bọc markdown) với cấu trúc:
 {
-  "title": "Tiêu đề bài học tiếng Việt và tiếng Trung",
-  "description": "Mô tả mục tiêu bài học",
+  "title": "Tên khóa học song ngữ ngắn gọn (VD: ${level} · ${topic})",
+  "vietnameseTitle": "Tên khóa học tiếng Việt thu hút",
+  "description": "Mô tả mục tiêu đầu ra, từ vựng và kỹ năng giao tiếp sau khóa học (2-3 câu)",
+  "targetVocabCount": 300,
+  "grammarPointsCount": 30,
+  "lessons": [
+    {
+      "lessonNumber": 1,
+      "title": "第1课：Tiêu đề chữ Hán bài 1",
+      "vietnameseTitle": "Bài 1: Tiêu đề tiếng Việt",
+      "durationMinutes": 35,
+      "description": "Mục tiêu bài học ngắn gọn",
+      "vocabulary": [
+        {
+          "word": "chữ Hán",
+          "pinyin": "pinyin có dấu thanh điệu",
+          "sino": "âm Hán Việt",
+          "meaning": "nghĩa tiếng Việt",
+          "example": "câu ví dụ chữ Hán tự nhiên",
+          "examplePinyin": "pinyin câu ví dụ",
+          "exampleMeaning": "dịch nghĩa tiếng Việt"
+        }
+      ],
+      "grammar": [
+        {
+          "title": "Tên điểm ngữ pháp",
+          "structure": "Công thức cấu trúc",
+          "explanation": "Giải thích dễ hiểu cho người Việt",
+          "examples": [
+            { "hanzi": "Câu ví dụ 1", "pinyin": "Pinyin ví dụ 1", "translation": "Dịch nghĩa 1" }
+          ]
+        }
+      ],
+      "dialogue": [
+        { "speaker": "A", "chinese": "Câu thoại A", "pinyin": "Pinyin", "vietnamese": "Dịch tiếng Việt" },
+        { "speaker": "B", "chinese": "Câu thoại B", "pinyin": "Pinyin", "vietnamese": "Dịch tiếng Việt" }
+      ],
+      "practiceQuestions": [
+        {
+          "type": "single_choice",
+          "question": "Câu hỏi trắc nghiệm chữ Hán liên quan bài học",
+          "pinyin": "Pinyin câu hỏi",
+          "options": ["A. Đáp án 1", "B. Đáp án 2", "C. Đáp án 3", "D. Đáp án 4"],
+          "correctAnswer": 0,
+          "explanation": "Giải thích chi tiết bằng tiếng Việt"
+        }
+      ]
+    }
+  ]
+}
+Lưu ý: Mỗi bài học cần có ít nhất 4 từ vựng, 1-2 điểm ngữ pháp, 4 lượt hội thoại và 2 câu luyện tập thực tế.`;
+    } else if (type === 'lesson') {
+      prompt = `Tạo một bài học tiếng Trung hoàn chỉnh chuẩn ${level} về chủ đề: "${topic}".
+Trả về DUY NHẤT JSON hợp lệ (không bọc markdown) gồm:
+{
+  "title": "第X课：Tiêu đề chữ Hán",
+  "vietnameseTitle": "Tiêu đề tiếng Việt hấp dẫn",
+  "durationMinutes": 35,
+  "description": "Mô tả mục tiêu bài học (1-2 câu)",
   "vocabulary": [
     { "word": "chữ Hán", "pinyin": "pinyin có dấu", "sino": "âm Hán Việt", "meaning": "nghĩa tiếng Việt", "example": "câu ví dụ chữ Hán", "examplePinyin": "pinyin câu ví dụ", "exampleMeaning": "dịch câu ví dụ" }
   ],
   "grammar": [
-    { "title": "Tên điểm ngữ pháp", "structure": "Cấu trúc ngữ pháp", "explanation": "Giải thích chi tiết", "examples": ["ví dụ 1", "ví dụ 2"] }
+    {
+      "title": "Tên điểm ngữ pháp",
+      "structure": "Cấu trúc ngữ pháp",
+      "explanation": "Giải thích chi tiết cho học viên Việt Nam",
+      "examples": [
+        { "hanzi": "Câu ví dụ 1", "pinyin": "Pinyin 1", "translation": "Dịch nghĩa 1" },
+        { "hanzi": "Câu ví dụ 2", "pinyin": "Pinyin 2", "translation": "Dịch nghĩa 2" }
+      ]
+    }
   ],
   "dialogue": [
-    { "speaker": "A / B", "chinese": "câu nói", "pinyin": "pinyin", "vietnamese": "dịch nghĩa" }
+    { "speaker": "A", "chinese": "câu nói chữ Hán", "pinyin": "pinyin", "vietnamese": "dịch nghĩa" },
+    { "speaker": "B", "chinese": "câu nói chữ Hán", "pinyin": "pinyin", "vietnamese": "dịch nghĩa" }
+  ],
+  "practiceQuestions": [
+    {
+      "type": "single_choice",
+      "question": "Câu hỏi ôn tập chuẩn HSK",
+      "pinyin": "Pinyin câu hỏi",
+      "options": ["A. Đáp án 1", "B. Đáp án 2", "C. Đáp án 3", "D. Đáp án 4"],
+      "correctAnswer": 0,
+      "explanation": "Giải thích vì sao đúng"
+    }
   ]
-}`;
+}
+Yêu cầu: Ít nhất 5 từ vựng, 2 điểm ngữ pháp, 4 lượt hội thoại và 3 câu hỏi ôn tập.`;
     } else {
-      prompt = `Tạo 3 câu hỏi trắc nghiệm ôn tập chuẩn HSK cấp độ ${level} cho chủ đề: "${topic}".
-Trả về JSON gồm:
+      prompt = `Tạo 4 câu hỏi trắc nghiệm ôn tập chuẩn HSK cấp độ ${level} cho chủ đề: "${topic}".
+Trả về DUY NHẤT JSON hợp lệ gồm:
 {
   "questions": [
     {
@@ -305,27 +418,40 @@ Trả về JSON gồm:
 }`;
     }
 
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
-      });
+    const { text: rawJson, model } = await generateWithFreeGemini({
+      contents: prompt,
+      responseMimeType: 'application/json',
+      preferFast: true,
+      timeoutMs: type === 'course' ? 32000 : 22000,
+    });
 
-      const cleanText = (response.text || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanText);
-      return res.json(parsed);
-    } catch (aiErr: any) {
-      console.warn('Admin generate AI fallback:', aiErr?.message);
-      return res.json(buildFallbackContent());
-    }
+    const cleanText = (rawJson || '{}').replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanText);
+    return res.json({ ...parsed, model, aiPowered: true });
   } catch (error: any) {
-    console.error('Admin generate error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Admin generate error:', error?.message || error);
+    return res.status(502).json({
+      error: 'AI đang bận hoặc chưa tạo được định dạng chuẩn. Vui lòng thử bấm tạo lại.',
+      details: error?.message,
+    });
   }
+});
+
+// Guard all unknown /api/* routes & API errors so Express NEVER falls through to SPA HTML
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    error: `Không tìm thấy API endpoint: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (req.path.startsWith('/api')) {
+    console.error('API middleware error:', err?.message || err);
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Lỗi máy chủ API. Vui lòng thử lại.',
+    });
+  }
+  next(err);
 });
 
 // Serve frontend in dev and prod

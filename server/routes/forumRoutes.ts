@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { db } from '../dataStore.ts';
 import { ForumPost, ForumReply } from '../../src/types/hsk.ts';
+import { generateWithFreeGemini } from '../geminiClient.ts';
 
 const router = Router();
 
@@ -136,6 +136,9 @@ router.post('/:id/replies', (req, res) => {
 
     post.replies.push(newReply);
     post.repliesCount = post.replies.length;
+    if (role === 'ai') {
+      post.isSolved = true;
+    }
     db.save();
 
     res.status(201).json(newReply);
@@ -144,7 +147,7 @@ router.post('/:id/replies', (req, res) => {
   }
 });
 
-// Trigger AI Tutor automated answer inside the forum thread
+// Trigger AI Tutor automated answer inside the forum thread (Free Gemini API)
 router.post('/:id/ai-solve', async (req, res) => {
   try {
     const post = db.forumPosts.find((p) => p.id === req.params.id);
@@ -152,44 +155,24 @@ router.post('/:id/ai-solve', async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết' });
     }
 
-    let aiContent = '';
     const apiKey = process.env.GEMINI_API_KEY || '';
-    if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({
-          apiKey,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build',
-            },
-          },
-        });
-        const prompt = `Bạn là Lão Sư AI giảng viên tiếng Trung chuyên luyện thi HSK 1 - 5.
-Hãy giải đáp câu hỏi của học viên sau trên diễn đàn một cách chi tiết, sư phạm, có chữ Hán, Pinyin và ví dụ cụ thể:
+    if (!apiKey) {
+      return res.status(503).json({
+        error: 'Hệ thống chưa cấu hình GEMINI_API_KEY cho Lão Sư AI.',
+      });
+    }
+
+    const prompt = `Bạn là Lão Sư AI giảng viên tiếng Trung chuyên luyện thi HSK 1 - 5 và Giáo trình Boya.
+Hãy giải đáp câu hỏi của học viên sau trên diễn đàn một cách chi tiết, sư phạm, dễ hiểu cho người Việt, có chữ Hán, Pinyin có dấu thanh điệu và 2-3 ví dụ cụ thể:
 Tiêu đề: ${post.title}
 Nội dung: ${post.content}
 Cấp độ: ${post.level}`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-4-hydrogen',
-          contents: prompt,
-          config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-          },
-        });
-
-        aiContent = response.text || '';
-      } catch (aiErr: any) {
-        console.warn('Forum AI solve fallback:', aiErr?.message);
-      }
-    }
-
-    if (!aiContent) {
-      aiContent = `Chào bạn! Lão Sư AI xin giải đáp chi tiết câu hỏi "${post.title}" (${post.level}):
-1. Phân tích ngữ pháp & từ vựng: Lưu ý vị trí phó từ/bổ ngữ đứng trước hoặc sau động từ chính theo chuẩn ngữ pháp HSK.
-2. Ví dụ thực tế: 我每天都认真复习汉语词汇总表。(Wǒ měitiān dōu rènzhēn fùxí Hànyǔ cíhuì zǒngbiǎo - Mỗi ngày tôi đều ôn tập kỹ bảng từ vựng tiếng Trung).
-加油！Cố lên bạn nhé!`;
-    }
+    const { text: aiContent } = await generateWithFreeGemini({
+      contents: prompt,
+      preferFast: true,
+      timeoutMs: 18000,
+    });
 
     const aiReply: ForumReply = {
       id: `fr-ai-${Date.now()}`,
@@ -198,7 +181,7 @@ Cấp độ: ${post.level}`;
       role: 'ai',
       content: aiContent,
       createdAt: new Date().toISOString(),
-      likes: 3,
+      likes: 1,
     };
 
     post.replies.push(aiReply);
@@ -206,9 +189,13 @@ Cấp độ: ${post.level}`;
     post.isSolved = true;
     db.save();
 
-    res.status(201).json({ success: true, reply: aiReply, post });
+    res.status(201).json({ success: true, aiPowered: true, reply: aiReply, post });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error('Forum AI solve error:', err?.message || err);
+    res.status(502).json({
+      error: 'Không thể kết nối Lão Sư AI giải đáp lúc này. Vui lòng thử lại sau giây lát.',
+      details: err?.message,
+    });
   }
 });
 

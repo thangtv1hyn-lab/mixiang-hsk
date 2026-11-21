@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Volume2,
@@ -8,18 +8,25 @@ import {
   MessageCircle,
   HelpCircle,
   Sparkles,
-  Share2,
   BookmarkCheck,
   Check,
   X,
   Play,
   Pause,
-  RotateCcw,
+  Eye,
+  EyeOff,
+  ListChecks,
+  ChevronDown,
+  ChevronUp,
+  Clock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Lesson, VocabItem } from '../types/hsk';
+import { Lesson } from '../types/hsk';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese, stopSpeaking } from '../utils/audioSpeech';
+import { VocabIllustration } from './VocabIllustration';
+import chibiBoyAvatar from '../assets/images/chibi_student_boy_1795167987005.jpg';
+import chibiTeacherAvatar from '../assets/images/chibi_teacher_girl_1795168016692.jpg';
 
 interface LessonDetailViewProps {
   lesson: Lesson;
@@ -28,7 +35,10 @@ interface LessonDetailViewProps {
 
 export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBack }) => {
   const {
+    courses,
+    setCurrentLesson,
     showPinyin,
+    setShowPinyin,
     studentProfile,
     completeLesson,
     markVocabMastered,
@@ -42,11 +52,72 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
   const [activeDialogueIndex, setActiveDialogueIndex] = useState<number | null>(null);
   const [isAutoPlayingDialogue, setIsAutoPlayingDialogue] = useState<boolean>(false);
   const [dialogueSpeed, setDialogueSpeed] = useState<number>(0.85);
+  const [isMobileLessonListOpen, setIsMobileLessonListOpen] = useState<boolean>(false);
   const [isCompletedNow, setIsCompletedNow] = useState<boolean>(
     studentProfile.completedLessonIds.includes(lesson.id)
   );
+  const playbackRunIdRef = useRef<number>(0);
 
   const isCompleted = studentProfile.completedLessonIds.includes(lesson.id) || isCompletedNow;
+
+  // Parent course & sorted lessons for left progress sidebar
+  const parentCourse =
+    courses.find((c) => c.lessons.some((l) => l.id === lesson.id)) ||
+    courses.find((c) => c.level === lesson.level) ||
+    null;
+
+  const courseLessons = (parentCourse?.lessons || [lesson])
+    .slice()
+    .sort((a, b) => (a.lessonNumber || 0) - (b.lessonNumber || 0));
+
+  const completedInCourseCount = courseLessons.filter((l) =>
+    studentProfile.completedLessonIds.includes(l.id)
+  ).length;
+  const courseProgressPercent = courseLessons.length
+    ? Math.round((completedInCourseCount / courseLessons.length) * 100)
+    : 0;
+  const currentLessonIndex = courseLessons.findIndex((l) => l.id === lesson.id);
+  const nextLesson =
+    currentLessonIndex >= 0 && currentLessonIndex < courseLessons.length - 1
+      ? courseLessons[currentLessonIndex + 1]
+      : null;
+
+  // Reset per-lesson state cleanly whenever active lesson changes
+  useEffect(() => {
+    playbackRunIdRef.current += 1;
+    stopSpeaking();
+    setIsAutoPlayingDialogue(false);
+    setActiveDialogueIndex(null);
+    setIsPlayingAudio(null);
+    setPracticeAnswers({});
+    setIsCompletedNow(studentProfile.completedLessonIds.includes(lesson.id));
+  }, [lesson.id]);
+
+  useEffect(() => {
+    return () => {
+      playbackRunIdRef.current += 1;
+      stopSpeaking();
+    };
+  }, []);
+
+  const handleSelectLesson = (target: Lesson) => {
+    if (target.id === lesson.id) {
+      setIsMobileLessonListOpen(false);
+      return;
+    }
+    playbackRunIdRef.current += 1;
+    stopSpeaking();
+    setCurrentLesson(target);
+    setIsMobileLessonListOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const isSpeakerATurn = (speaker: string | undefined, idx: number) =>
+    Boolean(
+      speaker?.toUpperCase().includes('A') ||
+        speaker?.toLowerCase().includes('minh') ||
+        idx % 2 === 0
+    );
 
   // Handle TTS play
   const handlePlayAudio = async (text: string, id: string) => {
@@ -58,31 +129,40 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
   // Play full dialogue step by step with speech bubble highlight
   const handlePlayAllDialogue = async () => {
     if (isAutoPlayingDialogue) {
+      playbackRunIdRef.current += 1;
       stopSpeaking();
       setIsAutoPlayingDialogue(false);
       setActiveDialogueIndex(null);
       return;
     }
 
+    const runId = ++playbackRunIdRef.current;
     setIsAutoPlayingDialogue(true);
     for (let i = 0; i < lesson.dialogue.length; i++) {
+      if (playbackRunIdRef.current !== runId) return;
       setActiveDialogueIndex(i);
       await speakChinese(lesson.dialogue[i].chinese, dialogueSpeed);
-      // Small natural pause between conversation turns
+      if (playbackRunIdRef.current !== runId) return;
       await new Promise((r) => setTimeout(r, 650));
     }
-    setActiveDialogueIndex(null);
-    setIsAutoPlayingDialogue(false);
+    if (playbackRunIdRef.current === runId) {
+      setActiveDialogueIndex(null);
+      setIsAutoPlayingDialogue(false);
+    }
   };
 
   const handlePlaySingleDialogue = async (text: string, index: number) => {
     if (isAutoPlayingDialogue) {
+      playbackRunIdRef.current += 1;
       stopSpeaking();
       setIsAutoPlayingDialogue(false);
     }
+    const runId = ++playbackRunIdRef.current;
     setActiveDialogueIndex(index);
     await speakChinese(text, dialogueSpeed);
-    setActiveDialogueIndex(null);
+    if (playbackRunIdRef.current === runId) {
+      setActiveDialogueIndex(null);
+    }
   };
 
   // Complete lesson celebration
@@ -95,9 +175,95 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       particleCount: 80,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#DC2626', '#EA580C', '#EAB308', '#10B981'],
+      colors: ['#A43828', '#EA580C', '#EAB308', '#10B981'],
     });
   };
+
+  const isStageSpeakerAActive =
+    activeDialogueIndex !== null &&
+    isSpeakerATurn(lesson.dialogue[activeDialogueIndex]?.speaker, activeDialogueIndex);
+  const isStageSpeakerBActive =
+    activeDialogueIndex !== null && !isStageSpeakerAActive;
+
+  const renderLessonSidebarList = () => (
+    <div className="space-y-1.5">
+      {courseLessons.map((item) => {
+        const isCurrent = item.id === lesson.id;
+        const isDone = studentProfile.completedLessonIds.includes(item.id);
+        const cleanTitle = item.vietnameseTitle.replace(/^Bài \d+:\s*/i, '');
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => handleSelectLesson(item)}
+            aria-current={isCurrent ? 'page' : undefined}
+            className={`w-full text-left p-3 rounded-2xl border transition-all flex items-start gap-3 cursor-pointer min-h-[52px] ${
+              isCurrent
+                ? 'bg-[#FCECE8] border-[#C85A43] shadow-2xs'
+                : isDone
+                ? 'bg-[#FAFDFB] border-emerald-200/80 hover:border-emerald-400'
+                : 'bg-[#FAF7F0]/70 border-transparent hover:bg-[#FAF7F0] hover:border-[#E8DFCE]'
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-mono text-[13px] font-black mt-0.5 ${
+                isCurrent
+                  ? 'bg-[#C85A43] text-white shadow-2xs'
+                  : isDone
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-white text-slate-600 border border-[#E8DFCE]'
+              }`}
+            >
+              {isDone && !isCurrent ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              ) : (
+                item.lessonNumber
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-1.5">
+                <span
+                  className={`text-[12px] font-extrabold uppercase tracking-wide ${
+                    isCurrent
+                      ? 'text-[#C85A43]'
+                      : isDone
+                      ? 'text-emerald-700'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  Bài {item.lessonNumber}
+                </span>
+                {isCurrent ? (
+                  <span className="px-2 py-0.5 rounded-lg bg-[#C85A43] text-white text-[10.5px] font-extrabold whitespace-nowrap">
+                    Đang học
+                  </span>
+                ) : isDone ? (
+                  <span className="text-[11px] font-bold text-emerald-700 whitespace-nowrap">
+                    Hoàn thành
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 text-[11px] font-mono text-slate-400 tabular-nums whitespace-nowrap">
+                    <Clock className="w-3 h-3" />
+                    {item.durationMinutes}p
+                  </span>
+                )}
+              </div>
+
+              <p
+                className={`text-[13.5px] leading-snug line-clamp-2 break-words ${
+                  isCurrent ? 'font-bold text-[#18181B]' : 'font-semibold text-slate-700'
+                }`}
+              >
+                {cleanTitle}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="w-full space-y-6 pb-16">
@@ -112,7 +278,25 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
           <span>Quay lại danh sách khóa học</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPinyin(!showPinyin)}
+            aria-pressed={showPinyin}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold border transition-colors cursor-pointer ${
+              showPinyin
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-white'
+            }`}
+          >
+            {showPinyin ? (
+              <Eye className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-slate-500" />
+            )}
+            <span>Pinyin: {showPinyin ? 'Đang bật' : 'Đang tắt'}</span>
+          </button>
+
           {isCompleted ? (
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold bg-[#ECFDF5] text-emerald-800 border border-emerald-300">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -131,8 +315,95 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
         </div>
       </div>
 
-      {/* Lesson Header Card (Đồng bộ Đỏ - Be - Đen) */}
-      <div className="bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] border border-red-500/70 text-white rounded-3xl p-6 sm:p-8 shadow-md space-y-5">
+      {/* Mobile Collapsible Lesson Progress Bar */}
+      <div className="lg:hidden bg-white rounded-2xl border border-[#E8DFCE] shadow-2xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsMobileLessonListOpen((prev) => !prev)}
+          aria-expanded={isMobileLessonListOpen}
+          className="w-full px-4 py-3.5 min-h-[48px] flex items-center justify-between gap-3 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#FCECE8] text-[#C85A43] flex items-center justify-center shrink-0">
+              <ListChecks className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[13.5px] font-extrabold text-[#18181B] truncate">
+                Danh sách bài học · {parentCourse?.level || lesson.level}
+              </div>
+              <div className="text-[12px] font-semibold text-slate-600 tabular-nums">
+                Đang học Bài {lesson.lessonNumber}/{courseLessons.length} · Đã xong{' '}
+                {completedInCourseCount}/{courseLessons.length} ({courseProgressPercent}%)
+              </div>
+            </div>
+          </div>
+          {isMobileLessonListOpen ? (
+            <ChevronUp className="w-5 h-5 text-[#C85A43] shrink-0" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />
+          )}
+        </button>
+
+        {isMobileLessonListOpen && (
+          <div className="border-t border-[#E8DFCE] p-3 bg-[#FDFBF7]">
+            {renderLessonSidebarList()}
+          </div>
+        )}
+      </div>
+
+      {/* Main 2-Column Workspace: Left Lesson Progress Sidebar + Right Lesson Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT SIDEBAR: DANH SÁCH BÀI HỌC & TIẾN ĐỘ HIỆN TẠI */}
+        <aside
+          aria-label="Danh sách bài học trong khóa"
+          className="hidden lg:block lg:col-span-3 lg:sticky lg:top-24"
+        >
+          <div className="bg-white rounded-3xl border border-[#E8DFCE] p-4 shadow-2xs space-y-4">
+            <div className="space-y-2.5 pb-3 border-b border-[#EFE7D6]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-wider text-[#C85A43]">
+                  <ListChecks className="w-4 h-4" />
+                  <span>Danh sách bài học</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-lg bg-[#FAF7F0] border border-[#E8DFCE] text-[11.5px] font-extrabold text-[#18181B]">
+                  {parentCourse?.level || lesson.level}
+                </span>
+              </div>
+
+              {parentCourse && (
+                <p className="text-[13.5px] font-bold text-[#18181B] leading-snug line-clamp-2">
+                  {parentCourse.vietnameseTitle}
+                </p>
+              )}
+
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex items-center justify-between text-[12px] font-bold text-slate-600 tabular-nums">
+                  <span>
+                    Tiến độ: {completedInCourseCount}/{courseLessons.length} bài
+                  </span>
+                  <span className="font-mono font-black text-[#C85A43]">
+                    {courseProgressPercent}%
+                  </span>
+                </div>
+                <div className="w-full bg-[#E8DFCE] rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-[#C85A43] to-amber-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${courseProgressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-0.5">
+              {renderLessonSidebarList()}
+            </div>
+          </div>
+        </aside>
+
+        {/* RIGHT COLUMN: NỘI DUNG CHI TIẾT BÀI HỌC */}
+        <div className="lg:col-span-9 space-y-6 min-w-0">
+          {/* Lesson Header Card (Màu đỏ pastel chủ đạo) */}
+          <div className="bg-gradient-to-br from-red-500 via-red-600 to-red-700 border border-red-400/70 text-white rounded-3xl p-6 sm:p-8 shadow-md space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2.5 text-[14px] font-bold text-amber-200">
@@ -144,7 +415,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">{lesson.durationMinutes} phút</span>
             </div>
-            <h1 className="font-serif text-[24px] sm:text-[30px] font-black text-white leading-tight">
+            <h1 className="font-sans text-[24px] sm:text-[30px] font-bold not-italic text-white leading-tight">
               {lesson.title}
             </h1>
             <p className="text-[19px] text-amber-200 font-bold leading-snug">
@@ -167,7 +438,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
           </button>
         </div>
 
-        <p className="text-[19px] text-rose-50 pt-4 border-t border-white/20 leading-relaxed">
+        <p className="text-[15.5px] sm:text-[16.5px] text-rose-50 pt-4 border-t border-white/20 leading-relaxed">
           {lesson.description}
         </p>
       </div>
@@ -178,7 +449,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
           { id: 'vocab', label: `Từ vựng (${lesson.vocabulary.length})`, icon: BookOpen },
           { id: 'grammar', label: `Ngữ pháp (${lesson.grammar.length})`, icon: FileText },
           { id: 'dialogue', label: `Hội thoại (${lesson.dialogue.length})`, icon: MessageCircle },
-          { id: 'practice', label: `Luyện tập (${lesson.practiceQuestions.length})`, icon: HelpCircle },
+          { id: 'practice', label: `Ôn tập (${lesson.practiceQuestions.length})`, icon: HelpCircle },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -204,7 +475,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       {activeTab === 'vocab' && (
         <div className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-            <p className="text-[19px] font-medium text-slate-700">
+            <p className="text-[15px] sm:text-[16px] font-medium text-slate-700">
               Bấm vào biểu tượng loa để nghe giọng đọc chuẩn bản xứ tiếng Trung.
             </p>
             <span className="font-bold text-[14px] text-red-700 bg-[#FFF5F3] px-4 py-1.5 rounded-2xl border border-red-200 tabular-nums">
@@ -266,6 +537,10 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                     >
                       <Volume2 className="w-6 h-6" />
                     </button>
+                  </div>
+
+                  <div className="mb-4">
+                    <VocabIllustration vocab={vocab} compact />
                   </div>
 
                   <div className="text-[19px] font-extrabold text-[#18181B] mb-4 bg-[#FEFCE8] p-4 rounded-2xl border border-amber-200/80">
@@ -335,23 +610,23 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                 <span className="w-9 h-9 rounded-xl bg-red-600 text-white text-[16px] font-black flex items-center justify-center shrink-0">
                   {idx + 1}
                 </span>
-                <h3 className="font-serif text-[21px] sm:text-[22px] font-black text-[#18181B]">
+                <h3 className="font-sans text-[20px] sm:text-[22px] font-extrabold text-[#18181B]">
                   {item.title}
                 </h3>
               </div>
 
               {/* Structure box */}
               <div className="bg-[#FEFCE8] rounded-2xl p-5 border border-amber-300/70 space-y-1">
-                <span className="text-[14px] font-bold uppercase tracking-wider text-amber-900 block">
+                <span className="text-[13px] font-bold uppercase tracking-wider text-amber-900 block">
                   Cấu trúc ngữ pháp
                 </span>
-                <p className="text-[19px] font-bold text-[#18181B] font-mono">
+                <p className="text-[17px] sm:text-[18px] font-bold text-[#18181B] font-mono">
                   {item.structure}
                 </p>
               </div>
 
               {/* Explanation */}
-              <p className="text-[19px] text-slate-700 leading-relaxed whitespace-pre-line">
+              <p className="text-[15.5px] sm:text-[16.5px] text-slate-700 leading-relaxed whitespace-pre-line">
                 {item.explanation}
               </p>
 
@@ -402,32 +677,32 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
             <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-              {/* Nhân vật A */}
-              <div className="flex items-center md:items-start gap-4">
-                <div className="relative">
+              {/* Nhân vật A — Chibi */}
+              <div className="flex items-center gap-3.5">
+                <div className="relative shrink-0">
                   <div
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-zinc-800 to-zinc-950 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
-                      activeDialogueIndex !== null &&
-                      (lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') || activeDialogueIndex % 2 === 0)
-                        ? 'border-red-500 ring-4 ring-red-500/50 scale-105 animate-pulse'
-                        : 'border-white/20'
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#FFF6E5] overflow-hidden shadow-lg border-[3px] transition-all duration-300 ${
+                      isStageSpeakerAActive
+                        ? 'border-amber-300 ring-4 ring-red-400/60 scale-105'
+                        : 'border-white/40'
                     }`}
                   >
-                    👦
+                    <img
+                      src={chibiBoyAvatar}
+                      alt="Nhân vật A"
+                      className="w-full h-full object-cover scale-[1.06] select-none"
+                    />
                   </div>
-                  {activeDialogueIndex !== null &&
-                    (lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') || activeDialogueIndex % 2 === 0) && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[13px] font-extrabold bg-red-600 text-white shadow-xs whitespace-nowrap animate-bounce">
-                        Đang nói 🔊
-                      </span>
-                    )}
+                  {isStageSpeakerAActive && (
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[12px] font-extrabold bg-red-600 text-white shadow-xs whitespace-nowrap animate-bounce">
+                      Đang nói 🔊
+                    </span>
+                  )}
                 </div>
                 <div className="text-left">
-                  <span className="px-2.5 py-0.5 rounded-md text-[12px] font-bold bg-red-950/80 text-red-200 border border-red-600/40 uppercase tracking-wider">
+                  <span className="px-2.5 py-1 rounded-md text-[12px] font-bold bg-red-950/80 text-red-200 border border-red-600/40 uppercase tracking-wider whitespace-nowrap">
                     Nhân vật A
                   </span>
-                  <h4 className="font-serif text-[18px] font-bold text-white mt-1">Tiểu Minh</h4>
-                  <p className="text-[14px] text-stone-300">Học viên tiếng Trung</p>
                 </div>
               </div>
 
@@ -487,32 +762,32 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                 </div>
               </div>
 
-              {/* Nhân vật B */}
-              <div className="flex items-center md:items-start gap-4 flex-row-reverse md:flex-row">
+              {/* Nhân vật B — Chibi */}
+              <div className="flex items-center gap-3.5 flex-row-reverse md:flex-row">
                 <div className="text-right">
-                  <span className="px-2.5 py-0.5 rounded-md text-[12px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/30 uppercase tracking-wider">
+                  <span className="px-2.5 py-1 rounded-md text-[12px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/30 uppercase tracking-wider whitespace-nowrap">
                     Nhân vật B
                   </span>
-                  <h4 className="font-serif text-[18px] font-bold text-white mt-1">Cô Mỹ Linh</h4>
-                  <p className="text-[14px] text-amber-200/90">Giảng viên / Lão Sư</p>
                 </div>
-                <div className="relative">
+                <div className="relative shrink-0">
                   <div
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 transition-all duration-300 ${
-                      activeDialogueIndex !== null &&
-                      (!lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') && activeDialogueIndex % 2 !== 0)
-                        ? 'border-amber-300 ring-4 ring-amber-400/50 scale-105 animate-pulse'
-                        : 'border-white/20'
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#FFD9C7] overflow-hidden shadow-lg border-[3px] transition-all duration-300 ${
+                      isStageSpeakerBActive
+                        ? 'border-amber-300 ring-4 ring-amber-400/60 scale-105'
+                        : 'border-white/40'
                     }`}
                   >
-                    👩‍🏫
+                    <img
+                      src={chibiTeacherAvatar}
+                      alt="Nhân vật B"
+                      className="w-full h-full object-cover scale-[1.06] select-none"
+                    />
                   </div>
-                  {activeDialogueIndex !== null &&
-                    (!lesson.dialogue[activeDialogueIndex]?.speaker?.toUpperCase().includes('A') && activeDialogueIndex % 2 !== 0) && (
-                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[13px] font-extrabold bg-amber-500 text-[#18181B] shadow-xs whitespace-nowrap animate-bounce">
-                        Đang nói 🔊
-                      </span>
-                    )}
+                  {isStageSpeakerBActive && (
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[12px] font-extrabold bg-amber-400 text-[#18181B] shadow-xs whitespace-nowrap animate-bounce">
+                      Đang nói 🔊
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -521,10 +796,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
           {/* Dòng Bong Bóng Hội Thoại */}
           <div className="space-y-6 pt-2">
             {lesson.dialogue.map((line, idx) => {
-              const isSpeakerA =
-                line.speaker.toUpperCase().includes('A') ||
-                line.speaker.toLowerCase().includes('minh') ||
-                idx % 2 === 0;
+              const isSpeakerA = isSpeakerATurn(line.speaker, idx);
               const isCurrentActive = activeDialogueIndex === idx;
 
               return (
@@ -535,13 +807,23 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   }`}
                 >
                   <div
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-md transition-all duration-300 ${
+                    className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full overflow-hidden shrink-0 shadow-md border-2 transition-all duration-300 ${
                       isSpeakerA
-                        ? 'bg-gradient-to-tr from-zinc-800 to-zinc-950 text-white border border-[#E8DFCE]'
-                        : 'bg-gradient-to-tr from-amber-600 to-red-600 text-white'
-                    } ${isCurrentActive ? 'ring-4 ring-red-500 scale-110 animate-bounce' : 'opacity-95'}`}
+                        ? 'bg-[#FFF6E5] border-[#E8DFCE]'
+                        : 'bg-[#FFD9C7] border-red-200'
+                    } ${
+                      isCurrentActive
+                        ? isSpeakerA
+                          ? 'border-red-600 ring-4 ring-red-400/60 scale-110'
+                          : 'border-amber-500 ring-4 ring-amber-400/60 scale-110'
+                        : 'opacity-95'
+                    }`}
                   >
-                    {isSpeakerA ? '👦' : '👩‍🏫'}
+                    <img
+                      src={isSpeakerA ? chibiBoyAvatar : chibiTeacherAvatar}
+                      alt={line.speaker}
+                      className="w-full h-full object-cover scale-[1.06] select-none"
+                    />
                   </div>
 
                   <div
@@ -624,10 +906,10 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
         <div className="space-y-4">
           <div className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-6">
             <div className="space-y-1">
-              <h3 className="font-serif font-black text-[#18181B] text-[21px] sm:text-[24px]">
+              <h3 className="font-sans font-extrabold text-[#18181B] text-[20px] sm:text-[23px]">
                 Luyện tập củng cố kiến thức
               </h3>
-              <p className="text-[19px] text-slate-600">
+              <p className="text-[15px] sm:text-[16px] text-slate-600">
                 Trả lời câu hỏi trắc nghiệm để kiểm tra mức độ hiểu bài
               </p>
             </div>
@@ -720,10 +1002,10 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       {/* Bottom Action Footer */}
       <div className="bg-[#FFF5F3] rounded-3xl border-2 border-red-200 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
         <div className="space-y-1">
-          <h4 className="font-serif font-black text-[#18181B] text-[21px]">
+          <h4 className="font-sans font-extrabold text-[#18181B] text-[20px]">
             {isCompleted ? 'Bạn đã hoàn thành bài học này!' : 'Đã học xong nội dung bài học?'}
           </h4>
-          <p className="text-[19px] text-slate-700 leading-relaxed">
+          <p className="text-[15.5px] text-slate-700 leading-relaxed">
             {isCompleted
               ? 'Tiếp tục luyện tập từ vựng hoặc chuyển sang bài học tiếp theo.'
               : 'Bấm nút hoàn thành để ghi nhận thời gian học tập và nhận điểm thưởng 50 XP.'}
@@ -744,11 +1026,13 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
 
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => (nextLesson ? handleSelectLesson(nextLesson) : onBack())}
             className="px-5 py-3 rounded-2xl border-2 border-[#E8DFCE] bg-white text-[#18181B] font-bold text-[14px] sm:text-[16px] hover:border-red-500 transition-colors cursor-pointer"
           >
-            Bài tiếp theo ➔
+            {nextLesson ? `Bài ${nextLesson.lessonNumber} tiếp theo ➔` : 'Quay lại khóa học'}
           </button>
+        </div>
+      </div>
         </div>
       </div>
     </div>

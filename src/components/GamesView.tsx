@@ -19,13 +19,18 @@ import {
   Award,
   ArrowLeft,
   Grid2X2,
+  PenTool,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useHSK } from '../context/HSKContext';
 import { HSKLevel, VocabItem } from '../types/hsk';
 import { speakChinese } from '../utils/audioSpeech';
+import { HanziStrokeCanvas } from './HanziStrokeCanvas';
+import { VocabIllustration } from './VocabIllustration';
+import chibiTeacherArcher from '../assets/images/chibi_teacher_archer_1795170893872.jpg';
 
-type ActiveGameType = 'rain' | 'match';
+type ActiveGameType = 'rain' | 'match' | 'draw';
+type DrawDifficulty = 'guided' | 'memory';
 type RainControlMode = 'choice' | 'pinyin';
 type RainSpeed = 'slow' | 'normal' | 'fast';
 type GamePhase = 'TITLE_MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER';
@@ -37,6 +42,14 @@ interface RainDrop {
   yPercent: number; // 0..100
   speedPerSec: number; // % height per second
   spawnedAt: number;
+}
+
+interface ArrowShot {
+  id: string;
+  targetX: number;
+  targetY: number;
+  word: string;
+  points: number;
 }
 
 interface MatchTile {
@@ -54,6 +67,7 @@ interface HighScores {
   rainPinyin: number;
   matchBestScore: number;
   matchBestTimeSec: number | null;
+  drawBestScore?: number;
 }
 
 const HIGH_SCORE_STORAGE_KEY = 'mixiang_hsk_game_highscores_v1';
@@ -181,6 +195,7 @@ export const GamesView: React.FC = () => {
   const [selectedSource, setSelectedSource] = useState<string>('ALL'); // 'ALL', HSKLevel, or 'deck:<id>'
   const [rainControlMode, setRainControlMode] = useState<RainControlMode>('choice');
   const [rainSpeed, setRainSpeed] = useState<RainSpeed>('normal');
+  const [drawDifficulty, setDrawDifficulty] = useState<DrawDifficulty>('guided');
   const [showRainPinyin, setShowRainPinyin] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [autoSpeakOnHit, setAutoSpeakOnHit] = useState<boolean>(true);
@@ -331,7 +346,12 @@ export const GamesView: React.FC = () => {
     [highScores, rainControlMode, recordStudyMinutes, saveHighScores, soundEnabled]
   );
 
+  const [arrowShots, setArrowShots] = useState<ArrowShot[]>([]);
+  const [isArcherRecoiling, setIsArcherRecoiling] = useState(false);
+
   const startRainGame = () => {
+    setArrowShots([]);
+    setIsArcherRecoiling(false);
     if (vocabPool.length < 4) return;
     const firstDrop = spawnOneDrop();
     const initialDrops = firstDrop ? [firstDrop] : [];
@@ -512,6 +532,24 @@ export const GamesView: React.FC = () => {
       const nextScore = scoreRef.current + pointsEarned;
       scoreRef.current = nextScore;
       setScore(nextScore);
+
+      // Fire animated golden arrow from Chibi Cô Giáo Cầm Cung to the shot word!
+      const shotId = `shot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setArrowShots((prev) => [
+        ...prev.slice(-4),
+        {
+          id: shotId,
+          targetX: drop.xPercent,
+          targetY: Math.min(82, drop.yPercent + 4),
+          word: drop.vocab.word,
+          points: pointsEarned,
+        },
+      ]);
+      setIsArcherRecoiling(true);
+      window.setTimeout(() => setIsArcherRecoiling(false), 180);
+      window.setTimeout(() => {
+        setArrowShots((prev) => prev.filter((s) => s.id !== shotId));
+      }, 460);
 
       setCorrectWords((prev) => {
         if (prev.some((w) => w.id === drop.vocab.id)) return prev;
@@ -806,6 +844,102 @@ export const GamesView: React.FC = () => {
     }
   };
 
+  // =========================================================================
+  // GAME 3: THỬ THÁCH VẼ CHỮ HÁN (HANZI DRAWING CHALLENGE)
+  // =========================================================================
+  const [drawWords, setDrawWords] = useState<VocabItem[]>([]);
+  const [drawCurrentIdx, setDrawCurrentIdx] = useState(0);
+  const [drawLastAccuracy, setDrawLastAccuracy] = useState<number | null>(null);
+
+  const startDrawGame = useCallback(() => {
+    const shuffled = [...vocabPool].sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, Math.min(6, shuffled.length));
+    setDrawWords(picked);
+    setDrawCurrentIdx(0);
+    setDrawLastAccuracy(null);
+    setScore(0);
+    scoreRef.current = 0;
+    setCombo(0);
+    comboRef.current = 0;
+    setMaxCombo(0);
+    setElapsedSec(0);
+    elapsedRef.current = 0;
+    setCorrectWords([]);
+    setMissedWords([]);
+    setIsNewRecord(false);
+    setProgressSyncedForRound(false);
+    setPhase('PLAYING');
+    if (picked[0] && autoSpeakOnHit) {
+      setTimeout(() => speakChinese(picked[0].word), 250);
+    }
+  }, [vocabPool, autoSpeakOnHit]);
+
+  const handleDrawScoreEvaluated = (accuracy: number) => {
+    const currentWord = drawWords[drawCurrentIdx];
+    if (!currentWord) return;
+    setDrawLastAccuracy(accuracy);
+
+    if (accuracy >= 60) {
+      const nextCombo = combo + 1;
+      setCombo(nextCombo);
+      setMaxCombo((prev) => Math.max(prev, nextCombo));
+      const gained = Math.round(accuracy / 3) + Math.min(25, (nextCombo - 1) * 5);
+      const nextScore = score + gained;
+      setScore(nextScore);
+      scoreRef.current = nextScore;
+
+      setCorrectWords((prev) =>
+        prev.some((w) => w.id === currentWord.id) ? prev : [...prev, currentWord]
+      );
+      if (autoSyncProgress) {
+        markVocabMastered(currentWord.id);
+      }
+      if (soundEnabled) playGameTone(nextCombo % 3 === 0 ? 'combo' : 'hit');
+    } else {
+      setCombo(0);
+      setMissedWords((prev) =>
+        prev.some((w) => w.id === currentWord.id) ? prev : [...prev, currentWord]
+      );
+      if (autoSyncProgress) {
+        markVocabLearning(currentWord.id);
+      }
+      if (soundEnabled) playGameTone('miss');
+    }
+  };
+
+  const handleNextDrawWord = (skipped = false) => {
+    const currentWord = drawWords[drawCurrentIdx];
+    if (skipped && currentWord) {
+      setCombo(0);
+      setMissedWords((prev) =>
+        prev.some((w) => w.id === currentWord.id) ? prev : [...prev, currentWord]
+      );
+      if (autoSyncProgress) {
+        markVocabLearning(currentWord.id);
+      }
+    }
+
+    if (drawCurrentIdx + 1 < drawWords.length) {
+      const nextIdx = drawCurrentIdx + 1;
+      setDrawCurrentIdx(nextIdx);
+      setDrawLastAccuracy(null);
+      if (drawWords[nextIdx] && autoSpeakOnHit) {
+        setTimeout(() => speakChinese(drawWords[nextIdx].word), 200);
+      }
+    } else {
+      if (soundEnabled) playGameTone('win');
+      confetti({ particleCount: 70, spread: 75, origin: { y: 0.65 } });
+      setPhase('GAME_OVER');
+
+      if (scoreRef.current > (highScores.drawBestScore || 0)) {
+        setIsNewRecord(true);
+        saveHighScores({ ...highScores, drawBestScore: scoreRef.current });
+      }
+      const mins = Math.max(1, Math.round(elapsedRef.current / 60));
+      recordStudyMinutes(mins);
+    }
+  };
+
   // Manual sync button in summary (if autoSyncProgress was off)
   const handleManualSyncVocab = () => {
     correctWords.forEach((v) => markVocabMastered(v.id));
@@ -825,13 +959,13 @@ export const GamesView: React.FC = () => {
     <div className="space-y-3.5 pb-4">
       {/* Header Banner - Only shown on Menu or Game Over so Active Play fits 100% in viewport */}
       {phase !== 'PLAYING' && phase !== 'PAUSED' && (
-        <div className="rounded-2xl bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white px-5 py-4 border border-red-500/70 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <div className="rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white px-5 py-4 border border-red-400/70 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div className="space-y-1 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 text-[12px] font-bold text-amber-200">
               <Gamepad2 className="w-4 h-4 text-amber-300" />
               <span>Trò chơi 2D luyện trí nhớ · 趣味汉字游戏</span>
             </div>
-            <h1 className="font-serif text-[20px] sm:text-[23px] font-black text-white leading-tight">
+            <h1 className="font-sans text-[21px] sm:text-[24px] font-extrabold text-white leading-tight">
               Chơi Game Ôn Từ Vựng HSK
             </h1>
             <p className="text-[13px] sm:text-[14px] text-rose-50 leading-snug">
@@ -840,7 +974,7 @@ export const GamesView: React.FC = () => {
           </div>
 
           {/* High Score Summary Box */}
-          <div className="grid grid-cols-3 gap-2 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
             <div className="px-3 py-2 rounded-xl bg-black/30 border border-white/15">
               <div className="text-[11px] text-amber-200 font-bold">Mưa (4 đáp án)</div>
               <div className="font-mono text-[15px] font-black text-white tabular-nums">
@@ -859,6 +993,12 @@ export const GamesView: React.FC = () => {
                 {highScores.matchBestScore}đ
               </div>
             </div>
+            <div className="px-3 py-2 rounded-xl bg-black/30 border border-white/15">
+              <div className="text-[11px] text-amber-200 font-bold">Vẽ chữ Hán</div>
+              <div className="font-mono text-[15px] font-black text-white tabular-nums">
+                {highScores.drawBestScore || 0}đ
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -869,20 +1009,25 @@ export const GamesView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveGame('rain')}
-            className={`flex-1 min-w-[180px] px-4 py-2 rounded-xl font-black text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`flex-1 min-w-[170px] px-4 py-2 rounded-xl font-black text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeGame === 'rain'
                 ? 'bg-red-700 text-white shadow-sm'
                 : 'text-[#18181B] hover:bg-white'
             }`}
           >
-            <Sparkles className="w-4 h-4 shrink-0" />
+            <img
+              src={chibiTeacherArcher}
+              alt="Cô giáo cầm cung bắn từ vựng"
+              referrerPolicy="no-referrer"
+              className="w-7 h-7 rounded-full object-cover border border-amber-300 shadow-2xs shrink-0"
+            />
             <span>Mưa Từ Vựng 2D (汉字雨)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveGame('match')}
-            className={`flex-1 min-w-[180px] px-4 py-2 rounded-xl font-black text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`flex-1 min-w-[170px] px-4 py-2.5 rounded-xl font-black text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeGame === 'match'
                 ? 'bg-red-700 text-white shadow-sm'
                 : 'text-[#18181B] hover:bg-white'
@@ -890,6 +1035,19 @@ export const GamesView: React.FC = () => {
           >
             <Grid2X2 className="w-4 h-4 shrink-0" />
             <span>Ghép Cặp Hán – Việt</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveGame('draw')}
+            className={`flex-1 min-w-[170px] px-4 py-2.5 rounded-xl font-black text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeGame === 'draw'
+                ? 'bg-red-700 text-white shadow-sm'
+                : 'text-[#18181B] hover:bg-white'
+            }`}
+          >
+            <PenTool className="w-4 h-4 shrink-0" />
+            <span>Vẽ Chữ Hán (画汉字)</span>
           </button>
         </div>
       )}
@@ -901,24 +1059,39 @@ export const GamesView: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
           {/* Left: Game Setup */}
           <div className="xl:col-span-8 bg-white rounded-2xl border border-[#E8DFCE] p-4 sm:p-5 space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EFE7D6] pb-3">
-              <div>
-                <h2 className="font-serif text-[18px] sm:text-[20px] font-black text-[#18181B]">
-                  {activeGame === 'rain'
-                    ? 'Cài đặt ván Mưa Từ Vựng 2D'
-                    : 'Cài đặt ván Ghép Cặp Hán – Việt'}
-                </h2>
-                <p className="text-[13px] text-slate-600">
-                  {activeGame === 'rain'
-                    ? 'Chọn kho từ vựng và cách điều khiển trước khi bắt đầu.'
-                    : 'Ghép 2 vòng (12 cặp Hán – Việt) nhanh nhất để ghi điểm kỷ lục.'}
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EFE7D6] pb-3">
+              <div className="flex items-center gap-3">
+                {activeGame === 'rain' && (
+                  <img
+                    src={chibiTeacherArcher}
+                    alt="Cô giáo cầm cung bắn từ vựng"
+                    referrerPolicy="no-referrer"
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-400 shadow-sm shrink-0 bg-[#FFF5F3]"
+                  />
+                )}
+                <div>
+                  <h2 className="font-sans text-[18px] sm:text-[20px] font-bold text-[#18181B]">
+                    {activeGame === 'rain'
+                      ? 'Cài đặt ván Mưa Từ Vựng 2D'
+                      : activeGame === 'match'
+                      ? 'Cài đặt ván Ghép Cặp Hán – Việt'
+                      : 'Cài đặt ván Thử Thách Vẽ Chữ Hán'}
+                  </h2>
+                  <p className="text-[13px] text-slate-600">
+                    {activeGame === 'rain'
+                      ? 'Cùng cô giáo bắn cung hạ gục các từ vựng đang rơi trước khi chạm đáy!'
+                      : activeGame === 'match'
+                      ? 'Ghép 2 vòng (12 cặp Hán – Việt) nhanh nhất để ghi điểm kỷ lục.'
+                      : 'Luyện vẽ 6 từ vựng chữ Hán trên bảng Ô Mễ Tự và chấm điểm nét bút trực tiếp.'}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   if (activeGame === 'rain') startRainGame();
-                  else setupMatchBoard(1, true);
+                  else if (activeGame === 'match') setupMatchBoard(1, true);
+                  else startDrawGame();
                 }}
                 className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[14px] shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
@@ -979,7 +1152,7 @@ export const GamesView: React.FC = () => {
                         <MousePointerClick className="w-4 h-4 text-red-600" />
                         <span className="text-[11px] font-black text-red-700">4 đáp án</span>
                       </div>
-                      <div className="font-serif text-[14px] font-black text-[#18181B]">
+                      <div className="font-sans text-[14.5px] font-bold text-[#18181B]">
                         Bấm chọn nghĩa
                       </div>
                       <p className="text-[12px] text-slate-600 leading-tight">
@@ -1000,7 +1173,7 @@ export const GamesView: React.FC = () => {
                         <Keyboard className="w-4 h-4 text-amber-700" />
                         <span className="text-[11px] font-black text-amber-800">Gõ phím</span>
                       </div>
-                      <div className="font-serif text-[14px] font-black text-[#18181B]">
+                      <div className="font-sans text-[14.5px] font-bold text-[#18181B]">
                         Gõ Pinyin phá từ
                       </div>
                       <p className="text-[12px] text-slate-600 leading-tight">
@@ -1044,6 +1217,58 @@ export const GamesView: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2B. Chế độ độ khó cho Vẽ Chữ Hán */}
+            {activeGame === 'draw' && (
+              <div className="space-y-2">
+                <div className="text-[13px] font-extrabold text-[#18181B]">
+                  2. Chế độ thử thách vẽ chữ
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDrawDifficulty('guided')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer space-y-1 ${
+                      drawDifficulty === 'guided'
+                        ? 'bg-[#FFF5F3] border-red-600 shadow-2xs'
+                        : 'bg-[#FDFBF6] border-[#E8DFCE] hover:border-red-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <PenTool className="w-4 h-4 text-red-600" />
+                      <span className="text-[11px] font-black text-red-700">Dễ · Tập viết</span>
+                    </div>
+                    <div className="font-sans text-[14px] font-bold text-[#18181B]">
+                      Có nét chữ mẫu mờ (Tô chữ)
+                    </div>
+                    <p className="text-[12px] text-slate-600 leading-tight">
+                      Hiện bóng chữ Hán mờ trên ô Mễ Tự để người mới làm quen với bút thuận.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDrawDifficulty('memory')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer space-y-1 ${
+                      drawDifficulty === 'memory'
+                        ? 'bg-[#FEFCE8] border-amber-600 shadow-2xs'
+                        : 'bg-[#FDFBF6] border-[#E8DFCE] hover:border-amber-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Sparkles className="w-4 h-4 text-amber-700" />
+                      <span className="text-[11px] font-black text-amber-800">Thử thách nhớ chữ</span>
+                    </div>
+                    <div className="font-sans text-[14px] font-bold text-[#18181B]">
+                      Nhìn Nghĩa & Pinyin tự vẽ chữ
+                    </div>
+                    <p className="text-[12px] text-slate-600 leading-tight">
+                      Ẩn nét chữ mẫu ban đầu để tự nhớ mặt chữ và viết lên bảng (có nút bật gợi ý).
+                    </p>
+                  </button>
                 </div>
               </div>
             )}
@@ -1103,13 +1328,18 @@ export const GamesView: React.FC = () => {
               type="button"
               onClick={() => {
                 if (activeGame === 'rain') startRainGame();
-                else setupMatchBoard(1, true);
+                else if (activeGame === 'match') setupMatchBoard(1, true);
+                else startDrawGame();
               }}
               className="w-full py-3 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[15px] shadow-sm transition-transform active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
             >
               <Play className="w-5 h-5 fill-white" />
               <span>
-                {activeGame === 'rain' ? 'Bắt đầu Mưa Từ Vựng' : 'Bắt đầu Ghép Cặp Hán – Việt'}
+                {activeGame === 'rain'
+                  ? 'Bắt đầu Mưa Từ Vựng'
+                  : activeGame === 'match'
+                  ? 'Bắt đầu Ghép Cặp Hán – Việt'
+                  : 'Bắt đầu Thử Thách Vẽ Chữ Hán'}
               </span>
             </button>
           </div>
@@ -1137,7 +1367,7 @@ export const GamesView: React.FC = () => {
                     <strong className="text-red-700">Chuyển mục tiêu:</strong> Bấm trực tiếp vào bất kỳ hạt mưa nào để ưu tiên giải từ đó.
                   </li>
                 </ul>
-              ) : (
+              ) : activeGame === 'match' ? (
                 <ul className="space-y-2 text-[13px] text-[#18181B] leading-snug">
                   <li>
                     <strong className="text-red-700">Mục tiêu:</strong> Chạm 1 thẻ chữ Hán và 1 thẻ nghĩa Tiếng Việt tương ứng để xóa cặp.
@@ -1147,6 +1377,18 @@ export const GamesView: React.FC = () => {
                   </li>
                   <li>
                     <strong className="text-red-700">Kỷ lục:</strong> Tính cả điểm cao nhất và thời gian hoàn thành nhanh nhất.
+                  </li>
+                </ul>
+              ) : (
+                <ul className="space-y-2 text-[13px] text-[#18181B] leading-snug">
+                  <li>
+                    <strong className="text-red-700">Mục tiêu:</strong> Dùng chuột hoặc màn hình cảm ứng vẽ đúng chữ Hán lên bảng Ô Mễ Tự.
+                  </li>
+                  <li>
+                    <strong className="text-red-700">Chấm điểm AI Canvas:</strong> Hệ thống đo độ khớp nét chữ (từ 60% trở lên được tính vượt qua và cộng Combo).
+                  </li>
+                  <li>
+                    <strong className="text-red-700">6 Từ mỗi ván:</strong> Vừa ghi nhớ mặt chữ vừa rèn bút thuận chuẩn đẹp.
                   </li>
                 </ul>
               )}
@@ -1217,9 +1459,13 @@ export const GamesView: React.FC = () => {
                     Cấp {rainWaveLevel}/6 (tối đa {maxConcurrentDrops} từ)
                   </div>
                 </>
-              ) : (
+              ) : activeGame === 'match' ? (
                 <div className="text-[13px] font-bold text-[#18181B] font-mono tabular-nums">
                   Vòng {matchRound}/2
+                </div>
+              ) : (
+                <div className="text-[13px] font-bold text-[#18181B] font-mono tabular-nums">
+                  Từ {drawCurrentIdx + 1}/{drawWords.length}
                 </div>
               )}
 
@@ -1310,11 +1556,108 @@ export const GamesView: React.FC = () => {
                   </div>
                 )}
 
+                {/* SVG Aiming Sightline & Golden Arrow Beams */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 w-full h-full pointer-events-none z-15"
+                >
+                  {/* Subtle aiming sightline toward current target word */}
+                  {targetDrop && phase === 'PLAYING' && (
+                    <line
+                      x1="50"
+                      y1="85"
+                      x2={targetDrop.xPercent}
+                      y2={Math.min(82, targetDrop.yPercent + 5)}
+                      stroke="rgba(253, 224, 71, 0.35)"
+                      strokeWidth="0.45"
+                      strokeDasharray="1.8 1.8"
+                    />
+                  )}
+
+                  {/* Active Golden Arrow Shots */}
+                  {arrowShots.map((shot) => (
+                    <g key={shot.id} className="animate-beam-fade">
+                      <line
+                        x1="50"
+                        y1="85"
+                        x2={shot.targetX}
+                        y2={shot.targetY}
+                        stroke="#FDE047"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1="50"
+                        y1="85"
+                        x2={shot.targetX}
+                        y2={shot.targetY}
+                        stroke="#FFFFFF"
+                        strokeWidth="0.45"
+                        strokeLinecap="round"
+                      />
+                    </g>
+                  ))}
+                </svg>
+
+                {/* Arrow Impact Star Bursts */}
+                {arrowShots.map((shot) => (
+                  <div
+                    key={`burst-${shot.id}`}
+                    style={{
+                      left: `${shot.targetX}%`,
+                      top: `${shot.targetY}%`,
+                    }}
+                    className="pointer-events-none absolute z-30 animate-arrow-pop flex flex-col items-center"
+                  >
+                    <div className="px-2.5 py-0.5 rounded-full bg-amber-400 text-[#18181B] font-mono text-[12px] font-black shadow-[0_0_16px_rgba(251,191,36,0.9)] whitespace-nowrap">
+                      ★ +{shot.points}đ
+                    </div>
+                  </div>
+                ))}
+
                 {/* Danger Bottom Line */}
-                <div className="absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-red-950/95 via-red-900/50 to-transparent border-t border-dashed border-amber-300/45 flex items-end justify-center pb-1.5 pointer-events-none">
-                  <span className="text-[11px] font-bold text-amber-200/85 tracking-wide">
-                    Vạch giới hạn — Giải nghĩa trước khi chữ Hán chạm đáy
+                <div className="absolute bottom-0 inset-x-0 h-9 bg-gradient-to-t from-red-950/95 via-red-900/50 to-transparent border-t border-dashed border-amber-300/45 flex items-end justify-between px-3 sm:px-4 pb-1.5 pointer-events-none">
+                  <span className="text-[11px] font-bold text-amber-200/85 tracking-wide hidden sm:inline">
+                    Vạch giới hạn — Bắn hạ chữ Hán trước khi chạm đáy
                   </span>
+                  <span className="text-[10.5px] font-bold text-amber-200/85 tracking-wide sm:hidden">
+                    Vạch giới hạn
+                  </span>
+                  <span className="text-[11px] font-bold text-amber-300/90 hidden sm:inline">
+                    Cô giáo xạ thủ sẵn sàng
+                  </span>
+                  <span className="text-[10.5px] font-bold text-amber-300/90 sm:hidden">
+                    Xạ thủ sẵn sàng
+                  </span>
+                </div>
+
+                {/* Chibi Cô Giáo Cầm Cung Bắn Từ Vựng (Bottom Center Archer Station) */}
+                <div
+                  className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center"
+                  aria-hidden="true"
+                >
+                  <div
+                    className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-amber-300 bg-[#2B161B] shadow-[0_0_24px_rgba(251,191,36,0.45)] overflow-hidden transition-transform duration-150 ${
+                      isArcherRecoiling ? 'scale-115 -translate-y-1.5 ring-4 ring-amber-300/60' : ''
+                    }`}
+                    style={{
+                      transform: targetDrop
+                        ? `scaleX(${targetDrop.xPercent < 48 ? -1 : 1}) rotate(${
+                            Math.max(-14, Math.min(14, (targetDrop.xPercent - 50) * 0.25)) *
+                            (targetDrop.xPercent < 48 ? -1 : 1)
+                          }deg)`
+                        : undefined,
+                    }}
+                  >
+                    <img
+                      src={chibiTeacherArcher}
+                      alt="Cô giáo cầm cung bắn từ vựng"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
 
                 {/* Falling Word Raindrops */}
@@ -1353,7 +1696,7 @@ export const GamesView: React.FC = () => {
                       )}
                       {isTarget && rainControlMode === 'choice' && (
                         <span className="text-[10px] font-extrabold text-amber-700">
-                          Đang chọn
+                          Đang ngắm bắn
                         </span>
                       )}
                     </button>
@@ -1524,6 +1867,70 @@ export const GamesView: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* -------------------- VẼ CHỮ HÁN ARENA (THỬ THÁCH VIẾT CHỮ HÁN) -------------------- */}
+          {activeGame === 'draw' && drawWords[drawCurrentIdx] && (
+            <div className="space-y-4">
+              {/* Target Word Prompt & Next Word Bar */}
+              <div className="bg-white rounded-2xl border-2 border-[#E8DFCE] p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="px-3 py-1 rounded-full bg-red-600 text-white text-[12px] font-extrabold">
+                      Thử thách {drawCurrentIdx + 1} / {drawWords.length}
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-[#FAF7F0] border border-[#E8DFCE] text-[12px] font-bold text-slate-700">
+                      {drawWords[drawCurrentIdx].level}
+                    </span>
+                    {drawDifficulty === 'memory' && (
+                      <span className="text-[12px] font-bold text-amber-700">
+                        Chế độ tự nhớ chữ (Có thể bấm "Đang hiện chữ mẫu" nếu cần gợi ý)
+                      </span>
+                    )}
+                  </div>
+                  <VocabIllustration vocab={drawWords[drawCurrentIdx]} compact />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => speakChinese(drawWords[drawCurrentIdx].word)}
+                    className="px-4 py-2.5 rounded-xl bg-[#FDF0ED] hover:bg-red-600 text-[#C85A43] hover:text-white font-bold text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span>Nghe phát âm</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleNextDrawWord(drawLastAccuracy === null)}
+                    className={`px-5 py-2.5 rounded-xl font-black text-[14px] flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      drawLastAccuracy !== null
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
+                        : 'bg-[#FAF7F0] hover:bg-red-50 text-slate-700 border border-[#E8DFCE]'
+                    }`}
+                  >
+                    <span>
+                      {drawCurrentIdx + 1 < drawWords.length
+                        ? drawLastAccuracy !== null
+                          ? 'Qua chữ tiếp theo ›'
+                          : 'Bỏ qua từ này ›'
+                        : 'Hoàn thành ván ›'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <HanziStrokeCanvas
+                word={drawWords[drawCurrentIdx].word}
+                pinyin={drawWords[drawCurrentIdx].pinyin}
+                meaning={drawWords[drawCurrentIdx].meaning}
+                sinoVietnamese={drawWords[drawCurrentIdx].sinoVietnamese}
+                showGuideByDefault={drawDifficulty === 'guided'}
+                onScoreEvaluated={(acc) => handleDrawScoreEvaluated(acc)}
+                compact
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1539,8 +1946,12 @@ export const GamesView: React.FC = () => {
                 <span>Chúc mừng! Kỷ lục cá nhân mới!</span>
               </div>
             )}
-            <h2 className="font-serif text-[26px] sm:text-[30px] font-black text-[#18181B]">
-              {activeGame === 'rain' ? 'Tổng kết Mưa Từ Vựng 2D' : 'Hoàn thành Ghép Cặp Hán – Việt'}
+            <h2 className="font-sans text-[26px] sm:text-[30px] font-bold text-[#18181B]">
+              {activeGame === 'rain'
+                ? 'Tổng kết Mưa Từ Vựng 2D'
+                : activeGame === 'match'
+                ? 'Hoàn thành Ghép Cặp Hán – Việt'
+                : 'Hoàn thành Thử Thách Vẽ Chữ Hán'}
             </h2>
             <p className="text-[19px] text-slate-600">
               Hệ thống đã ghi nhận thêm thời gian học hôm nay vào hồ sơ của bạn.
@@ -1562,7 +1973,7 @@ export const GamesView: React.FC = () => {
               </div>
             </div>
             <div className="p-5 rounded-2xl bg-[#ECFDF5] border border-emerald-200 text-center space-y-1">
-              <div className="text-[14px] font-bold text-emerald-800">Từ trả lời đúng</div>
+              <div className="text-[14px] font-bold text-emerald-800">Từ hoàn thành tốt</div>
               <div className="font-mono text-[26px] font-black text-[#18181B] tabular-nums">
                 {correctWords.length}
               </div>
@@ -1593,7 +2004,7 @@ export const GamesView: React.FC = () => {
 
           {missedWords.length > 0 && (
             <div className="space-y-3">
-              <h3 className="font-serif text-[21px] font-black text-[#18181B]">
+              <h3 className="font-sans text-[21px] font-bold text-[#18181B]">
                 Từ cần ôn lại ({missedWords.length} từ)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1633,7 +2044,8 @@ export const GamesView: React.FC = () => {
               type="button"
               onClick={() => {
                 if (activeGame === 'rain') startRainGame();
-                else setupMatchBoard(1, true);
+                else if (activeGame === 'match') setupMatchBoard(1, true);
+                else startDrawGame();
               }}
               className="px-7 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-[16px] flex items-center gap-2 shadow-sm cursor-pointer"
             >

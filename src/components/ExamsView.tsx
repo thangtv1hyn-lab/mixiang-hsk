@@ -29,8 +29,8 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header Banner (Đỏ - Be - Đen tươi sáng) */}
-      <div className="bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] border border-red-500/70 text-white rounded-3xl p-6 sm:p-8 shadow-md">
+      {/* Header Banner (Màu đỏ pastel chủ đạo) */}
+      <div className="bg-gradient-to-br from-red-500 via-red-600 to-red-700 border border-red-400/70 text-white rounded-3xl p-6 sm:p-8 shadow-md">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 text-[14px] font-bold text-amber-200">
@@ -38,38 +38,46 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
               <span>Hệ thống Đề thi thử HSK Chuẩn Quốc Tế</span>
             </div>
 
-            <h1 className="font-serif text-[24px] sm:text-[30px] font-black tracking-tight leading-tight text-balance">
+            <h1 className="font-sans text-[24px] sm:text-[30px] font-bold tracking-tight leading-tight text-balance">
               Phòng Thi Thử & Chấm Điểm Tự Động
             </h1>
 
-            <p className="text-[19px] text-rose-50 leading-relaxed">
+            <p className="text-[15.5px] sm:text-[16.5px] text-rose-50 leading-relaxed">
               Mô phỏng 100% cấu trúc đề thi HSK với đồng hồ bấm giờ, các phần Nghe – Đọc – Viết và phân tích điểm chi tiết ngay khi nộp bài.
             </p>
           </div>
 
-          {/* Quick exam stats */}
-          <div className="bg-white/10 rounded-2xl p-5 border border-white/15 xl:min-w-[270px] space-y-3 shrink-0">
-            <div className="flex justify-between items-center text-[14px]">
-              <span className="text-stone-300">Đã hoàn thành:</span>
-              <span className="font-black text-[18px] text-white tabular-nums">
-                {studentProfile.examHistory.length} bài
-              </span>
+          {/* Right: Quick exam stats + HSK Mascot Illustration */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 shrink-0">
+            <div className="bg-white/10 rounded-2xl p-5 border border-white/15 w-full sm:w-auto sm:min-w-[240px] space-y-3">
+              <div className="flex justify-between items-center gap-4 text-[14px]">
+                <span className="text-stone-200">Đã hoàn thành:</span>
+                <span className="font-black text-[18px] text-white tabular-nums">
+                  {studentProfile.examHistory.length} bài
+                </span>
+              </div>
+              <div className="flex justify-between items-center gap-4 text-[14px]">
+                <span className="text-stone-200">Điểm cao nhất:</span>
+                <span className="font-black text-[18px] text-amber-300 tabular-nums">
+                  {highestOverall !== null ? `${highestOverall} đ` : 'Chưa có'}
+                </span>
+              </div>
+              {lastExamResult && (
+                <button
+                  type="button"
+                  onClick={onViewResult}
+                  className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-600 text-white font-bold text-[14px] rounded-xl text-center transition-colors cursor-pointer"
+                >
+                  Xem kết quả bài vừa thi
+                </button>
+              )}
             </div>
-            <div className="flex justify-between items-center text-[14px]">
-              <span className="text-stone-300">Điểm cao nhất:</span>
-              <span className="font-black text-[18px] text-amber-300 tabular-nums">
-                {highestOverall !== null ? `${highestOverall} đ` : 'Chưa có'}
-              </span>
-            </div>
-            {lastExamResult && (
-              <button
-                type="button"
-                onClick={onViewResult}
-                className="w-full py-2.5 px-4 bg-red-700 hover:bg-red-600 text-white font-bold text-[14px] rounded-xl text-center transition-colors cursor-pointer"
-              >
-                Xem kết quả bài vừa thi
-              </button>
-            )}
+
+            <img
+              src="/assets/aistudio/icon2_d1d361e7.png"
+              alt="Luyện thi HSK MiXiangg"
+              className="h-36 sm:h-40 w-auto object-contain drop-shadow-md select-none shrink-0"
+            />
           </div>
         </div>
       </div>
@@ -105,7 +113,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
         )}
       </div>
 
-      {/* Exams Grid */}
+      {/* Exams Vertical List (Danh sách từ trên xuống dưới) */}
       {filteredExams.length === 0 ? (
         <div className="bg-white rounded-3xl border border-dashed border-[#D6CBB3] p-12 text-center space-y-2">
           <GraduationCap className="w-12 h-12 text-slate-400 mx-auto" />
@@ -114,7 +122,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5">
           {filteredExams.map((exam) => {
             const pastAttempts = studentProfile.examHistory.filter(
               (h) => h.examId === exam.id
@@ -127,7 +135,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
             return (
               <div
                 key={exam.id}
-                className="bg-white hover:bg-[#FFF9F6] rounded-3xl border-2 border-[#E8DFCE] hover:border-amber-500/70 p-6 sm:p-7 flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.015] hover:shadow-xl transition-all duration-300 ease-out"
+                className="bg-white hover:bg-[#FFF9F6] rounded-3xl border-2 border-[#E8DFCE] hover:border-amber-500/70 p-6 sm:p-7 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ease-out"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-[14px] font-bold">
@@ -138,7 +146,7 @@ export const ExamsView: React.FC<ExamsViewProps> = ({ onStartExam, onViewResult 
                     </span>
                   </div>
 
-                  <h2 className="font-serif font-black text-[21px] sm:text-[22px] text-[#18181B] leading-snug">
+                  <h2 className="font-sans font-bold not-italic text-[21px] sm:text-[22px] text-[#18181B] leading-snug">
                     {exam.title}
                   </h2>
 

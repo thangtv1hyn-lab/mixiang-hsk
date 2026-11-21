@@ -34,7 +34,7 @@ const DEFAULT_ADMIN_AUTH_USER: AuthUser = {
   id: 'usr-admin-1',
   name: 'Thắng Trần (Quản trị viên)',
   email: 'thangtv1.hyn@gmail.com',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  avatar: '/assets/aistudio/icon2_d1d361e7.png',
   provider: 'google',
   role: 'admin',
   status: 'active',
@@ -339,8 +339,9 @@ export class HSKDataStore {
         name: matchedAppUser.name,
         email: matchedAppUser.email,
         avatar:
-          matchedAppUser.avatar ||
-          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+          matchedAppUser.avatar && !matchedAppUser.avatar.includes('images.unsplash.com/photo-')
+            ? matchedAppUser.avatar
+            : '/assets/aistudio/icon2_d1d361e7.png',
         targetLevel: matchedAppUser.level || 'HSK 1',
         streakDays: matchedAppUser.streak || 1,
         lastActiveDate: new Date().toISOString().split('T')[0],

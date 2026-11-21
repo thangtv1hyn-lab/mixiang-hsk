@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { db } from '../dataStore.ts';
 import { VocabItem, VocabDeck, HSKLevel } from '../../src/types/hsk.ts';
+import { generateWithFreeGemini } from '../geminiClient.ts';
 
 const router = Router();
 
@@ -156,6 +156,7 @@ router.post('/decks/:id/cards', (req, res) => {
       radical,
       strokeCount,
       category,
+      imageUrl,
     } = req.body;
 
     if (!word || !pinyin || !meaning) {
@@ -175,6 +176,7 @@ router.post('/decks/:id/cards', (req, res) => {
       exampleMeaning: exampleMeaning || '',
       radical: radical || '',
       strokeCount: Number(strokeCount) || 1,
+      imageUrl: imageUrl ? String(imageUrl).trim() : undefined,
     };
 
     const existingCardIdx = deck.cards.findIndex((c) => c.id === newCard.id);
@@ -220,6 +222,7 @@ router.put('/decks/:id/cards/:cardId', (req, res) => {
     radical,
     strokeCount,
     category,
+    imageUrl,
   } = req.body;
 
   const card = deck.cards[cardIndex];
@@ -233,6 +236,7 @@ router.put('/decks/:id/cards/:cardId', (req, res) => {
   if (radical !== undefined) card.radical = radical;
   if (strokeCount !== undefined) card.strokeCount = Number(strokeCount);
   if (category) card.category = category;
+  if (imageUrl !== undefined) card.imageUrl = imageUrl ? String(imageUrl).trim() : undefined;
 
   const globalVocabIdx = db.vocabularies.findIndex((v) => v.id === cardId);
   if (globalVocabIdx !== -1) {
@@ -541,11 +545,6 @@ router.post('/ai-generate-deck', async (req, res) => {
     }
 
     try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      });
-
       const aiBatchCount = Math.min(requestedCount, 40);
       const prompt = `Bạn là Lão Sư dạy tiếng Trung HSK và Giáo trình Boya (博雅汉语) chuyên nghiệp. Hãy biên soạn một bộ flashcard từ vựng chất lượng cao.
 Giáo trình / Cấp độ: "${curriculumLabel}" (Tương đương cấp độ ${level})
@@ -578,16 +577,13 @@ Yêu cầu nghiêm ngặt:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
+      const { text: responseText } = await generateWithFreeGemini({
         contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
+        responseMimeType: 'application/json',
+        preferFast: true,
+        timeoutMs: 25000,
       });
 
-      const responseText = response.text || '';
       const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
@@ -637,7 +633,7 @@ Yêu cầu nghiêm ngặt:
         db.save();
       }
 
-      return res.status(201).json(generatedDeck);
+      return res.status(201).json({ ...generatedDeck, aiPowered: true });
     } catch (aiErr: any) {
       console.warn('Gemini Flashcard Generation fallback:', aiErr?.message);
       const fallbackDeck = generateFallbackDeck(topic, level, requestedCount);
@@ -645,7 +641,7 @@ Yêu cầu nghiêm ngặt:
         db.vocabDecks.unshift(fallbackDeck);
         db.save();
       }
-      return res.status(201).json(fallbackDeck);
+      return res.status(201).json({ ...fallbackDeck, aiPowered: false, aiNotice: 'AI đang bận, hệ thống tạm dùng bộ từ chuẩn giáo trình.' });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -696,6 +692,7 @@ router.post('/', (req, res) => {
       exampleMeaning,
       radical,
       strokeCount,
+      imageUrl,
     } = req.body;
     if (!word || !pinyin || !meaning) {
       return res.status(400).json({ error: 'Chữ Hán, Pinyin và Nghĩa là bắt buộc' });
@@ -714,6 +711,7 @@ router.post('/', (req, res) => {
       exampleMeaning: exampleMeaning || '',
       radical: radical || '',
       strokeCount: Number(strokeCount) || 1,
+      imageUrl: imageUrl ? String(imageUrl).trim() : undefined,
     };
 
     const existingIdx = db.vocabularies.findIndex((v) => v.id === newVocab.id);

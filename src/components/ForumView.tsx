@@ -11,9 +11,11 @@ import {
   Send,
   ArrowLeft,
   Bot,
+  X,
 } from 'lucide-react';
 import { useHSK } from '../context/HSKContext';
 import { ForumPost, HSKLevel } from '../types/hsk';
+import { safeParseJson } from '../utils/safeFetchJson';
 
 export const ForumView: React.FC = () => {
   const {
@@ -42,6 +44,7 @@ export const ForumView: React.FC = () => {
   // Reply state
   const [replyText, setReplyText] = useState('');
   const [isAiAnswering, setIsAiAnswering] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const categories = ['Tất cả', 'Ngữ pháp', 'Từ vựng', 'Kinh nghiệm thi', 'Chữa bài', 'Hỏi đáp chung'];
 
@@ -108,22 +111,27 @@ export const ForumView: React.FC = () => {
   const handleRequestAiReply = async () => {
     if (!selectedPost || isAiAnswering) return;
     setIsAiAnswering(true);
+    setAiError('');
 
     try {
       const response = await fetch('/api/gemini/tutor-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Học viên hỏi trong diễn đàn:\nTiêu đề: ${selectedPost.title}\nNội dung: ${selectedPost.content}\nTrình độ: ${selectedPost.level}`,
+          message: `Học viên hỏi trong diễn đàn:\nTiêu đề: ${selectedPost.title}\nNội dung: ${selectedPost.content}\nTrình độ: ${selectedPost.level}\nHãy giải đáp chi tiết, sư phạm, kèm chữ Hán, Pinyin và ví dụ.`,
           hskLevel: selectedPost.level,
         }),
       });
 
-      const data = await response.json();
-      const aiReplyContent = data.reply || 'Lão Sư đã tiếp nhận câu hỏi của bạn và sẽ phân tích sớm nhất!';
+      const data = await safeParseJson<{ reply?: string; error?: string }>(
+        response,
+        'Lão Sư AI đang bận, vui lòng thử lại sau giây lát.'
+      );
+      if (!response.ok || !data.reply) {
+        throw new Error(data.error || 'Lão Sư AI đang bận, vui lòng thử lại sau giây lát.');
+      }
 
-      addForumReply(selectedPost.id, aiReplyContent, 'teacher');
-
+      addForumReply(selectedPost.id, data.reply, 'ai');
       setSelectedPost((prev) => {
         if (!prev) return null;
         return {
@@ -137,15 +145,16 @@ export const ForumView: React.FC = () => {
               authorName: 'Lão Sư AI (Trợ lý Giáo viên)',
               authorAvatar: '',
               role: 'ai',
-              content: aiReplyContent,
+              content: data.reply,
               createdAt: new Date().toISOString(),
               likes: 1,
             },
           ],
         };
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('AI answer error:', err);
+      setAiError(err?.message || 'Không thể kết nối Lão Sư AI lúc này. Vui lòng thử lại.');
     } finally {
       setIsAiAnswering(false);
     }
@@ -197,11 +206,11 @@ export const ForumView: React.FC = () => {
               </div>
             </div>
 
-            <h1 className="text-[22px] sm:text-[27px] font-black text-[#18181B] leading-snug">
+            <h1 className="font-sans text-[22px] sm:text-[26px] font-extrabold text-[#18181B] leading-snug">
               {selectedPost.title}
             </h1>
 
-            <p className="text-[19px] text-slate-800 leading-relaxed whitespace-pre-line">
+            <p className="text-[15.5px] sm:text-[16.5px] text-slate-800 leading-relaxed whitespace-pre-line">
               {selectedPost.content}
             </p>
 
@@ -233,6 +242,18 @@ export const ForumView: React.FC = () => {
                 </button>
               </div>
             </div>
+            {aiError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[13.5px] font-semibold flex items-center justify-between gap-3">
+                <span>{aiError}</span>
+                <button
+                  type="button"
+                  onClick={handleRequestAiReply}
+                  className="px-3 py-1 rounded-lg bg-red-700 text-white text-[12.5px] font-bold hover:bg-red-800 shrink-0 cursor-pointer"
+                >
+                  Thử lại
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Replies Section */}
@@ -273,7 +294,7 @@ export const ForumView: React.FC = () => {
                     </div>
                   </div>
 
-                  <p className="text-[19px] text-[#18181B] leading-relaxed whitespace-pre-line">
+                  <p className="text-[15.5px] sm:text-[16px] text-[#18181B] leading-relaxed whitespace-pre-line">
                     {reply.content}
                   </p>
                 </div>
@@ -310,17 +331,17 @@ export const ForumView: React.FC = () => {
       ) : (
         <div className="space-y-6">
           {/* Top Forum Banner */}
-          <div className="bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white rounded-3xl p-6 sm:p-8 shadow-md border border-red-500/70">
+          <div className="bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-red-400/70">
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 text-[14px] font-bold text-amber-200">
                   <MessageSquare className="w-5 h-5" />
                   <span>Cộng đồng Học viên & Giảng viên HSK</span>
                 </div>
-                <h1 className="font-serif text-[24px] sm:text-[29px] font-black tracking-tight leading-tight">
-                  Diễn Đàn Trao Đổi & Hỏi Đáp Trực Tuyến
+                <h1 className="font-sans text-[24px] sm:text-[30px] font-extrabold tracking-tight leading-tight">
+                  Diễn Đàn Trao Đổi &amp; Hỏi Đáp Trực Tuyến
                 </h1>
-                <p className="text-[19px] text-rose-50 max-w-2xl leading-relaxed">
+                <p className="text-[15.5px] sm:text-[16.5px] text-rose-50 max-w-2xl leading-relaxed">
                   Đặt câu hỏi ngữ pháp, nhờ sửa bài viết và nhận giải đáp từ bạn bè cùng Lão Sư AI 24/7.
                 </p>
               </div>
@@ -328,9 +349,9 @@ export const ForumView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsNewPostOpen(true)}
-                className="px-6 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#18181B] font-black text-[16px] shadow-md transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+                className="px-6 py-3.5 min-h-[48px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#18181B] font-extrabold text-[15px] shadow-md transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
               >
-                <PlusCircle className="w-6 h-6" />
+                <PlusCircle className="w-5 h-5" />
                 <span>Đặt câu hỏi mới</span>
               </button>
             </div>
@@ -368,68 +389,106 @@ export const ForumView: React.FC = () => {
           </div>
 
           {/* Posts List */}
-          <div className="space-y-4">
-            {filteredPosts.map((post) => (
-              <button
-                key={post.id}
-                type="button"
-                onClick={() => setSelectedPost(post)}
-                className={`w-full text-left bg-white rounded-3xl border p-6 transition-all hover:shadow-md cursor-pointer block space-y-3 ${
-                  post.isPinned
-                    ? 'border-amber-500 bg-[#FFFDF8]'
-                    : 'border-[#E6DEC8] hover:border-red-700'
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[14px] font-bold">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    {post.isPinned && (
-                      <span className="inline-flex items-center gap-1 text-amber-800">
-                        <Pin className="w-4 h-4 fill-amber-700" />
-                        <span>Ghim ·</span>
+          {filteredPosts.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-dashed border-[#D6CBB3] p-10 sm:p-12 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#FAF7F0] border border-[#E8DFCE] text-[#C85A43] flex items-center justify-center mx-auto">
+                <MessageSquare className="w-7 h-7" />
+              </div>
+              <div className="space-y-1 max-w-md mx-auto">
+                <h3 className="font-sans text-[18px] font-bold text-[#18181B]">
+                  Không tìm thấy bài viết phù hợp
+                </h3>
+                <p className="text-[14.5px] text-slate-600 leading-relaxed">
+                  Thử xóa bộ lọc tìm kiếm hoặc đặt câu hỏi đầu tiên cho chủ đề này để cộng đồng và Lão Sư AI hỗ trợ bạn.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                {(searchQuery || activeCategory !== 'Tất cả') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setActiveCategory('Tất cả');
+                    }}
+                    className="px-4 py-2.5 min-h-[44px] rounded-xl border border-[#E8DFCE] bg-[#FAF7F0] hover:bg-white text-[#18181B] font-bold text-[14px] cursor-pointer transition-colors"
+                  >
+                    Xem tất cả bài viết
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsNewPostOpen(true)}
+                  className="px-5 py-2.5 min-h-[44px] rounded-xl bg-[#C85A43] hover:bg-[#B24A34] text-white font-bold text-[14px] inline-flex items-center gap-2 cursor-pointer transition-colors"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Đặt câu hỏi mới</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredPosts.map((post) => (
+                <button
+                  key={post.id}
+                  type="button"
+                  onClick={() => setSelectedPost(post)}
+                  className={`w-full text-left bg-white rounded-3xl border p-5 sm:p-6 transition-all hover:shadow-md cursor-pointer block space-y-3 ${
+                    post.isPinned
+                      ? 'border-amber-500 bg-[#FFFDF8]'
+                      : 'border-[#E6DEC8] hover:border-red-700'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[13.5px] font-bold">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      {post.isPinned && (
+                        <span className="inline-flex items-center gap-1 text-amber-800">
+                          <Pin className="w-4 h-4 fill-amber-700" />
+                          <span>Ghim ·</span>
+                        </span>
+                      )}
+                      <span className="text-red-700 font-black">{post.level}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{post.category}</span>
+                    </div>
+
+                    {post.isSolved && (
+                      <span className="flex items-center gap-1.5 text-emerald-700 font-extrabold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Đã giải đáp</span>
                       </span>
                     )}
-                    <span className="text-red-700 font-black">{post.level}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{post.category}</span>
                   </div>
 
-                  {post.isSolved && (
-                    <span className="flex items-center gap-1.5 text-red-700 font-extrabold">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>Đã giải đáp</span>
-                    </span>
-                  )}
-                </div>
+                  <h3 className="font-sans font-extrabold text-[19px] sm:text-[20px] text-[#18181B] leading-snug">
+                    {post.title}
+                  </h3>
 
-                <h3 className="font-black text-[21px] text-[#18181B] leading-snug">
-                  {post.title}
-                </h3>
+                  <p className="text-[15px] sm:text-[15.5px] text-slate-700 line-clamp-2 leading-relaxed">
+                    {post.content}
+                  </p>
 
-                <p className="text-[19px] text-slate-700 line-clamp-2 leading-relaxed">
-                  {post.content}
-                </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-[13.5px] text-slate-600 pt-3 border-t border-[#F5EFEB]">
+                    <div className="flex items-center gap-2 font-bold">
+                      <span className="text-[#18181B]">{post.authorName}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{new Date(post.createdAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 text-[14px] text-slate-600 pt-3 border-t border-[#F5EFEB]">
-                  <div className="flex items-center gap-2 font-bold">
-                    <span className="text-[#18181B]">{post.authorName}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{new Date(post.createdAt).toLocaleDateString('vi-VN')}</span>
+                    <div className="flex items-center gap-5 font-bold tabular-nums">
+                      <span className="flex items-center gap-1.5">
+                        <ThumbsUp className="w-4 h-4 text-red-700" />
+                        <span>{post.likes}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MessageCircle className="w-4 h-4 text-red-700" />
+                        <span>{post.repliesCount} trả lời</span>
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-5 font-bold tabular-nums">
-                    <span className="flex items-center gap-1.5">
-                      <ThumbsUp className="w-5 h-5 text-red-700" />
-                      <span>{post.likes}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <MessageCircle className="w-5 h-5 text-red-700" />
-                      <span>{post.repliesCount} trả lời</span>
-                    </span>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -441,9 +500,21 @@ export const ForumView: React.FC = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 border-2 border-[#E6DEC8]"
+            className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 border-2 border-[#E6DEC8] max-h-[90vh] overflow-y-auto relative"
           >
-            <h3 className="text-[21px] font-black text-[#18181B]">Đặt câu hỏi mới lên Diễn đàn</h3>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-sans text-[20px] font-extrabold text-[#18181B]">
+                Đặt câu hỏi mới lên Diễn đàn
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsNewPostOpen(false)}
+                aria-label="Đóng cửa sổ đặt câu hỏi"
+                className="w-9 h-9 rounded-full text-slate-500 hover:text-red-700 hover:bg-[#FAF7F0] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <form onSubmit={handleCreatePost} className="space-y-4 text-[14px]">
               <div>
                 <label className="font-bold text-[#18181B] block mb-1.5">

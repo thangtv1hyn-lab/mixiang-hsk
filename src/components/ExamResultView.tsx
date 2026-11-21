@@ -15,6 +15,7 @@ import confetti from 'canvas-confetti';
 import { ExamResult, Exam } from '../types/hsk';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese } from '../utils/audioSpeech';
+import { CompletionSealStamp } from './CompletionSealStamp';
 
 interface ExamResultViewProps {
   result: ExamResult;
@@ -31,6 +32,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
 }) => {
   const { exams, showPinyin } = useHSK();
   const exam = exams.find((e) => e.id === result.examId);
+  const [isCardThumping, setIsCardThumping] = React.useState(false);
 
   // Trigger celebration if passed
   React.useEffect(() => {
@@ -43,28 +45,46 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
     }
   }, [result.passed]);
 
+  const handleStampImpact = React.useCallback(() => {
+    setIsCardThumping(true);
+    window.setTimeout(() => setIsCardThumping(false), 680);
+  }, []);
+
   return (
     <div className="w-full space-y-8 pb-16">
       {/* Score Certificate Card */}
       <div
         className={`rounded-3xl p-8 sm:p-10 border text-center shadow-lg relative overflow-hidden ${
+          isCardThumping ? 'animate-card-thump' : ''
+        } ${
           result.passed
-            ? 'bg-gradient-to-br from-red-600 via-red-700 to-[#18181B] text-white border-red-500/70'
-            : 'bg-gradient-to-br from-[#18181B] via-zinc-900 to-[#18181B] text-white border-zinc-700'
+            ? 'bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white border-red-400/70'
+            : 'bg-gradient-to-br from-red-700 via-red-800 to-red-900 text-white border-red-600/70'
         }`}
       >
+        {/* Desktop Floating Red Seal Stamp (top-right corner) */}
+        <div className="hidden lg:block absolute top-6 right-7 z-20">
+          <CompletionSealStamp
+            label={result.passed ? 'ĐÃ ĐẠT · HOÀN THÀNH' : 'ĐÃ HOÀN THÀNH'}
+            subLabel={result.date}
+            surface="dark"
+            autoStamp
+            onImpact={handleStampImpact}
+          />
+        </div>
+
         <div className="relative z-10 max-w-2xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[14px] font-bold bg-white/10 backdrop-blur-md border border-white/20">
             <Sparkles className="w-5 h-5 text-amber-300" />
             <span>Kết Quả Thi Thử HSK Tự Động</span>
           </div>
 
-          <h2 className="font-serif text-[22px] sm:text-[27px] font-black tracking-tight">
+          <h2 className="font-sans text-[22px] sm:text-[27px] font-bold not-italic tracking-tight">
             {result.examTitle}
           </h2>
 
           {/* Big Score Display */}
-          <div className="py-4">
+          <div className="py-4 flex flex-col sm:flex-row items-center justify-center gap-5">
             <div className="inline-block p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
               <span className="font-mono text-6xl sm:text-7xl font-black tracking-tight text-amber-300 tabular-nums">
                 {result.totalScore}
@@ -72,6 +92,18 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
               <span className="font-mono text-[21px] text-rose-100 font-bold ml-2 tabular-nums">
                 / {result.maxScore}
               </span>
+            </div>
+
+            {/* Mobile & Tablet Inline Red Seal Stamp */}
+            <div className="lg:hidden">
+              <CompletionSealStamp
+                label={result.passed ? 'ĐÃ ĐẠT · HOÀN THÀNH' : 'ĐÃ HOÀN THÀNH'}
+                subLabel={result.date}
+                surface="dark"
+                autoStamp
+                compact
+                onImpact={handleStampImpact}
+              />
             </div>
           </div>
 
@@ -88,7 +120,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
                 <span>CHƯA ĐẠT (不合格) - CẦN CỐ GẮNG THÊM</span>
               </div>
             )}
-            <p className="text-[19px] text-rose-50">
+            <p className="text-[15.5px] sm:text-[16.5px] text-rose-50">
               Điểm đạt yêu cầu: {exam?.passScore || 120} điểm · Thời gian làm bài: {Math.round(result.timeSpentSeconds / 60)} phút
             </p>
           </div>
@@ -146,10 +178,10 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
       {exam && (
         <div className="bg-white rounded-3xl border border-[#E8DFCE] p-6 sm:p-8 shadow-2xs space-y-6">
           <div className="space-y-1">
-            <h3 className="font-serif text-[21px] sm:text-[24px] font-black text-[#18181B]">
+            <h3 className="font-sans text-[20px] sm:text-[23px] font-extrabold text-[#18181B]">
               Chi tiết bài làm và đáp án giải thích
             </h3>
-            <p className="text-[19px] text-slate-600">
+            <p className="text-[15px] sm:text-[16px] text-slate-600">
               Xem lại từng câu hỏi để nắm rõ lý do chọn đúng hoặc sai
             </p>
           </div>
@@ -282,7 +314,7 @@ export const ExamResultView: React.FC<ExamResultViewProps> = ({
                   )}
 
                   {/* Explanation */}
-                  <div className="p-4 rounded-2xl bg-white border border-[#E8DFCE] text-[18px] text-slate-700 leading-relaxed">
+                  <div className="p-4 rounded-2xl bg-white border border-[#E8DFCE] text-[15px] sm:text-[16px] text-slate-700 leading-relaxed">
                     <span className="font-bold text-[#18181B] block mb-1">Giải thích chi tiết:</span>
                     {q.explanation}
                   </div>

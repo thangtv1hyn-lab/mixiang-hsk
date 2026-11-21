@@ -13,6 +13,7 @@ export interface VocabItem {
   exampleSentence: string;
   examplePinyin: string;
   exampleMeaning: string;
+  imageUrl?: string;
 }
 
 export interface GrammarPoint {
@@ -67,6 +68,7 @@ export interface Course {
   title: string;
   vietnameseTitle: string;
   description: string;
+  coverImage?: string;
   targetVocabCount: number;
   grammarPointsCount: number;
   colorScheme: {
@@ -216,4 +218,79 @@ export interface AuthUser {
   targetLevel?: HSKLevel;
   joinedAt: string;
 }
+
+export interface ClassroomMomentItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  detail: string;
+  date: string;
+  location: string;
+  image: string;
+}
+
+export interface SiteUIConfig {
+  // Theme & Typography
+  primaryColor: string;
+  canvasColor: string;
+  fontScale: '13.5px' | '14px' | '15px';
+
+  // Brand & Header
+  headerLogoUrl?: string;
+  brandName: string;
+  brandHighlight: string;
+  brandSubtitle: string;
+
+  // Hero Section
+  heroBadge: string;
+  heroTitleLine1: string;
+  heroTitleHighlight: string;
+  heroTitleLine3: string;
+  heroDescription: string;
+  heroCtaPrimary: string;
+  heroCtaSecondary: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+
+  // Section 3: Đồng Hành Cùng Giảng Viên (2 Posters) & Admission Banner
+  posterSectionBadge: string;
+  posterSectionTitle: string;
+  posterSectionSubtitle: string;
+  poster1Url: string;
+  poster1Caption: string;
+  poster2Url: string;
+  poster2Caption: string;
+  admissionBadge: string;
+  admissionTitle: string;
+  admissionDescription: string;
+  admissionCta: string;
+
+  // Section 4: Khoảnh Khắc Cùng Lớp Học (Kỷ Niệm Đáng Nhớ)
+  momentsSectionBadge: string;
+  momentsSectionTitle: string;
+  momentsSectionSubtitle: string;
+  classroomMoments: ClassroomMomentItem[];
+
+  // Section Visibility
+  showCoursesSection: boolean;
+  showPostersSection: boolean;
+  showAdmissionBanner: boolean;
+  showMomentsSection: boolean;
+
+  // Footer Info (Matching Banner Card Design)
+  footerLogoUrl: string;
+  footerTitle: string;
+  footerSubtitle: string;
+  hotline: string;
+  footerCtaText: string;
+  facebook: string;
+  copyrightText: string;
+  motto: string;
+}
+
+
 

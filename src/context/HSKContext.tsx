@@ -13,6 +13,8 @@ import {
   VocabDeck,
   UserRole,
   UserStatus,
+  SiteUIConfig,
+  ClassroomMomentItem,
 } from '../types/hsk';
 import {
   INITIAL_COURSES,
@@ -23,6 +25,7 @@ import {
   INITIAL_VOCAB_DECKS,
   INITIAL_APP_USERS,
 } from '../data/initialData';
+import { DEFAULT_CARTOON_AVATAR, resolveCartoonAvatar } from '../utils/cartoonAvatars';
 
 interface HSKContextType {
   // Authentication & Self-Registration
@@ -105,7 +108,7 @@ interface HSKContextType {
 
   // Forum actions
   addForumPost: (post: Omit<ForumPost, 'id' | 'createdAt' | 'likes' | 'repliesCount' | 'replies'>) => void;
-  addForumReply: (postId: string, content: string, role?: 'student' | 'teacher' | 'admin') => void;
+  addForumReply: (postId: string, content: string, role?: 'student' | 'teacher' | 'admin' | 'ai') => void;
   likeForumPost: (postId: string) => void;
   togglePinPost: (postId: string) => void;
   toggleSolvedPost: (postId: string) => void;
@@ -114,11 +117,179 @@ interface HSKContextType {
   updateReminderSettings: (enabled: boolean, time: string, dailyGoal: number) => void;
   recordStudyMinutes: (minutes: number) => void;
   resetAllData: () => void;
+
+  // UI Customization (Admin / Teacher)
+  siteUIConfig: SiteUIConfig;
+  updateSiteUIConfig: (partial: Partial<SiteUIConfig>) => void;
+  resetSiteUIConfig: () => void;
 }
 
 const HSKContext = createContext<HSKContextType | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = 'mixiang_hsk_';
+
+export const DEFAULT_CLASSROOM_MOMENTS: ClassroomMomentItem[] = [
+  {
+    id: 'moment-1',
+    title: 'Lễ bế giảng khóa HSK 3 K18',
+    subtitle: '100% học viên lớp vượt qua kỳ thi với số điểm trên 240/300',
+    detail:
+      'Buổi tổng kết và trao chứng nhận hoàn thành khóa HSK 3 K18. Cả lớp cùng ôn lại hành trình 30 buổi học chữ Hán, luyện nghe phản xạ và chia sẻ bí quyết đạt điểm tuyệt đối phần đọc hiểu.',
+    date: 'Tháng 10/2026',
+    location: 'Cơ sở Hà Nội & Zoom Online',
+    image:
+      '/assets/aistudio/1794493556654_2645543663410262361_g4922351168579610784_e99743bc4875704f02020ec30504d074_7a96f4ba.jpg',
+  },
+  {
+    id: 'moment-2',
+    title: 'Workshop Thư pháp & Văn hóa Trung Hoa',
+    subtitle: 'Trải nghiệm viết câu đối chữ Hán và thưởng thức trà Long Tỉnh',
+    detail:
+      'Hoạt động ngoại khóa cuối tuần giúp học viên trực tiếp cầm bút lông luyện quy tắc bút thuận trên giấy tuyên chỉ, tìm hiểu chiết tự chữ Hán và văn hóa thưởng trà truyền thống.',
+    date: 'Tháng 09/2026',
+    location: 'Không gian Văn hóa MiXiangg',
+    image: '/assets/aistudio/image_f2d52981.png',
+  },
+  {
+    id: 'moment-3',
+    title: 'Giao lưu cùng du học sinh Thượng Hải',
+    subtitle: 'Chia sẻ kinh nghiệm săn học bổng CSC toàn phần',
+    detail:
+      'Buổi tọa đàm trực tiếp cùng các cựu học viên MiXiangg đang theo học Thạc sĩ tại Đại học Phúc Đán và Đại học Giao thông Thượng Hải, giải đáp hồ sơ xin học bổng Chính phủ Trung Quốc.',
+    date: 'Tháng 08/2026',
+    location: 'Hội trường MiXiangg HSK',
+    image:
+      '/assets/aistudio/1794493556657_2645543663410262361_g4922351168579610784_dce6dc1e88bf0bec69888aec30c627a0_f9b8c805.jpg',
+  },
+  {
+    id: 'moment-4',
+    title: 'Giờ học thực hành giao tiếp gọi món',
+    subtitle: 'Mô phỏng tình huống gọi món Dimsum và thanh toán thực tế',
+    detail:
+      'Lớp học nhập vai thực hành hội thoại nhà hàng: đặt bàn, hỏi món đặc sản, yêu cầu khẩu vị và thanh toán bằng tiếng Trung tự nhiên không cần nhìn sách.',
+    date: 'Hàng tuần',
+    location: 'Lớp Thực chiến Giao tiếp HSK 1-2',
+    image: '/assets/aistudio/mh_c19ddbdc.jpg',
+  },
+];
+
+export const DEFAULT_SITE_UI_CONFIG: SiteUIConfig = {
+  primaryColor: '#C85A43',
+  canvasColor: '#F7F4EC',
+  fontScale: '14px',
+
+  headerLogoUrl: '',
+  brandName: 'MiXiangg',
+  brandHighlight: 'HSK',
+  brandSubtitle: '米香中文 • Học Chuẩn & Nhớ Lâu',
+
+  heroBadge: '米香中文 • Lớp học Tiếng Trung Dành Cho Người Bắt Đầu',
+  heroTitleLine1: 'Học Tiếng Trung',
+  heroTitleHighlight: 'Tự Nhiên & Chuẩn Nét',
+  heroTitleLine3: 'Từ Con Số 0',
+  heroDescription:
+    'Phương pháp giảng dạy trực quan, thực chiến dành riêng cho người mới bắt đầu. Tự tin giao tiếp và đạt HSK điểm cao trong 3 tháng.',
+  heroCtaPrimary: 'Khám Phá Các Khóa Học',
+  heroCtaSecondary: 'Học Thử Flashcard 3D',
+  stat1Value: '45,000+',
+  stat1Label: 'Học viên theo học',
+  stat2Value: '98.6%',
+  stat2Label: 'Tỷ lệ đỗ HSK 1 - 4',
+  stat3Value: 'Top 1',
+  stat3Label: 'Khóa học cho người mới',
+
+  posterSectionBadge: 'ĐỘI NGŨ TÂM HUYẾT',
+  posterSectionTitle: 'Đồng Hành Cùng Giảng Viên MiXiangg',
+  posterSectionSubtitle:
+    'Tuyển sinh các lớp Tiếng Trung Boya & Luyện thi HSK 1–5 (Online & Offline) cùng đội ngũ giảng viên giàu kinh nghiệm.',
+  poster1Url:
+    '/assets/aistudio/1794493556654_2645543663410262361_g4922351168579610784_e99743bc4875704f02020ec30504d074_7a96f4ba.jpg',
+  poster1Caption: 'Tuyển sinh Lớp Tiếng Trung Boya Sơ Cấp 1 — Giảng viên Nguyễn Thị Minh Hương',
+  poster2Url:
+    '/assets/aistudio/1794493556657_2645543663410262361_g4922351168579610784_dce6dc1e88bf0bec69888aec30c627a0_f9b8c805.jpg',
+  poster2Caption: 'Thông báo Tuyển sinh Khóa Học Tiếng Trung Online & Offline — MiXiangg HSK',
+  admissionBadge: 'THÔNG BÁO TUYỂN SINH KHÓA MỚI',
+  admissionTitle: 'Lớp Học Tiếng Trung Cơ Bản MiXiangg K24',
+  admissionDescription:
+    'Lịch học linh hoạt ca tối và cuối tuần. Tặng giáo trình bản cứng chuẩn HSK 3.0 và tài khoản học Flashcard không giới hạn.',
+  admissionCta: 'Đăng Ký Tư Vấn Ngay',
+
+  momentsSectionBadge: 'KỶ NIỆM ĐÁNG NHỚ',
+  momentsSectionTitle: 'Khoảnh Khắc Cùng Lớp Học',
+  momentsSectionSubtitle:
+    'Học tập không chỉ là thi cử, mà là hành trình kết nối văn hóa và bạn bè.',
+  classroomMoments: DEFAULT_CLASSROOM_MOMENTS,
+
+  showCoursesSection: true,
+  showPostersSection: true,
+  showAdmissionBanner: true,
+  showMomentsSection: true,
+
+  footerLogoUrl: '/assets/aistudio/banner_d01a30da.jpg',
+  footerTitle: 'Tuyển sinh lớp Tiếng Trung Sơ cấp – HSK 1–6 (Online / Offline)',
+  footerSubtitle: 'Giáo trình Boya · Tối đa 08 học viên/lớp',
+  hotline: '0378.105.999',
+  footerCtaText: 'Xem Lộ trình Khóa học',
+  facebook: 'fb.com/nguyenminhhuong.min',
+  copyrightText: '© 2026 MiXiangg HSK',
+  motto: '学而时习之',
+};
+
+const AVATAR_CACHE_KEY = 'mixiang_hsk_saved_avatars_v1';
+
+const safeSetItem = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage quota or private browsing errors so state & backend save still succeed
+  }
+};
+
+const getCachedAvatar = (email?: string): string | null => {
+  if (!email) return null;
+  try {
+    const raw = localStorage.getItem(AVATAR_CACHE_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw) as Record<string, string>;
+    const key = email.trim().toLowerCase();
+    return typeof map[key] === 'string' && map[key].trim() ? map[key] : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedAvatar = (email?: string, avatar?: string): void => {
+  if (!email || !avatar) return;
+  try {
+    const raw = localStorage.getItem(AVATAR_CACHE_KEY);
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    map[email.trim().toLowerCase()] = avatar;
+    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const resolvePersistentAvatar = (serverAvatar?: string, email?: string): string => {
+  const cached = getCachedAvatar(email);
+  const normalizedServer =
+    serverAvatar && !serverAvatar.includes('images.unsplash.com/photo-')
+      ? serverAvatar.trim()
+      : '';
+
+  // If server has a custom non-default avatar, prefer it (and sync cache)
+  if (normalizedServer && normalizedServer !== DEFAULT_CARTOON_AVATAR) {
+    saveCachedAvatar(email, normalizedServer);
+    return normalizedServer;
+  }
+
+  // Otherwise, if this user saved a preferred avatar in cache (survives logout/server restarts), restore it
+  if (cached) {
+    return cached;
+  }
+
+  return resolveCartoonAvatar(normalizedServer || undefined, email);
+};
 
 export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Navigation & Role
@@ -127,7 +298,12 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed: AuthUser = JSON.parse(saved);
+      return {
+        ...parsed,
+        avatar: resolvePersistentAvatar(parsed.avatar, parsed.email),
+      };
     } catch {
       return null;
     }
@@ -145,7 +321,22 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return 'student';
     }
   });
-  const [showPinyin, setShowPinyin] = useState<boolean>(true);
+  const [showPinyin, setShowPinyinState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'show_pinyin');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const setShowPinyin = (show: boolean) => {
+    setShowPinyinState(show);
+    try {
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'show_pinyin', String(show));
+    } catch {
+      // ignore storage errors
+    }
+  };
   const [isMobileCompanionOpen, setIsMobileCompanionOpen] = useState<boolean>(false);
 
   // Authentication
@@ -214,7 +405,12 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [studentProfile, setStudentProfile] = useState<StudentProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'profile');
-      return saved ? JSON.parse(saved) : INITIAL_STUDENT_PROFILE;
+      if (!saved) return INITIAL_STUDENT_PROFILE;
+      const parsed: StudentProfile = JSON.parse(saved);
+      return {
+        ...parsed,
+        avatar: resolveCartoonAvatar(parsed.avatar, parsed.email),
+      };
     } catch {
       return INITIAL_STUDENT_PROFILE;
     }
@@ -228,6 +424,62 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return INITIAL_APP_USERS;
     }
   });
+
+  const [siteUIConfig, setSiteUIConfig] = useState<SiteUIConfig>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_SITE_UI_CONFIG,
+          ...parsed,
+          classroomMoments:
+            Array.isArray(parsed.classroomMoments) && parsed.classroomMoments.length > 0
+              ? parsed.classroomMoments
+              : DEFAULT_CLASSROOM_MOMENTS,
+        };
+      }
+      return DEFAULT_SITE_UI_CONFIG;
+    } catch {
+      return DEFAULT_SITE_UI_CONFIG;
+    }
+  });
+
+  const updateSiteUIConfig = (partial: Partial<SiteUIConfig>) => {
+    setSiteUIConfig((prev) => {
+      const next = { ...prev, ...partial };
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2', JSON.stringify(next));
+      } catch {
+        // ignore storage quota errors
+      }
+      return next;
+    });
+  };
+
+  const resetSiteUIConfig = () => {
+    setSiteUIConfig(DEFAULT_SITE_UI_CONFIG);
+    try {
+      localStorage.removeItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2');
+    } catch {
+      // ignore
+    }
+  };
+
+  // Apply dynamic UI theme tokens to root document
+  useEffect(() => {
+    const root = document.documentElement;
+    if (siteUIConfig.primaryColor) {
+      root.style.setProperty('--color-red-600', siteUIConfig.primaryColor);
+      root.style.setProperty('--accent-red', siteUIConfig.primaryColor);
+    }
+    if (siteUIConfig.canvasColor) {
+      root.style.setProperty('--bg-canvas', siteUIConfig.canvasColor);
+    }
+    if (siteUIConfig.fontScale) {
+      root.style.fontSize = siteUIConfig.fontScale;
+    }
+  }, [siteUIConfig.primaryColor, siteUIConfig.canvasColor, siteUIConfig.fontScale]);
 
   // Helper to build headers including active session token and user identity
   const getAuthHeaders = (): Record<string, string> => {
@@ -247,33 +499,33 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return headers;
   };
 
-  // Save changes to localStorage
+  // Save changes to localStorage safely (never throw QuotaExceededError)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'courses', JSON.stringify(courses));
+    safeSetItem(STORAGE_KEY_PREFIX + 'courses', JSON.stringify(courses));
   }, [courses]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'exams', JSON.stringify(exams));
+    safeSetItem(STORAGE_KEY_PREFIX + 'exams', JSON.stringify(exams));
   }, [exams]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'vocab', JSON.stringify(vocabularies));
+    safeSetItem(STORAGE_KEY_PREFIX + 'vocab', JSON.stringify(vocabularies));
   }, [vocabularies]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'decks', JSON.stringify(vocabDecks));
+    safeSetItem(STORAGE_KEY_PREFIX + 'decks', JSON.stringify(vocabDecks));
   }, [vocabDecks]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'forum', JSON.stringify(forumPosts));
+    safeSetItem(STORAGE_KEY_PREFIX + 'forum', JSON.stringify(forumPosts));
   }, [forumPosts]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(studentProfile));
+    safeSetItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(studentProfile));
   }, [studentProfile]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'app_users', JSON.stringify(appUsers));
+    safeSetItem(STORAGE_KEY_PREFIX + 'app_users', JSON.stringify(appUsers));
   }, [appUsers]);
 
   // Initial synchronization with Backend API
@@ -327,7 +579,14 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (uRes.status === 'fulfilled' && uRes.value.ok) {
           const uData = await uRes.value.json();
-          if (Array.isArray(uData) && uData.length > 0) setAppUsers(uData);
+          if (Array.isArray(uData) && uData.length > 0) {
+            setAppUsers(
+              uData.map((u: AppUser) => ({
+                ...u,
+                avatar: resolveCartoonAvatar(u.avatar, u.email),
+              }))
+            );
+          }
         }
         if (rRes.status === 'fulfilled' && rRes.value.ok) {
           const rData = await rRes.value.json();
@@ -356,11 +615,21 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (meRes.value.ok) {
             const meData = await meRes.value.json();
             if (meData.authenticated && meData.user) {
+              const resolvedAvatar = resolvePersistentAvatar(meData.user.avatar, meData.user.email);
+              const normalizedUser: AuthUser = {
+                ...meData.user,
+                avatar: resolvedAvatar,
+              };
               setIsAuthenticated(true);
-              setCurrentUser(meData.user);
-              setUserRole(meData.user.role || 'student');
-              localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(meData.user));
-              if (meData.profile) setStudentProfile(meData.profile);
+              setCurrentUser(normalizedUser);
+              setUserRole(normalizedUser.role || 'student');
+              safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(normalizedUser));
+              if (meData.profile) {
+                setStudentProfile({
+                  ...meData.profile,
+                  avatar: resolvedAvatar,
+                });
+              }
             }
           } else if (meRes.value.status === 401) {
             setIsAuthenticated(false);
@@ -787,12 +1056,19 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: resData.error || 'Đăng ký không thành công' };
       }
 
-      const authedUser: AuthUser = resData.user;
+      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
+      const authedUser: AuthUser = {
+        ...resData.user,
+        avatar: resolvedAvatar,
+      };
       setIsAuthenticated(true);
       setCurrentUser(authedUser);
       setUserRole(authedUser.role || 'student');
       if (resData.profile) {
-        setStudentProfile(resData.profile);
+        setStudentProfile({
+          ...resData.profile,
+          avatar: resolvedAvatar,
+        });
       }
 
       setAppUsers((prev) => {
@@ -800,6 +1076,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: authedUser.id,
           name: authedUser.name,
           email: authedUser.email,
+          avatar: resolvedAvatar,
           role: 'student',
           status: 'active',
           level: data.level,
@@ -813,10 +1090,10 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [matchingAppUser, ...prev.filter((u) => u.email !== authedUser.email)];
       });
 
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
       if (resData.token) {
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
       }
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: resData.message };
@@ -838,19 +1115,40 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: resData.error || 'Đăng nhập không thành công' };
       }
 
-      const authedUser: AuthUser = resData.user;
+      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
+      const authedUser: AuthUser = {
+        ...resData.user,
+        avatar: resolvedAvatar,
+      };
       setIsAuthenticated(true);
       setCurrentUser(authedUser);
       setUserRole(authedUser.role || 'student');
       if (resData.profile) {
-        setStudentProfile(resData.profile);
+        setStudentProfile({
+          ...resData.profile,
+          avatar: resolvedAvatar,
+        });
       }
 
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
       if (resData.token) {
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
       }
+
+      // If cached avatar was restored after server restart, silently resync to backend
+      if (resolvedAvatar !== resData.user?.avatar && authedUser.email) {
+        fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(resData.token ? { Authorization: `Bearer ${resData.token}` } : {}),
+            'x-user-email': authedUser.email,
+          },
+          body: JSON.stringify({ email: authedUser.email, avatar: resolvedAvatar }),
+        }).catch(() => {});
+      }
+
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: resData.message };
     } catch (err: any) {
@@ -871,18 +1169,25 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: resData.error || 'Đặt lại mật khẩu không thành công' };
       }
 
-      const authedUser: AuthUser = resData.user;
+      const resolvedAvatar = resolvePersistentAvatar(resData.user?.avatar, resData.user?.email);
+      const authedUser: AuthUser = {
+        ...resData.user,
+        avatar: resolvedAvatar,
+      };
       setIsAuthenticated(true);
       setCurrentUser(authedUser);
       setUserRole(authedUser.role || 'student');
       if (resData.profile) {
-        setStudentProfile(resData.profile);
+        setStudentProfile({
+          ...resData.profile,
+          avatar: resolvedAvatar,
+        });
       }
 
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
       if (resData.token) {
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', resData.token);
+        safeSetItem(STORAGE_KEY_PREFIX + 'token', resData.token);
       }
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: resData.message };
@@ -1035,11 +1340,20 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addForumReply = async (postId: string, content: string, role: 'student' | 'teacher' | 'admin' = 'student') => {
-    const replyId = `fr-${Date.now()}`;
+  const addForumReply = async (
+    postId: string,
+    content: string,
+    role: 'student' | 'teacher' | 'admin' | 'ai' = 'student'
+  ) => {
+    const replyId = role === 'ai' ? `fr-ai-${Date.now()}` : `fr-${Date.now()}`;
     const authorName =
-      userRole === 'admin' ? 'Quản trị viên / Giáo viên' : currentUser?.name || studentProfile.name;
-    const authorAvatar = userRole === 'admin' ? '' : currentUser?.avatar || studentProfile.avatar;
+      role === 'ai'
+        ? 'Lão Sư AI (Trợ lý Giáo viên)'
+        : userRole === 'admin'
+        ? 'Quản trị viên / Giáo viên'
+        : currentUser?.name || studentProfile.name;
+    const authorAvatar =
+      role === 'ai' || userRole === 'admin' ? '' : currentUser?.avatar || studentProfile.avatar;
 
     const newReply = {
       id: replyId,
@@ -1056,6 +1370,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (post.id === postId) {
           return {
             ...post,
+            isSolved: role === 'ai' ? true : post.isSolved,
             repliesCount: post.repliesCount + 1,
             replies: [...post.replies, newReply],
           };
@@ -1160,9 +1475,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userPayload = {
       name: customData?.name || 'Thắng Trần',
       email: customData?.email || 'thangtv1.hyn@gmail.com',
-      avatar:
-        customData?.avatar ||
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: customData?.avatar || DEFAULT_CARTOON_AVATAR,
     };
 
     try {
@@ -1177,11 +1490,16 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: data.error || 'Đăng nhập Google không thành công' };
       }
 
-      const authedUser: AuthUser = data.user || {
+      const rawAuthedUser: AuthUser = data.user || {
         id: `g-user-${Date.now()}`,
         ...userPayload,
         provider: 'google',
         joinedAt: new Date().toISOString(),
+      };
+      const resolvedAvatar = resolvePersistentAvatar(rawAuthedUser.avatar, rawAuthedUser.email);
+      const authedUser: AuthUser = {
+        ...rawAuthedUser,
+        avatar: resolvedAvatar,
       };
 
       setIsAuthenticated(true);
@@ -1190,21 +1508,37 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUserRole(authedUser.role);
       }
       if (data.profile) {
-        setStudentProfile(data.profile);
+        setStudentProfile({
+          ...data.profile,
+          avatar: resolvedAvatar,
+        });
       } else {
         setStudentProfile((prev) => ({
           ...prev,
           name: authedUser.name,
           email: authedUser.email,
-          avatar: authedUser.avatar,
+          avatar: resolvedAvatar,
         }));
       }
 
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'auth', 'true');
-      localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
+      safeSetItem(STORAGE_KEY_PREFIX + 'auth', 'true');
+      safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(authedUser));
       if (data.token) {
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'token', data.token);
+        safeSetItem(STORAGE_KEY_PREFIX + 'token', data.token);
       }
+
+      if (resolvedAvatar !== rawAuthedUser.avatar && authedUser.email) {
+        fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(data.token ? { Authorization: `Bearer ${data.token}` } : {}),
+            'x-user-email': authedUser.email,
+          },
+          body: JSON.stringify({ email: authedUser.email, avatar: resolvedAvatar }),
+        }).catch(() => {});
+      }
+
       setIsGoogleAuthModalOpen(false);
       return { success: true, message: data.message };
     } catch (err: any) {
@@ -1216,7 +1550,8 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     data: Partial<AppUser> & { currentPassword?: string; targetLevel?: HSKLevel }
   ) => {
     try {
-      if (!currentUser?.email) {
+      const targetEmail = (currentUser?.email || studentProfile?.email || '').trim();
+      if (!targetEmail) {
         return { success: false, message: 'Bạn chưa đăng nhập' };
       }
 
@@ -1224,7 +1559,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          email: currentUser.email,
+          email: targetEmail,
           ...data,
         }),
       });
@@ -1234,27 +1569,59 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: resData.error || 'Cập nhật thất bại' };
       }
 
+      const savedAvatar =
+        (data.avatar && data.avatar.trim()) ||
+        resolveCartoonAvatar(resData.user?.avatar || currentUser?.avatar, targetEmail);
+
+      // Persist chosen avatar per email so it survives logout, refresh, and server restarts
+      if (data.avatar && data.avatar.trim()) {
+        saveCachedAvatar(targetEmail, savedAvatar);
+      }
+
       if (resData.user) {
-        const updatedUser: AuthUser = resData.user;
+        const updatedUser: AuthUser = {
+          ...resData.user,
+          avatar: savedAvatar,
+        };
         setCurrentUser(updatedUser);
         if (updatedUser.role) {
           setUserRole(updatedUser.role);
         }
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
+        safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
+      } else if (currentUser) {
+        const updatedUser: AuthUser = {
+          ...currentUser,
+          name: data.name || currentUser.name,
+          avatar: savedAvatar,
+          targetLevel: (data.targetLevel || data.level || currentUser.targetLevel) as HSKLevel,
+        };
+        setCurrentUser(updatedUser);
+        safeSetItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(updatedUser));
       }
 
       if (resData.profile) {
-        setStudentProfile(resData.profile);
-        localStorage.setItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(resData.profile));
+        const updatedProfile: StudentProfile = {
+          ...resData.profile,
+          avatar: savedAvatar,
+        };
+        setStudentProfile(updatedProfile);
+        safeSetItem(STORAGE_KEY_PREFIX + 'profile', JSON.stringify(updatedProfile));
+      } else {
+        setStudentProfile((prev) => ({
+          ...prev,
+          name: data.name || prev.name,
+          avatar: savedAvatar,
+          targetLevel: (data.targetLevel || data.level || prev.targetLevel) as HSKLevel,
+        }));
       }
 
       setAppUsers((prev) =>
         prev.map((u) => {
-          if (u.email.toLowerCase() === currentUser.email.toLowerCase()) {
+          if (u.email.toLowerCase() === targetEmail.toLowerCase()) {
             return {
               ...u,
               name: data.name || u.name,
-              avatar: data.avatar || u.avatar,
+              avatar: savedAvatar,
               level: (data.level || data.targetLevel || u.level) as HSKLevel,
             };
           }
@@ -1380,6 +1747,9 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateReminderSettings,
         recordStudyMinutes,
         resetAllData,
+        siteUIConfig,
+        updateSiteUIConfig,
+        resetSiteUIConfig,
       }}
     >
       {children}

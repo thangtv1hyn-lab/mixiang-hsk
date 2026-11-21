@@ -57,7 +57,7 @@ export const EditCourseModal: React.FC<EditCourseModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-[#FDFBF6] rounded-3xl w-[96vw] max-w-4xl max-h-[94vh] overflow-y-auto shadow-2xl border-2 border-[#E8DFCE] flex flex-col">
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-red-600 via-red-700 to-[#18181B] text-white flex items-center justify-between gap-4 shrink-0">
+        <div className="px-6 py-5 bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/15 text-amber-300 flex items-center justify-center border border-white/25 shrink-0">
               <BookOpen className="w-7 h-7" />

@@ -240,7 +240,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
             Thoát
           </button>
           <div className="min-w-0">
-            <h3 className="font-serif font-black text-[#18181B] text-[18px] sm:text-[21px] hidden sm:block truncate max-w-lg">
+            <h3 className="font-sans font-extrabold text-[#18181B] text-[17px] sm:text-[19px] hidden sm:block truncate max-w-lg">
               {exam.title}
             </h3>
             {exam.subtitle && (
@@ -326,12 +326,12 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
               )}
 
               {/* Question Text */}
-              <div className="space-y-2">
-                <h4 className="font-serif text-[21px] sm:text-[24px] font-black text-[#18181B] leading-snug">
+              <div className="space-y-2.5">
+                <h4 className="font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-[21px] sm:text-[24px] font-bold tracking-wide text-[#18181B] leading-relaxed">
                   {activeQuestion.question}
                 </h4>
                 {activeQuestion.pinyin && showPinyin && (
-                  <p className="text-[16px] font-mono text-red-600 font-semibold">
+                  <p className="text-[21px] sm:text-[24px] font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-red-600 font-semibold tracking-wide leading-relaxed">
                     {activeQuestion.pinyin}
                   </p>
                 )}
@@ -357,7 +357,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                                 [activeQuestion.id]: optIdx,
                               }))
                             }
-                            className={`w-full p-4 sm:p-5 rounded-2xl border-2 text-left text-[16px] sm:text-[19px] transition-all flex items-center justify-between gap-3 group cursor-pointer ${
+                            className={`w-full p-4 sm:p-5 rounded-2xl border-2 text-left font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-[19px] sm:text-[21px] tracking-wide transition-all flex items-center justify-between gap-3 group cursor-pointer ${
                               isSelected
                                 ? 'border-red-600 bg-[#FFF5F3] text-[#18181B] font-bold shadow-xs'
                                 : 'border-[#E8DFCE] bg-[#FDFBF6] text-[#18181B] hover:bg-[#FFF9F6] hover:border-amber-500/70'
@@ -397,7 +397,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                           }))
                         }
                         placeholder="Gõ từ cần điền vào đây (ví dụ: 所以 / 学习...)"
-                        className="w-full p-4 rounded-2xl border-2 border-[#E8DFCE] focus:border-red-600 bg-[#FDFBF6] text-[18px] sm:text-[19px] font-medium text-[#18181B] shadow-xs outline-hidden"
+                        className="w-full p-4 rounded-2xl border-2 border-[#E8DFCE] focus:border-red-600 bg-[#FDFBF6] font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-[19px] sm:text-[21px] font-medium text-[#18181B] shadow-xs outline-hidden"
                       />
                       {currentValue && (
                         <p className="text-[14px] text-emerald-700 font-bold flex items-center gap-1.5">
@@ -427,7 +427,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                           }))
                         }
                         placeholder="Nhập câu tiếng Trung hoàn chỉnh theo yêu cầu đề bài..."
-                        className="w-full p-4 rounded-2xl border-2 border-[#E8DFCE] focus:border-red-600 bg-[#FDFBF6] text-[18px] sm:text-[19px] font-medium text-[#18181B] shadow-xs outline-hidden"
+                        className="w-full p-4 rounded-2xl border-2 border-[#E8DFCE] focus:border-red-600 bg-[#FDFBF6] font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-[19px] sm:text-[21px] font-medium text-[#18181B] shadow-xs outline-hidden"
                       />
                       {currentValue && (
                         <p className="text-[14px] text-red-700 font-bold flex items-center gap-1.5">
@@ -465,11 +465,11 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
                         <span className="text-[13px] text-slate-500 uppercase font-bold block">
                           Câu cần phát âm:
                         </span>
-                        <p className="font-serif text-[21px] sm:text-[24px] font-black text-[#18181B]">
+                        <p className="font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-[21px] sm:text-[24px] font-bold tracking-wide text-[#18181B]">
                           {activeQuestion.correctText || activeQuestion.question}
                         </p>
-                        {activeQuestion.pinyin && (
-                          <p className="text-[16px] font-mono text-red-600 font-semibold">
+                        {activeQuestion.pinyin && showPinyin && (
+                          <p className="text-[21px] sm:text-[24px] font-['Noto_Sans_SC','PingFang_SC','Microsoft_YaHei',sans-serif] text-red-600 font-semibold tracking-wide">
                             {activeQuestion.pinyin}
                           </p>
                         )}
@@ -530,7 +530,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
         {/* Right Palette: Question Navigator */}
         <div className="space-y-4">
           <div className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 shadow-2xs space-y-4">
-            <h4 className="font-serif font-black text-[19px] text-[#18181B]">Mục lục câu hỏi</h4>
+            <h4 className="font-sans font-extrabold text-[18px] text-[#18181B]">Mục lục câu hỏi</h4>
 
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-4 text-[13px] font-semibold text-slate-600">
@@ -586,7 +586,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
       {showConfirmSubmit && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-[#E8DFCE] shadow-2xl space-y-4">
-            <h3 className="font-serif text-[21px] font-black text-[#18181B]">Xác nhận nộp bài thi?</h3>
+            <h3 className="font-sans text-[20px] font-extrabold text-[#18181B]">Xác nhận nộp bài thi?</h3>
             <div className="text-[14px] text-[#18181B] space-y-2 bg-[#FDFBF6] p-4 rounded-2xl border border-[#E8DFCE]">
               <p className="text-[16px]">
                 - Bạn đã hoàn thành: <strong className="text-red-600 tabular-nums">{answeredCount}/{exam.questions.length}</strong> câu hỏi.
@@ -624,7 +624,7 @@ export const ExamTakingView: React.FC<ExamTakingViewProps> = ({
       {showConfirmExit && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-[#E8DFCE] shadow-2xl space-y-4">
-            <h3 className="font-serif text-[21px] font-black text-[#18181B]">Thoát bài thi?</h3>
+            <h3 className="font-sans text-[20px] font-extrabold text-[#18181B]">Thoát bài thi?</h3>
             <p className="text-[16px] text-slate-700 leading-relaxed">
               Bạn có chắc muốn thoát bài thi? Tiến trình làm bài hiện tại sẽ không được lưu.
             </p>

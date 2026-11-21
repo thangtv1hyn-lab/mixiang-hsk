@@ -25,15 +25,21 @@ function clearSessionCookie(res: Response): void {
   );
 }
 
+const DEFAULT_CARTOON_AVATAR_URL = '/assets/aistudio/icon2_d1d361e7.png';
+
+function normalizeAvatarUrl(avatar?: string): string {
+  if (!avatar || avatar.includes('images.unsplash.com/photo-')) {
+    return DEFAULT_CARTOON_AVATAR_URL;
+  }
+  return avatar;
+}
+
 function buildAuthUser(appUser: AppUser, fallbackAvatar?: string): AuthUser {
   return {
     id: appUser.id,
     name: appUser.name,
     email: appUser.email,
-    avatar:
-      appUser.avatar ||
-      fallbackAvatar ||
-      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+    avatar: normalizeAvatarUrl(appUser.avatar || fallbackAvatar),
     provider: appUser.provider,
     role: appUser.role,
     status: appUser.status,
@@ -77,7 +83,7 @@ router.post('/register', (req, res) => {
       name: String(name).trim(),
       email: normalizedEmail,
       password: hashPassword(String(password).trim()),
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      avatar: DEFAULT_CARTOON_AVATAR_URL,
       role: 'student',
       status: 'active',
       level,
@@ -187,6 +193,10 @@ router.post('/login', (req, res) => {
     db.users.unshift(authUser);
 
     const profile = db.getActiveProfile(normalizedEmail);
+    if (profile) {
+      profile.avatar = authUser.avatar;
+      profile.name = authUser.name;
+    }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
     setSessionCookie(res, session.token);
@@ -243,6 +253,10 @@ router.post('/reset-password', (req, res) => {
     db.users.unshift(authUser);
 
     const profile = db.getActiveProfile(normalizedEmail);
+    if (profile) {
+      profile.avatar = authUser.avatar;
+      profile.name = authUser.name;
+    }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
     setSessionCookie(res, session.token);
@@ -283,7 +297,7 @@ router.post('/google', (req, res) => {
         name: name ? String(name).trim() : normalizedEmail.split('@')[0],
         email: normalizedEmail,
         password: hashPassword('123456'),
-        avatar: avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        avatar: normalizeAvatarUrl(avatar),
         role: assignedRole,
         status: 'active',
         level: 'HSK 3',
@@ -312,6 +326,10 @@ router.post('/google', (req, res) => {
     db.users.unshift(authUser);
 
     const profile = db.getActiveProfile(normalizedEmail);
+    if (profile) {
+      profile.avatar = authUser.avatar;
+      profile.name = authUser.name;
+    }
     const session = db.createSession(authUser);
     db.saveUsersAndSessions();
     setSessionCookie(res, session.token);
@@ -359,6 +377,10 @@ router.get('/me', (req, res) => {
 
   const user = buildAuthUser(appUser);
   const profile = db.getActiveProfile(appUser.email);
+  if (profile) {
+    profile.avatar = user.avatar;
+    profile.name = user.name;
+  }
 
   res.json({
     authenticated: true,
@@ -374,15 +396,28 @@ router.put('/profile', (req, res) => {
     const session = db.getSession(token);
     const { email, name, avatar, targetLevel, level, password, currentPassword } = req.body;
 
-    const targetEmail = (session?.email || email || '').trim().toLowerCase();
-    if (!targetEmail) {
+    const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const sessionEmail = session?.email ? session.email.trim().toLowerCase() : '';
+    const headerEmail =
+      typeof req.headers['x-user-email'] === 'string'
+        ? req.headers['x-user-email'].trim().toLowerCase()
+        : '';
+
+    const candidateEmails = [requestedEmail, sessionEmail, headerEmail].filter(Boolean);
+    if (candidateEmails.length === 0) {
       return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
     }
 
-    const appUser = db.appUsers.find((u) => u.email.toLowerCase() === targetEmail);
+    let appUser = db.appUsers.find((u) => u.email.toLowerCase() === candidateEmails[0]);
+    if (!appUser && candidateEmails.length > 1) {
+      appUser = db.appUsers.find((u) => candidateEmails.includes(u.email.toLowerCase()));
+    }
+
     if (!appUser) {
       return res.status(404).json({ error: 'Không tìm thấy thông tin tài khoản' });
     }
+
+    const targetEmail = appUser.email.toLowerCase();
 
     if (password !== undefined && password !== '') {
       if (String(password).trim().length < 6) {
@@ -397,22 +432,35 @@ router.put('/profile', (req, res) => {
     }
 
     const resolvedLevel = targetLevel || level;
-    if (name && String(name).trim()) appUser.name = String(name).trim();
-    if (avatar) appUser.avatar = avatar;
+    const cleanName = typeof name === 'string' && name.trim() ? name.trim() : undefined;
+    const cleanAvatar = typeof avatar === 'string' && avatar.trim() ? avatar.trim() : undefined;
+
+    if (cleanName) appUser.name = cleanName;
+    if (cleanAvatar) appUser.avatar = cleanAvatar;
     if (resolvedLevel) appUser.level = resolvedLevel;
 
-    const authUser = db.users.find((u) => u.email.toLowerCase() === targetEmail);
-    if (authUser) {
-      if (name && String(name).trim()) authUser.name = String(name).trim();
-      if (avatar) authUser.avatar = avatar;
-      if (resolvedLevel) authUser.targetLevel = resolvedLevel;
+    for (const authUser of db.users) {
+      if (authUser.id === appUser.id || authUser.email.toLowerCase() === targetEmail) {
+        if (cleanName) authUser.name = cleanName;
+        if (cleanAvatar) authUser.avatar = cleanAvatar;
+        if (resolvedLevel) authUser.targetLevel = resolvedLevel;
+      }
     }
 
     const studentProfile = db.getActiveProfile(targetEmail);
     if (studentProfile) {
-      if (name && String(name).trim()) studentProfile.name = String(name).trim();
-      if (avatar) studentProfile.avatar = avatar;
+      if (cleanName) studentProfile.name = cleanName;
+      if (cleanAvatar) studentProfile.avatar = cleanAvatar;
       if (resolvedLevel) studentProfile.targetLevel = resolvedLevel;
+    }
+
+    // Ensure any duplicate student profile records matching id or email stay in sync
+    for (const sp of db.students) {
+      if (sp.id === appUser.id || sp.email.toLowerCase() === targetEmail) {
+        if (cleanName) sp.name = cleanName;
+        if (cleanAvatar) sp.avatar = cleanAvatar;
+        if (resolvedLevel) sp.targetLevel = resolvedLevel;
+      }
     }
 
     db.saveUsersAndSessions();

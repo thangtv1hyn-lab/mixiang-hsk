@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese } from '../utils/audioSpeech';
+import { safeParseJson } from '../utils/safeFetchJson';
 
 export const MobileAppCompanion: React.FC = () => {
   const {
@@ -60,7 +61,7 @@ export const MobileAppCompanion: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg }),
       });
-      const data = await res.json();
+      const data = await safeParseJson<{ reply?: string }>(res);
       setMobileAiMessages((prev) => [
         ...prev,
         { role: 'model', text: data.reply || '加油！Cố lên bạn nhé!' },
