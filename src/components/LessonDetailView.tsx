@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   Volume2,
@@ -25,6 +25,7 @@ import { Lesson } from '../types/hsk';
 import { useHSK } from '../context/HSKContext';
 import { speakChinese, stopSpeaking } from '../utils/audioSpeech';
 import { VocabIllustration } from './VocabIllustration';
+import { CompletionSealStamp } from './CompletionSealStamp';
 import chibiBoyAvatar from '../assets/images/chibi_student_boy_1795167987005.jpg';
 import chibiTeacherAvatar from '../assets/images/chibi_teacher_girl_1795168016692.jpg';
 
@@ -56,7 +57,12 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
   const [isCompletedNow, setIsCompletedNow] = useState<boolean>(
     studentProfile.completedLessonIds.includes(lesson.id)
   );
+  const [showStampOverlay, setShowStampOverlay] = useState<boolean>(false);
+  const [stampOverlayKey, setStampOverlayKey] = useState<number>(0);
+  const [isOverlayCardThumping, setIsOverlayCardThumping] = useState<boolean>(false);
+  const [isHeaderCardThumping, setIsHeaderCardThumping] = useState<boolean>(false);
   const playbackRunIdRef = useRef<number>(0);
+  const thumpTimersRef = useRef<number[]>([]);
 
   const isCompleted = studentProfile.completedLessonIds.includes(lesson.id) || isCompletedNow;
 
@@ -70,8 +76,8 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
     .slice()
     .sort((a, b) => (a.lessonNumber || 0) - (b.lessonNumber || 0));
 
-  const completedInCourseCount = courseLessons.filter((l) =>
-    studentProfile.completedLessonIds.includes(l.id)
+  const completedInCourseCount = courseLessons.filter(
+    (l) => studentProfile.completedLessonIds.includes(l.id) || (l.id === lesson.id && isCompletedNow)
   ).length;
   const courseProgressPercent = courseLessons.length
     ? Math.round((completedInCourseCount / courseLessons.length) * 100)
@@ -91,12 +97,29 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
     setIsPlayingAudio(null);
     setPracticeAnswers({});
     setIsCompletedNow(studentProfile.completedLessonIds.includes(lesson.id));
+    setShowStampOverlay(false);
+    setIsOverlayCardThumping(false);
+    setIsHeaderCardThumping(false);
   }, [lesson.id]);
+
+  // Dismiss achievement stamp overlay via Escape key
+  useEffect(() => {
+    if (!showStampOverlay) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowStampOverlay(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showStampOverlay]);
 
   useEffect(() => {
     return () => {
       playbackRunIdRef.current += 1;
       stopSpeaking();
+      thumpTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      thumpTimersRef.current = [];
     };
   }, []);
 
@@ -165,18 +188,33 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
     }
   };
 
-  // Complete lesson celebration
-  const handleCompleteLesson = () => {
-    completeLesson(lesson.id);
-    setIsCompletedNow(true);
-    recordStudyMinutes(lesson.durationMinutes || 20);
-
+  const handleOverlayStampImpact = useCallback(() => {
+    setIsOverlayCardThumping(true);
     confetti({
       particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#A43828', '#EA580C', '#EAB308', '#10B981'],
+      spread: 72,
+      origin: { y: 0.52 },
+      colors: ['#C85A43', '#D62828', '#EAB308', '#10B981'],
     });
+    const timerId = window.setTimeout(() => setIsOverlayCardThumping(false), 680);
+    thumpTimersRef.current.push(timerId);
+  }, []);
+
+  const handleHeaderStampImpact = useCallback(() => {
+    setIsHeaderCardThumping(true);
+    const timerId = window.setTimeout(() => setIsHeaderCardThumping(false), 680);
+    thumpTimersRef.current.push(timerId);
+  }, []);
+
+  // Complete lesson celebration with Red Seal Stamp overlay
+  const handleCompleteLesson = () => {
+    if (!isCompleted) {
+      completeLesson(lesson.id);
+      setIsCompletedNow(true);
+      recordStudyMinutes(lesson.durationMinutes || 20);
+    }
+    setStampOverlayKey((k) => k + 1);
+    setShowStampOverlay(true);
   };
 
   const isStageSpeakerAActive =
@@ -298,15 +336,20 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
           </button>
 
           {isCompleted ? (
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold bg-[#ECFDF5] text-emerald-800 border border-emerald-300">
+            <button
+              type="button"
+              onClick={handleCompleteLesson}
+              title="Xem lại hiệu ứng dấu mộc đỏ hoàn thành"
+              className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-2xl text-[14px] font-bold bg-[#ECFDF5] text-emerald-800 border border-emerald-300 hover:border-red-400 hover:bg-[#FFF5F3] hover:text-red-700 transition-colors cursor-pointer"
+            >
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <span>Đã hoàn thành bài học</span>
-            </span>
+            </button>
           ) : (
             <button
               type="button"
               onClick={handleCompleteLesson}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[14px] font-bold bg-red-600 text-white hover:bg-red-700 transition-colors shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-2xl text-[14px] font-bold bg-red-600 text-white hover:bg-red-700 active:scale-[0.98] transition-all shadow-xs cursor-pointer"
             >
               <Check className="w-5 h-5" />
               <span>Đánh dấu hoàn thành</span>
@@ -365,9 +408,6 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
                   <ListChecks className="w-4 h-4" />
                   <span>Danh sách bài học</span>
                 </span>
-                <span className="px-2 py-0.5 rounded-lg bg-[#FAF7F0] border border-[#E8DFCE] text-[11.5px] font-extrabold text-[#18181B]">
-                  {parentCourse?.level || lesson.level}
-                </span>
               </div>
 
               {parentCourse && (
@@ -403,9 +443,13 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
         {/* RIGHT COLUMN: NỘI DUNG CHI TIẾT BÀI HỌC */}
         <div className="lg:col-span-9 space-y-6 min-w-0">
           {/* Lesson Header Card (Màu đỏ pastel chủ đạo) */}
-          <div className="bg-gradient-to-br from-red-500 via-red-600 to-red-700 border border-red-400/70 text-white rounded-3xl p-6 sm:p-8 shadow-md space-y-5">
+          <div
+            className={`relative overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-red-700 border border-red-400/70 text-white rounded-3xl p-6 sm:p-8 shadow-md space-y-5 ${
+              isHeaderCardThumping ? 'animate-card-thump' : ''
+            }`}
+          >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2 flex-1">
+          <div className="space-y-2 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 text-[14px] font-bold text-amber-200">
               <span className="px-3 py-0.5 rounded-xl bg-black/30 border border-white/20 text-white">
                 {lesson.level}
@@ -415,7 +459,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">{lesson.durationMinutes} phút</span>
             </div>
-            <h1 className="font-sans text-[24px] sm:text-[30px] font-bold not-italic text-white leading-tight">
+            <h1 className="font-sans text-[24px] sm:text-[30px] font-bold not-italic text-white leading-tight text-balance">
               {lesson.title}
             </h1>
             <p className="text-[19px] text-amber-200 font-bold leading-snug">
@@ -423,19 +467,32 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => handlePlayAudio(lesson.title, 'lesson-title')}
-            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer shrink-0 ${
-              isPlayingAudio === 'lesson-title'
-                ? 'bg-amber-300 text-[#18181B] border-amber-200 scale-105 animate-pulse'
-                : 'bg-white/15 text-white border-white/30 hover:bg-white/25'
-            }`}
-            title="Nghe phát âm tiêu đề bài học"
-            aria-label="Nghe phát âm tiêu đề bài học"
-          >
-            <Volume2 className="w-7 h-7" />
-          </button>
+          <div className="flex items-center gap-4 shrink-0 self-start sm:self-center">
+            {isCompleted && (
+              <CompletionSealStamp
+                label="ĐÃ HOÀN THÀNH"
+                subLabel={`${lesson.level} · Bài ${lesson.lessonNumber}`}
+                surface="dark"
+                autoStamp={false}
+                compact
+                onImpact={handleHeaderStampImpact}
+              />
+            )}
+
+            <button
+              type="button"
+              onClick={() => handlePlayAudio(lesson.title, 'lesson-title')}
+              className={`p-4 min-w-[56px] min-h-[56px] rounded-2xl border-2 transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                isPlayingAudio === 'lesson-title'
+                  ? 'bg-amber-300 text-[#18181B] border-amber-200 scale-105 animate-pulse'
+                  : 'bg-white/15 text-white border-white/30 hover:bg-white/25'
+              }`}
+              title="Nghe phát âm tiêu đề bài học"
+              aria-label="Nghe phát âm tiêu đề bài học"
+            >
+              <Volume2 className="w-7 h-7" />
+            </button>
+          </div>
         </div>
 
         <p className="text-[15.5px] sm:text-[16.5px] text-rose-50 pt-4 border-t border-white/20 leading-relaxed">
@@ -1035,6 +1092,93 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({ lesson, onBa
       </div>
         </div>
       </div>
+
+      {/* Red Seal Stamp Achievement Overlay ("Dấu mộc đỏ" đè lên bài học khi hoàn thành) */}
+      {showStampOverlay && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lesson-stamp-dialog-title"
+          onClick={() => setShowStampOverlay(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#18181B]/45 backdrop-blur-[2px]"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`relative w-full max-w-md rounded-3xl bg-[#FFFDF9] border-2 border-[#E8DFCE] p-6 sm:p-8 shadow-2xl text-center space-y-5 ${
+              isOverlayCardThumping ? 'animate-card-thump' : ''
+            }`}
+          >
+            {/* Subtle concentric rice-paper inner border */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-2.5 rounded-[20px] border border-[#C85A43]/20"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowStampOverlay(false)}
+              aria-label="Đóng thông báo hoàn thành bài học"
+              className="absolute top-3.5 right-3.5 z-10 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-[#18181B] hover:bg-[#F2EDE2] transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="pt-2 flex justify-center">
+              <CompletionSealStamp
+                key={`lesson-overlay-stamp-${stampOverlayKey}`}
+                label="HOÀN THÀNH BÀI HỌC"
+                subLabel={`${lesson.level} · Bài ${lesson.lessonNumber}`}
+                surface="light"
+                autoStamp
+                onImpact={handleOverlayStampImpact}
+              />
+            </div>
+
+            <div className="space-y-1.5 relative z-10">
+              <h2
+                id="lesson-stamp-dialog-title"
+                className="font-sans text-[21px] sm:text-[23px] font-extrabold text-[#18181B] tracking-tight text-balance"
+              >
+                Xuất sắc! Đã đóng dấu Bài {lesson.lessonNumber}
+              </h2>
+              <p className="text-[15px] font-semibold text-slate-600 line-clamp-2 break-words">
+                {lesson.vietnameseTitle}
+              </p>
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-[13px] font-bold text-[#933B28] tabular-nums">
+                <span>+50 XP</span>
+                <span aria-hidden="true" className="text-slate-300">·</span>
+                <span>{lesson.durationMinutes} phút học</span>
+                <span aria-hidden="true" className="text-slate-300">·</span>
+                <span>Tiến độ khóa {courseProgressPercent}%</span>
+              </div>
+            </div>
+
+            <div className="relative z-10 pt-1 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowStampOverlay(false)}
+                className="flex-1 min-h-[44px] px-4 py-2.5 rounded-2xl border border-[#E8DFCE] bg-white text-[#18181B] text-[14px] font-bold hover:border-[#C85A43] hover:text-[#C85A43] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+              >
+                Ở lại bài học
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStampOverlay(false);
+                  if (nextLesson) {
+                    handleSelectLesson(nextLesson);
+                  } else {
+                    onBack();
+                  }
+                }}
+                className="flex-1 min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#C85A43] text-white text-[14px] font-bold hover:bg-[#B24A34] active:scale-[0.98] transition-all shadow-xs cursor-pointer whitespace-nowrap"
+              >
+                {nextLesson ? `Bài ${nextLesson.lessonNumber} tiếp theo ➔` : 'Về khóa học'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

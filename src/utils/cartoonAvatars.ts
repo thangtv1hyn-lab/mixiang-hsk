@@ -233,41 +233,142 @@ export function resolveCartoonAvatar(url?: string, seed?: string): string {
   return CARTOON_AVATAR_PRESETS[hash % CARTOON_AVATAR_PRESETS.length].url;
 }
 
+function renderCanvasDataUrl(
+  img: HTMLImageElement,
+  width: number,
+  height: number,
+  mimeType: 'image/webp' | 'image/jpeg' | 'image/png',
+  quality: number,
+  fillWhiteBg: boolean
+): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  if (fillWhiteBg) {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    ctx.clearRect(0, 0, width, height);
+  }
+  ctx.drawImage(img, 0, 0, width, height);
+  return mimeType === 'image/png'
+    ? canvas.toDataURL('image/png')
+    : canvas.toDataURL(mimeType, quality);
+}
+
+/**
+ * Adaptively compresses an uploaded image file so the resulting data URL is
+ * ALWAYS valid, crisp, and strictly <= maxDataUrlChars (preventing Base64 truncation
+ * or Firestore 1 MiB document size errors).
+ */
 export function compressImageToDataUrl(
   file: File,
   maxSize = 320,
-  preserveTransparency = false
+  preserveTransparency = false,
+  maxDataUrlChars = 110000
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('Vui lòng chọn tệp hình ảnh hợp lệ (JPG, PNG, WebP).'));
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Không thể đọc tệp hình ảnh'));
+    reader.onerror = () => reject(new Error('Không thể đọc tệp hình ảnh từ máy của bạn.'));
     reader.onload = () => {
       const src = typeof reader.result === 'string' ? reader.result : '';
       if (!src) {
-        reject(new Error('Dữ liệu hình ảnh không hợp lệ'));
+        reject(new Error('Dữ liệu hình ảnh không hợp lệ.'));
         return;
       }
+
+      // Small SVG logos can be kept directly if already tiny and safe
+      if (file.type === 'image/svg+xml' && src.length <= maxDataUrlChars) {
+        resolve(src);
+        return;
+      }
+
       const img = new Image();
-      img.onerror = () => resolve(src);
+      img.onerror = () =>
+        reject(
+          new Error(
+            'Trình duyệt không giải mã được định dạng ảnh này (ví dụ HEIC). Vui lòng đổi sang JPG hoặc PNG rồi thử lại.'
+          )
+        );
       img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width || 1, img.height || 1));
-        const width = Math.max(1, Math.round(img.width * scale));
-        const height = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(src);
+        const naturalW = img.naturalWidth || img.width || 1;
+        const naturalH = img.naturalHeight || img.height || 1;
+        const baseScale = Math.min(1, maxSize / Math.max(naturalW, naturalH));
+        let width = Math.max(1, Math.round(naturalW * baseScale));
+        let height = Math.max(1, Math.round(naturalH * baseScale));
+
+        // Probe browser WebP encoding support (supports alpha & 4x-8x smaller than PNG)
+        const webpProbe = renderCanvasDataUrl(img, Math.min(width, 16), Math.min(height, 16), 'image/webp', 0.8, false);
+        const supportsWebp = webpProbe.startsWith('data:image/webp');
+
+        const qualities = [0.84, 0.76, 0.68, 0.58, 0.48, 0.38];
+        let bestDataUrl = '';
+
+        // Step 1: Try adaptive WebP (preserves transparency) or JPEG (for photos)
+        for (let dimStep = 0; dimStep < 6; dimStep++) {
+          const primaryMime: 'image/webp' | 'image/jpeg' | 'image/png' = supportsWebp
+            ? 'image/webp'
+            : preserveTransparency
+            ? 'image/png'
+            : 'image/jpeg';
+
+          if (primaryMime === 'image/png') {
+            const pngUrl = renderCanvasDataUrl(img, width, height, 'image/png', 1, false);
+            if (pngUrl && (!bestDataUrl || pngUrl.length < bestDataUrl.length)) {
+              bestDataUrl = pngUrl;
+            }
+            if (pngUrl && pngUrl.length <= maxDataUrlChars) {
+              resolve(pngUrl);
+              return;
+            }
+            // Fallback to high-quality JPEG on white canvas if PNG stays oversized
+            for (const q of qualities) {
+              const jpgUrl = renderCanvasDataUrl(img, width, height, 'image/jpeg', q, true);
+              if (jpgUrl && (!bestDataUrl || jpgUrl.length < bestDataUrl.length)) {
+                bestDataUrl = jpgUrl;
+              }
+              if (jpgUrl && jpgUrl.length <= maxDataUrlChars) {
+                resolve(jpgUrl);
+                return;
+              }
+            }
+          } else {
+            const fillWhite = primaryMime === 'image/jpeg';
+            for (const q of qualities) {
+              const outUrl = renderCanvasDataUrl(img, width, height, primaryMime, q, fillWhite);
+              if (outUrl && (!bestDataUrl || outUrl.length < bestDataUrl.length)) {
+                bestDataUrl = outUrl;
+              }
+              if (outUrl && outUrl.length <= maxDataUrlChars) {
+                resolve(outUrl);
+                return;
+              }
+            }
+          }
+
+          // Reduce dimensions by 20% and retry
+          if (Math.max(width, height) <= 140) break;
+          width = Math.max(80, Math.round(width * 0.8));
+          height = Math.max(80, Math.round(height * 0.8));
+        }
+
+        if (bestDataUrl && bestDataUrl.length <= maxDataUrlChars) {
+          resolve(bestDataUrl);
           return;
         }
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-        const outputType = preserveTransparency ? 'image/png' : 'image/jpeg';
-        const dataUrl = preserveTransparency
-          ? canvas.toDataURL('image/png')
-          : canvas.toDataURL(outputType, 0.86);
-        resolve(dataUrl);
+
+        reject(
+          new Error(
+            'Ảnh có dung lượng quá lớn sau khi nén. Vui lòng chọn ảnh nhẹ hơn hoặc dán link URL ảnh.'
+          )
+        );
       };
       img.src = src;
     };

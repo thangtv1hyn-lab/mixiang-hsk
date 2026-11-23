@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Palette,
   Type,
@@ -6,6 +6,8 @@ import {
   Image as ImageIcon,
   RotateCcw,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
   Eye,
   Upload,
   Sparkles,
@@ -23,28 +25,113 @@ import {
 } from '../../context/HSKContext';
 import { ClassroomMomentItem, SiteUIConfig } from '../../types/hsk';
 import { compressImageToDataUrl } from '../../utils/cartoonAvatars';
+import {
+  estimateSiteConfigBytes,
+  MAX_SITE_CONFIG_BYTES,
+} from '../../services/firestoreService';
+
+const isCorruptedLegacyImage = (url?: string): boolean =>
+  typeof url === 'string' && url.startsWith('data:image/') && url.length >= 179000;
 
 export const UIEditorPanel: React.FC = () => {
-  const { siteUIConfig, updateSiteUIConfig, resetSiteUIConfig, setActiveTab } = useHSK();
+  const {
+    siteUIConfig,
+    updateSiteUIConfig,
+    saveSiteUIConfigNow,
+    resetSiteUIConfig,
+    setActiveTab,
+  } = useHSK();
   const [savedNotice, setSavedNotice] = useState(false);
   const [savedText, setSavedText] = useState('Đã lưu thay đổi giao diện!');
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const momentsList: ClassroomMomentItem[] =
+    Array.isArray(siteUIConfig.classroomMoments) && siteUIConfig.classroomMoments.length > 0
+      ? siteUIConfig.classroomMoments
+      : DEFAULT_CLASSROOM_MOMENTS;
+
+  const totalBytesUsed = useMemo(() => estimateSiteConfigBytes(siteUIConfig), [siteUIConfig]);
+  const usedKB = Math.round(totalBytesUsed / 1024);
+  const maxKB = Math.round(MAX_SITE_CONFIG_BYTES / 1024);
+
+  const corruptedLegacyCount = useMemo(() => {
+    let count = 0;
+    if (isCorruptedLegacyImage(siteUIConfig.headerLogoUrl)) count++;
+    if (isCorruptedLegacyImage(siteUIConfig.footerLogoUrl)) count++;
+    if (isCorruptedLegacyImage(siteUIConfig.poster1Url)) count++;
+    if (isCorruptedLegacyImage(siteUIConfig.poster2Url)) count++;
+    for (const m of momentsList) {
+      if (isCorruptedLegacyImage(m.image)) count++;
+    }
+    return count;
+  }, [siteUIConfig, momentsList]);
+
   const triggerSavedNotice = (message = 'Đã lưu thay đổi giao diện!') => {
+    setErrorNotice(null);
     setSavedText(message);
     setSavedNotice(true);
     setHasUnsavedChanges(false);
-    setTimeout(() => setSavedNotice(false), 3000);
+    setTimeout(() => setSavedNotice(false), 3500);
   };
 
   const handleFieldChange = (partial: Partial<SiteUIConfig>) => {
+    setErrorNotice(null);
     updateSiteUIConfig(partial);
     setHasUnsavedChanges(true);
   };
 
-  const handleExplicitSave = () => {
-    updateSiteUIConfig({ ...siteUIConfig });
-    triggerSavedNotice('Đã lưu cấu hình giao diện & logo thành công!');
+  const handleExplicitSave = async () => {
+    setIsSaving(true);
+    setErrorNotice(null);
+    const res = await saveSiteUIConfigNow({ ...siteUIConfig });
+    setIsSaving(false);
+    if (res.success) {
+      triggerSavedNotice(res.message || 'Đã lưu cấu hình giao diện & logo lên Cloud thành công!');
+    } else {
+      setErrorNotice(res.message || 'Không thể lưu giao diện. Vui lòng thử lại.');
+    }
+  };
+
+  const handleCleanCorruptedLegacyImages = async () => {
+    setIsSaving(true);
+    setErrorNotice(null);
+    const cleanedMoments = momentsList.map((m, idx) =>
+      isCorruptedLegacyImage(m.image)
+        ? {
+            ...m,
+            image:
+              DEFAULT_CLASSROOM_MOMENTS[idx % DEFAULT_CLASSROOM_MOMENTS.length]?.image ||
+              '/assets/aistudio/image_f2d52981.png',
+          }
+        : m
+    );
+    const cleanedConfig: SiteUIConfig = {
+      ...siteUIConfig,
+      headerLogoUrl: isCorruptedLegacyImage(siteUIConfig.headerLogoUrl)
+        ? ''
+        : siteUIConfig.headerLogoUrl,
+      footerLogoUrl: isCorruptedLegacyImage(siteUIConfig.footerLogoUrl)
+        ? DEFAULT_SITE_UI_CONFIG.footerLogoUrl
+        : siteUIConfig.footerLogoUrl,
+      poster1Url: isCorruptedLegacyImage(siteUIConfig.poster1Url)
+        ? DEFAULT_SITE_UI_CONFIG.poster1Url
+        : siteUIConfig.poster1Url,
+      poster2Url: isCorruptedLegacyImage(siteUIConfig.poster2Url)
+        ? DEFAULT_SITE_UI_CONFIG.poster2Url
+        : siteUIConfig.poster2Url,
+      classroomMoments: cleanedMoments,
+    };
+
+    const res = await saveSiteUIConfigNow(cleanedConfig);
+    setIsSaving(false);
+    if (res.success) {
+      triggerSavedNotice('Đã dọn sạch ảnh bị lỗi cắt dung lượng cũ! Bạn có thể tải lại ảnh mới ngay.');
+    } else {
+      setErrorNotice(res.message || 'Không thể dọn ảnh lỗi cũ lúc này.');
+    }
   };
 
   const handleImageFileUpload = async (
@@ -52,31 +139,42 @@ export const UIEditorPanel: React.FC = () => {
     field: 'headerLogoUrl' | 'poster1Url' | 'poster2Url' | 'footerLogoUrl'
   ) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    setUploadingSlot(field);
+    setErrorNotice(null);
+
     try {
       const isLogo = field === 'headerLogoUrl' || field === 'footerLogoUrl';
       const dataUrl = await compressImageToDataUrl(
         file,
-        isLogo ? 360 : 960,
-        file.type === 'image/png' || isLogo
+        isLogo ? 320 : 900,
+        isLogo,
+        isLogo ? 48000 : 110000
       );
-      handleFieldChange({ [field]: dataUrl });
-    } catch {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          handleFieldChange({ [field]: reader.result });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-    e.target.value = '';
-  };
 
-  const momentsList: ClassroomMomentItem[] =
-    Array.isArray(siteUIConfig.classroomMoments) && siteUIConfig.classroomMoments.length > 0
-      ? siteUIConfig.classroomMoments
-      : DEFAULT_CLASSROOM_MOMENTS;
+      // Automatically clean any legacy 180KB broken image on OTHER fields only if needed? No, keep user edits explicit
+      const nextConfig: SiteUIConfig = {
+        ...siteUIConfig,
+        [field]: dataUrl,
+      };
+      const saveRes = await saveSiteUIConfigNow(nextConfig);
+      if (saveRes.success) {
+        triggerSavedNotice(
+          `Đã nén ảnh (${Math.round(dataUrl.length / 1024)} KB) và lưu lên Cloud thành công!`
+        );
+      } else {
+        setErrorNotice(saveRes.message || 'Lưu ảnh lên Cloud thất bại.');
+      }
+    } catch (err: any) {
+      setErrorNotice(
+        err?.message || 'Không thể xử lý tệp ảnh này. Vui lòng thử ảnh JPG, PNG hoặc WebP khác.'
+      );
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
 
   const handleUpdateMoment = (index: number, partial: Partial<ClassroomMomentItem>) => {
     const updated = momentsList.map((item, idx) =>
@@ -85,20 +183,44 @@ export const UIEditorPanel: React.FC = () => {
     updateSiteUIConfig({ classroomMoments: updated });
   };
 
-  const handleMomentImageUpload = (
+  const handleMomentImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number
   ) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        handleUpdateMoment(index, { image: reader.result });
-        triggerSavedNotice();
+
+    const slotKey = `moment-${index}`;
+    setUploadingSlot(slotKey);
+    setErrorNotice(null);
+
+    try {
+      const dataUrl = await compressImageToDataUrl(file, 720, false, 65000);
+      const updated = momentsList.map((item, idx) =>
+        idx === index ? { ...item, image: dataUrl } : item
+      );
+      const nextConfig: SiteUIConfig = {
+        ...siteUIConfig,
+        classroomMoments: updated,
+      };
+      const saveRes = await saveSiteUIConfigNow(nextConfig);
+      if (saveRes.success) {
+        triggerSavedNotice(
+          `Đã nén ảnh Khoảnh khắc #${index + 1} (${Math.round(
+            dataUrl.length / 1024
+          )} KB) và lưu lên Cloud!`
+        );
+      } else {
+        setErrorNotice(saveRes.message || 'Lưu ảnh khoảnh khắc lên Cloud thất bại.');
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setErrorNotice(
+        err?.message || 'Không thể nén ảnh khoảnh khắc này. Vui lòng chọn ảnh JPG/PNG/WebP khác.'
+      );
+    } finally {
+      setUploadingSlot(null);
+    }
   };
 
   const handleAddMoment = () => {
@@ -113,14 +235,14 @@ export const UIEditorPanel: React.FC = () => {
       image: '/assets/aistudio/image_f2d52981.png',
     };
     updateSiteUIConfig({ classroomMoments: [...momentsList, newMoment] });
-    triggerSavedNotice();
+    triggerSavedNotice('Đã thêm thẻ khoảnh khắc mới!');
   };
 
   const handleDeleteMoment = (index: number) => {
     if (momentsList.length <= 1) return;
     const updated = momentsList.filter((_, idx) => idx !== index);
     updateSiteUIConfig({ classroomMoments: updated });
-    triggerSavedNotice();
+    triggerSavedNotice('Đã xóa thẻ khoảnh khắc!');
   };
 
   const colorPresets = [
@@ -134,66 +256,111 @@ export const UIEditorPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Action Bar */}
-      <div className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFF5F3] text-red-700 text-[12px] font-extrabold border border-red-200">
-            <Palette className="w-3.5 h-3.5" />
-            <span>TRÌNH CHỈNH SỬA GIAO DIỆN &amp; LOGO</span>
+      <div className="bg-white rounded-3xl border-2 border-[#E8DFCE] p-6 shadow-2xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFF5F3] text-red-700 text-[12px] font-extrabold border border-red-200">
+              <Palette className="w-3.5 h-3.5" />
+              <span>TRÌNH CHỈNH SỬA GIAO DIỆN &amp; LOGO</span>
+            </div>
+            <h3 className="font-sans font-extrabold text-[#18181B] text-[21px] sm:text-[23px] tracking-tight">
+              Tùy chỉnh Logo, Màu sắc, Poster &amp; Khoảnh khắc Lớp học
+            </h3>
+            <p className="text-[14.5px] text-slate-600">
+              Ảnh tải lên được tự động nén gọn chuẩn WebP/JPG để lưu nhanh trên Cloud (đang dùng{' '}
+              <strong className={usedKB > 800 ? 'text-rose-700' : 'text-[#18181B]'}>
+                {usedKB} KB / {maxKB} KB
+              </strong>
+              ).
+            </p>
           </div>
-          <h3 className="font-sans font-extrabold text-[#18181B] text-[21px] sm:text-[23px] tracking-tight">
-            Tùy chỉnh Logo, Màu sắc, Poster &amp; Khoảnh khắc Lớp học
-          </h3>
-          <p className="text-[14.5px] text-slate-600">
-            Chỉnh sửa trực quan Logo Header/Footer, màu thương hiệu, nội dung và bấm{' '}
-            <strong className="text-[#C85A43]">Lưu thay đổi</strong> để xác nhận áp dụng.
-          </p>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {uploadingSlot && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-[13px] font-bold">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang nén &amp; lưu ảnh...</span>
+              </span>
+            )}
+
+            {savedNotice && !uploadingSlot && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[13px] font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>{savedText}</span>
+              </span>
+            )}
+
+            <button
+              type="button"
+              disabled={isSaving || Boolean(uploadingSlot)}
+              onClick={handleExplicitSave}
+              className={`px-5 py-2.5 min-h-[44px] rounded-2xl font-bold text-[14px] flex items-center gap-2 cursor-pointer transition-all shadow-xs disabled:opacity-60 ${
+                hasUnsavedChanges
+                  ? 'bg-[#C85A43] hover:bg-[#B24A34] text-white ring-2 ring-[#C85A43]/30'
+                  : 'bg-[#C85A43] hover:bg-[#B24A34] text-white'
+              }`}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-4 py-2.5 min-h-[44px] rounded-2xl bg-[#18181B] hover:bg-black text-white font-bold text-[13.5px] flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <Eye className="w-4 h-4 text-amber-300" />
+              <span>Xem Trang Chủ</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                resetSiteUIConfig();
+                triggerSavedNotice('Đã khôi phục giao diện & logo mặc định!');
+              }}
+              className="px-4 py-2.5 min-h-[44px] rounded-2xl bg-[#FAF7F0] hover:bg-[#FFF5F3] text-[#18181B] hover:text-red-700 border border-[#E8DFCE] font-bold text-[13.5px] flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <RotateCcw className="w-4 h-4 text-red-600" />
+              <span>Khôi phục mặc định</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {savedNotice && (
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[13px] font-bold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>{savedText}</span>
-            </span>
-          )}
+        {errorNotice && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-[13.5px] font-semibold flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <span>{errorNotice}</span>
+          </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleExplicitSave}
-            className={`px-5 py-2.5 min-h-[44px] rounded-2xl font-bold text-[14px] flex items-center gap-2 cursor-pointer transition-all shadow-xs ${
-              hasUnsavedChanges
-                ? 'bg-[#C85A43] hover:bg-[#B24A34] text-white ring-2 ring-[#C85A43]/30'
-                : 'bg-[#C85A43] hover:bg-[#B24A34] text-white'
-            }`}
-          >
-            <Save className="w-4 h-4" />
-            <span>Lưu thay đổi</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('home');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="px-4 py-2.5 min-h-[44px] rounded-2xl bg-[#18181B] hover:bg-black text-white font-bold text-[13.5px] flex items-center gap-2 cursor-pointer transition-colors"
-          >
-            <Eye className="w-4 h-4 text-amber-300" />
-            <span>Xem Trang Chủ</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              resetSiteUIConfig();
-              triggerSavedNotice('Đã khôi phục giao diện & logo mặc định!');
-            }}
-            className="px-4 py-2.5 min-h-[44px] rounded-2xl bg-[#FAF7F0] hover:bg-[#FFF5F3] text-[#18181B] hover:text-red-700 border border-[#E8DFCE] font-bold text-[13.5px] flex items-center gap-2 cursor-pointer transition-colors"
-          >
-            <RotateCcw className="w-4 h-4 text-red-600" />
-            <span>Khôi phục mặc định</span>
-          </button>
-        </div>
+        {corruptedLegacyCount > 0 && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 text-[13.5px] text-amber-950">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold">
+                  Phát hiện {corruptedLegacyCount} ảnh tải lên trước đây bị vượt dung lượng (đang chiếm{' '}
+                  {usedKB} KB / {maxKB} KB)
+                </p>
+                <p className="text-[12.5px] text-amber-900/90 mt-0.5">
+                  Hãy bấm dọn các ảnh bị lỗi cũ này để giải phóng bộ nhớ Cloud, sau đó tải lại ảnh mới — hệ thống sẽ tự động nén siêu nhẹ và sắc nét.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={handleCleanCorruptedLegacyImages}
+              className="shrink-0 px-4 py-2.5 min-h-[44px] rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[13px] cursor-pointer transition-colors disabled:opacity-60"
+            >
+              {isSaving ? 'Đang dọn...' : 'Dọn ảnh lỗi cũ ngay'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -705,9 +872,17 @@ export const UIEditorPanel: React.FC = () => {
 
                   <input
                     type="text"
-                    value={siteUIConfig.poster1Url}
+                    value={
+                      siteUIConfig.poster1Url?.startsWith('data:image/')
+                        ? ''
+                        : siteUIConfig.poster1Url
+                    }
                     onChange={(e) => updateSiteUIConfig({ poster1Url: e.target.value })}
-                    placeholder="Hoặc dán đường dẫn URL ảnh Poster 1..."
+                    placeholder={
+                      siteUIConfig.poster1Url?.startsWith('data:image/')
+                        ? 'Đã tải ảnh Poster 1 từ máy tính (dán link mới để thay)'
+                        : 'Hoặc dán đường dẫn URL ảnh Poster 1...'
+                    }
                     className="w-full p-2 rounded-xl border border-[#E8DFCE] bg-white text-[12px]"
                   />
 
@@ -763,9 +938,17 @@ export const UIEditorPanel: React.FC = () => {
 
                   <input
                     type="text"
-                    value={siteUIConfig.poster2Url}
+                    value={
+                      siteUIConfig.poster2Url?.startsWith('data:image/')
+                        ? ''
+                        : siteUIConfig.poster2Url
+                    }
                     onChange={(e) => updateSiteUIConfig({ poster2Url: e.target.value })}
-                    placeholder="Hoặc dán đường dẫn URL ảnh Poster 2..."
+                    placeholder={
+                      siteUIConfig.poster2Url?.startsWith('data:image/')
+                        ? 'Đã tải ảnh Poster 2 từ máy tính (dán link mới để thay)'
+                        : 'Hoặc dán đường dẫn URL ảnh Poster 2...'
+                    }
                     className="w-full p-2 rounded-xl border border-[#E8DFCE] bg-white text-[12px]"
                   />
 
@@ -1107,9 +1290,13 @@ export const UIEditorPanel: React.FC = () => {
 
                     <input
                       type="text"
-                      value={moment.image}
+                      value={moment.image?.startsWith('data:image/') ? '' : moment.image}
                       onChange={(e) => handleUpdateMoment(idx, { image: e.target.value })}
-                      placeholder="Hoặc dán đường dẫn URL ảnh..."
+                      placeholder={
+                        moment.image?.startsWith('data:image/')
+                          ? 'Đã tải ảnh từ máy tính (dán link mới để thay)'
+                          : 'Hoặc dán đường dẫn URL ảnh...'
+                      }
                       className="w-full p-2 rounded-xl border border-[#E8DFCE] bg-white text-[12px]"
                     />
                   </div>

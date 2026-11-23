@@ -100,6 +100,19 @@ function clampOptionalString(val: unknown, maxLen: number): string | undefined {
   return val.length > maxLen ? val.slice(0, maxLen) : val;
 }
 
+function safeImageUrl(val: unknown, fallback = ''): string {
+  if (typeof val !== 'string') return fallback;
+  // Never slice a base64 data:image URL mid-stream because doing so corrupts the image
+  if (val.startsWith('data:image/') && val.length > MAX_IMAGE_CHARS) {
+    throw new Error(
+      `Ảnh tải lên quá lớn (${Math.round(val.length / 1024)} KB, giới hạn ${Math.round(
+        MAX_IMAGE_CHARS / 1024
+      )} KB/ảnh). Vui lòng tải lại ảnh để hệ thống tự động nén.`
+    );
+  }
+  return val.length > MAX_IMAGE_CHARS ? val.slice(0, MAX_IMAGE_CHARS) : val;
+}
+
 function clampNumber(val: unknown, min: number, max: number, fallback: number): number {
   const num = typeof val === 'number' && Number.isFinite(val) ? val : Number(val);
   if (!Number.isFinite(num)) return fallback;
@@ -436,7 +449,8 @@ export function toSiteConfigDoc(config: SiteUIConfig): Record<string, unknown> {
       config.fontScale === '13.5px' || config.fontScale === '14px' || config.fontScale === '15px'
         ? config.fontScale
         : '14px',
-    headerLogoUrl: clampOptionalString(config.headerLogoUrl, MAX_IMAGE_CHARS),
+    headerLogoUrl:
+      typeof config.headerLogoUrl === 'string' ? safeImageUrl(config.headerLogoUrl, '') : undefined,
     brandName: clampString(config.brandName, 120, 'MiXiangg') || 'MiXiangg',
     brandHighlight: clampString(config.brandHighlight, 120, 'HSK'),
     brandSubtitle: clampString(config.brandSubtitle, 200, ''),
@@ -456,9 +470,9 @@ export function toSiteConfigDoc(config: SiteUIConfig): Record<string, unknown> {
     posterSectionBadge: clampString(config.posterSectionBadge, 200, ''),
     posterSectionTitle: clampString(config.posterSectionTitle, 200, ''),
     posterSectionSubtitle: clampString(config.posterSectionSubtitle, 500, ''),
-    poster1Url: clampString(config.poster1Url, MAX_IMAGE_CHARS, ''),
+    poster1Url: safeImageUrl(config.poster1Url, ''),
     poster1Caption: clampString(config.poster1Caption, 300, ''),
-    poster2Url: clampString(config.poster2Url, MAX_IMAGE_CHARS, ''),
+    poster2Url: safeImageUrl(config.poster2Url, ''),
     poster2Caption: clampString(config.poster2Caption, 300, ''),
     admissionBadge: clampString(config.admissionBadge, 200, ''),
     admissionTitle: clampString(config.admissionTitle, 250, ''),
@@ -476,13 +490,13 @@ export function toSiteConfigDoc(config: SiteUIConfig): Record<string, unknown> {
         detail: clampString(m.detail, 1000, ''),
         date: clampString(m.date, 64, ''),
         location: clampString(m.location, 200, ''),
-        image: clampString(m.image, MAX_IMAGE_CHARS, ''),
+        image: safeImageUrl(m.image, ''),
       })),
     showCoursesSection: Boolean(config.showCoursesSection),
     showPostersSection: Boolean(config.showPostersSection),
     showAdmissionBanner: Boolean(config.showAdmissionBanner),
     showMomentsSection: Boolean(config.showMomentsSection),
-    footerLogoUrl: clampString(config.footerLogoUrl, MAX_IMAGE_CHARS, ''),
+    footerLogoUrl: safeImageUrl(config.footerLogoUrl, ''),
     footerTitle: clampString(config.footerTitle, 200, ''),
     footerSubtitle: clampString(config.footerSubtitle, 300, ''),
     hotline: clampString(config.hotline, 80, ''),
@@ -1196,9 +1210,28 @@ export async function fetchSiteConfigFromFirestore(): Promise<Partial<SiteUIConf
   }
 }
 
-export async function saveSiteConfigToFirestore(config: SiteUIConfig): Promise<void> {
+export const MAX_SITE_CONFIG_BYTES = 950_000;
+
+export function estimateSiteConfigBytes(config: SiteUIConfig): number {
   try {
-    await setDoc(doc(db, 'siteConfig', 'main'), toSiteConfigDoc(config));
+    return new TextEncoder().encode(JSON.stringify(config)).length;
+  } catch {
+    return JSON.stringify(config).length;
+  }
+}
+
+export async function saveSiteConfigToFirestore(config: SiteUIConfig): Promise<void> {
+  const payload = toSiteConfigDoc(config);
+  const totalBytes = new TextEncoder().encode(JSON.stringify(payload)).length;
+  if (totalBytes > MAX_SITE_CONFIG_BYTES) {
+    throw new Error(
+      `Tổng dung lượng ảnh giao diện hiện tại (${Math.round(
+        totalBytes / 1024
+      )} KB) vượt giới hạn lưu trữ đám mây (950 KB). Vui lòng bấm "Dọn ảnh lỗi cũ" hoặc xóa bớt ảnh cũ trước khi tải thêm.`
+    );
+  }
+  try {
+    await setDoc(doc(db, 'siteConfig', 'main'), payload);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'siteConfig/main');
   }

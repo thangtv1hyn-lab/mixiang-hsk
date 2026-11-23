@@ -162,6 +162,7 @@ interface HSKContextType {
   // UI Customization (Admin / Teacher)
   siteUIConfig: SiteUIConfig;
   updateSiteUIConfig: (partial: Partial<SiteUIConfig>) => void;
+  saveSiteUIConfigNow: (configOverride?: SiteUIConfig) => Promise<{ success: boolean; message?: string }>;
   resetSiteUIConfig: () => void;
 }
 
@@ -528,20 +529,74 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const siteConfigSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSiteConfigRef = useRef<SiteUIConfig>(siteUIConfig);
+  latestSiteConfigRef.current = siteUIConfig;
+
   const updateSiteUIConfig = (partial: Partial<SiteUIConfig>) => {
     setSiteUIConfig((prev) => {
       const next = { ...prev, ...partial };
+      latestSiteConfigRef.current = next;
       try {
         localStorage.setItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2', JSON.stringify(next));
       } catch {
         // ignore storage quota errors
       }
-      persistAdminFirestore(() => saveSiteConfigToFirestore(next), 'siteConfig');
+      if (siteConfigSaveTimerRef.current) {
+        clearTimeout(siteConfigSaveTimerRef.current);
+      }
+      siteConfigSaveTimerRef.current = setTimeout(() => {
+        persistAdminFirestore(() => saveSiteConfigToFirestore(next), 'siteConfig');
+      }, 450);
       return next;
     });
   };
 
+  const saveSiteUIConfigNow = async (
+    configOverride?: SiteUIConfig
+  ): Promise<{ success: boolean; message?: string }> => {
+    const target = configOverride || latestSiteConfigRef.current;
+    latestSiteConfigRef.current = target;
+    setSiteUIConfig(target);
+    try {
+      localStorage.setItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2', JSON.stringify(target));
+    } catch {
+      // ignore localStorage quota errors (Cloud Firestore is primary)
+    }
+    if (siteConfigSaveTimerRef.current) {
+      clearTimeout(siteConfigSaveTimerRef.current);
+      siteConfigSaveTimerRef.current = null;
+    }
+    try {
+      const isAdminUser = await isCurrentFirebaseUserAdmin();
+      if (!isAdminUser) {
+        return {
+          success: false,
+          message:
+            'Bạn cần đăng nhập bằng tài khoản Quản trị viên Google để lưu cấu hình giao diện lên máy chủ.',
+        };
+      }
+      await saveSiteConfigToFirestore(target);
+      return { success: true, message: 'Đã lưu cấu hình giao diện & hình ảnh lên Cloud thành công!' };
+    } catch (err: any) {
+      const rawMsg = err?.message || 'Không thể lưu giao diện lên Cloud Firestore.';
+      let friendly = rawMsg;
+      try {
+        const parsed = JSON.parse(rawMsg);
+        if (parsed?.error) friendly = parsed.error;
+      } catch {
+        // already plain message
+      }
+      return { success: false, message: friendly };
+    }
+  };
+
   const resetSiteUIConfig = () => {
+    if (siteConfigSaveTimerRef.current) {
+      clearTimeout(siteConfigSaveTimerRef.current);
+      siteConfigSaveTimerRef.current = null;
+    }
+    latestSiteConfigRef.current = DEFAULT_SITE_UI_CONFIG;
     setSiteUIConfig(DEFAULT_SITE_UI_CONFIG);
     try {
       localStorage.removeItem(STORAGE_KEY_PREFIX + 'site_ui_config_v2');
@@ -2279,6 +2334,7 @@ export const HSKProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetAllData,
         siteUIConfig,
         updateSiteUIConfig,
+        saveSiteUIConfigNow,
         resetSiteUIConfig,
       }}
     >
